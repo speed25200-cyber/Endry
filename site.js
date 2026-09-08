@@ -1,0 +1,15 @@
+'use strict';
+const toggle = document.querySelector('.menu-toggle');
+const nav = document.querySelector('#navigation');
+function closeMenu(){nav?.classList.remove('open');toggle?.setAttribute('aria-expanded','false');toggle?.setAttribute('aria-label','Ouvrir le menu');}
+toggle?.addEventListener('click',()=>{const open=nav.classList.toggle('open');toggle.setAttribute('aria-expanded',String(open));toggle.setAttribute('aria-label',open?'Fermer le menu':'Ouvrir le menu');});
+nav?.querySelectorAll('a').forEach(a=>a.addEventListener('click',closeMenu));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&nav?.classList.contains('open')){closeMenu();toggle.focus();}});
+const year=document.querySelector('#year');if(year)year.textContent=new Date().getFullYear();
+const imageDialog=document.querySelector('#image-dialog');
+document.querySelectorAll('.project-image').forEach(button=>button.addEventListener('click',()=>{const img=document.querySelector('#large-image');img.src=button.dataset.image;img.alt=button.dataset.caption;document.querySelector('#image-caption').textContent=button.dataset.caption;imageDialog.showModal();}));
+document.querySelectorAll('dialog').forEach(dialog=>{dialog.querySelector('.close-dialog')?.addEventListener('click',()=>dialog.close());dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)dialog.close();}});});
+document.querySelectorAll('[data-service]').forEach(a=>a.addEventListener('click',()=>{document.querySelector('#domaine').value=a.dataset.service;}));
+const form=document.querySelector('#project-form');
+form?.addEventListener('submit',e=>{e.preventDefault();if(!form.reportValidity())return;const f=new FormData(form);const value=k=>String(f.get(k)||'').trim();const requestKind=value('domaine')==='Dépannage'?'Demande de dépannage':'Demande de projet';const body=`Bonjour Endry SA,\n\nJe souhaite vous contacter au sujet du projet suivant.\n\nDomaine : ${value('domaine')}\nCommune : ${value('commune')}\nÉchéance souhaitée : ${value('echeance')||'À définir'}\n\n${value('message')}\n\nMes coordonnées\nNom : ${value('nom')}\nE-mail : ${value('email')}\nTéléphone : ${value('telephone')||'Non renseigné'}\n\nMeilleures salutations,\n${value('nom')}`;document.querySelector('#request-preview').value=body;document.querySelector('#send-email').href=`mailto:info@endry.ch?subject=${encodeURIComponent(requestKind+' — '+value('domaine')+' — '+value('commune'))}&body=${encodeURIComponent(body)}`;document.querySelector('#copy-status').textContent='';document.querySelector('#request-dialog').showModal();});
+document.querySelector('#copy-request')?.addEventListener('click',async()=>{const field=document.querySelector('#request-preview'),status=document.querySelector('#copy-status');try{await navigator.clipboard.writeText(field.value);status.textContent='Texte copié.';}catch{field.focus();field.select();status.textContent='Sélectionnez « Copier » pour copier le texte.';}});

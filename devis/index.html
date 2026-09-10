@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="fr-CH">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Devis — Endry SA</title>
+<meta name="description" content="Modèle de devis Endry SA. Sanitaire, chauffage, ventilation et dépannage à Bussy FR.">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#211a13">
+<link rel="icon" href="../assets/monogramme.png"><link rel="stylesheet" href="devis.css">
+<script defer src="devis.js"></script>
+</head>
+<body>
+
+<div class="toolbar no-print" role="toolbar" aria-label="Actions du devis">
+  <p><strong>Modèle de devis</strong> · Cliquez sur un texte pour le modifier. Les totaux se calculent automatiquement.</p>
+  <div class="toolbar-actions">
+    <button type="button" id="btn-reset" class="tb-link">Nouveau devis</button>
+    <button type="button" id="btn-print" class="tb-primary">Imprimer / Enregistrer en PDF ↗</button>
+  </div>
+</div>
+
+<main class="sheet" id="devis">
+
+  <header class="band">
+    <img class="logo" src="../assets/logo.png" alt="Endry SA — Sanitaire, chauffage, ventilation" width="945" height="240">
+    <div class="band-title">
+      <p class="eyebrow gold">OFFRE</p>
+      <p class="doc-kind">Devis <span class="doc-no" contenteditable="true" data-field="numero">N° D-2026-0042</span></p>
+    </div>
+  </header>
+
+  <section class="meta">
+    <div class="meta-col">
+      <p class="eyebrow">DE LA PART DE</p>
+      <p class="party-name">Endry SA</p>
+      <p class="party-lines">Route des Marechets 143<br>1541 Bussy FR<br><span class="nowrap">Fixe 026 663 30 60</span><br><span class="nowrap">Mobile 079 962 30 60</span><br>info@endry.ch</p>
+      <p class="party-lines" contenteditable="true">IDE : CHE-___.___.___ TVA</p>
+    </div>
+    <div class="meta-col">
+      <p class="eyebrow">ADRESSÉ À</p>
+      <p class="party-name" contenteditable="true">Madame Claire Dupraz</p>
+      <p class="party-lines" contenteditable="true">Chemin des Vergers 8<br>1530 Payerne<br>079 000 00 00<br>claire.dupraz@example.ch</p>
+    </div>
+    <dl class="refs">
+      <dt>Date</dt><dd contenteditable="true" data-field="date">10 septembre 2026</dd>
+      <dt>Validité</dt><dd contenteditable="true" data-field="validite">30 jours, soit jusqu’au 10 octobre 2026</dd>
+      <dt>Lieu du chantier</dt><dd contenteditable="true">Chemin des Vergers 8, 1530 Payerne</dd>
+      <dt>Votre contact</dt><dd contenteditable="true">Endry SA · 079 962 30 60</dd>
+      <dt>Référence</dt><dd contenteditable="true">Visite sur place du 3 septembre 2026</dd>
+    </dl>
+  </section>
+
+  <section class="objet">
+    <p class="eyebrow">OBJET</p>
+    <h1 contenteditable="true">Rénovation complète d’une salle de bain. <span>Sanitaire, chauffage et ventilation.</span></h1>
+    <p class="intro" contenteditable="true">Madame, Monsieur, nous vous remercions de votre confiance. Suite à notre visite sur place, nous avons le plaisir de vous soumettre notre offre pour les travaux décrits ci-dessous. Les prestations comprennent la fourniture, la pose, les raccordements et la mise en service des installations, dans le respect des normes SSIGE et SICC en vigueur.</p>
+  </section>
+
+  <div class="table-wrap">
+  <table class="lines" id="lines">
+    <colgroup><col class="c-pos"><col class="c-desc"><col class="c-qty"><col class="c-unit"><col class="c-pu"><col class="c-tot"></colgroup>
+    <thead>
+      <tr><th>Pos.</th><th>Désignation</th><th class="num">Qté</th><th>Unité</th><th class="num">Prix unit. CHF</th><th class="num">Total CHF</th></tr>
+    </thead>
+
+    <tbody class="group" data-group="Sanitaire">
+      <tr class="group-head"><td colspan="6"><span class="g-num">01</span><span class="g-name" contenteditable="true">Sanitaire</span><span class="g-lead" contenteditable="true">L’eau, à la bonne place.</span><button type="button" class="add-line no-print" title="Ajouter une ligne">+ Ligne</button></td></tr>
+      <tr class="line"><td class="pos"></td><td class="desc" contenteditable="true">Dépose des appareils sanitaires existants, protection des lieux et évacuation des déchets en décharge agréée</td><td class="qty num" contenteditable="true">1</td><td class="unit" contenteditable="true">forfait</td><td class="pu num" contenteditable="true">850.00</td><td class="tot num"></td><td class="rm no-print"><button type="button" title="Supprimer la ligne">×</button></td></tr>
+      <tr class="line"><td class="pos"></td><td class="desc" contenteditable="true">Distribution eau froide et eau chaude en tubes inox pressés, y compris isolation et fixations</td><td class="qty num" contenteditable="true">18</td><td class="unit" contenteditable="true">m</td><td class="pu num" contenteditable="true">96.00</td><td class="tot num"></td><td class="rm no-print"><button type="button" title="Supprimer la ligne">×</button></td></tr>
+      <tr class="line"><td class="pos"></td><td class="desc" contenteditable="true">Évacuations en PE, siphons et raccordements aux colonnes existantes</td><td class="qty num" contenteditable="true">1</td><td class="unit" contenteditable="true">forfait</td><td class="pu num" contenteditable="true">1240.00</td><td class="tot num"></td><td class="rm no-print"><button type="button" title="Supprimer la ligne">×</button></td></tr>
+      <tr class="line"><td class="pos"></td><td class="desc" contenteditable="true">Fourniture et pose d’un WC suspendu avec bâti-support, plaque de commande et abattant frein de chute</td><td class="qty num" contenteditable="true">1</td><td class="unit" contenteditable="true">pce</td><td class="pu num" contenteditable="true">1890.00</td><td class="tot num"></td><td class="rm no-print"><button type="button" title="Supprimer la ligne">×</button></td></tr>
+      <tr class="line"><td class="pos"></td><td class="desc" contenteditable="true">Fourniture et pose d’un meuble-lavabo 90 cm avec mitigeur et siphon design</td><td class="qty num" contenteditable="true">1</td><td class="unit" contenteditable="true">pce</td><td class="pu num" contenteditable="true">2150.00</td><td class="tot num"></td><td class="rm no-print"><button type="button" title="Supprimer la ligne">×</button></td></tr>
+      <tr class="line"><td class="pos"></td><td class="desc" contenteditable="true">Receveur de douche extra-plat 120 × 90 cm, paroi vitrée et robinetterie thermostatique encastrée</td><td class="qty num" contenteditable="true">1</td><td class="unit" contenteditable="true">pce</td><td class="pu num" contenteditable="true">3480.00</td><td class="tot num"></td><td class="rm no-print"><button type="button" title="Supprimer la ligne">×</button></td></tr>
+      <tr class="group-sub"><td colspan="5">Sous-total <span class="g-ref">Sanitaire</span></td><td class="num g-total"></td></tr>
+    </tbody>
+
+    <tbody class="group" data-group="Chauffage">
+      <tr class="group-head"><td colspan="6"><span class="g-num">02</span><span class="g-name" contenteditable="true">Chauffage</span><span class="g-lead" contenteditable="true">Une chaleur bien pensée.</span><button type="button" class="add-line no-print" title="Ajouter une ligne">+ Ligne</button></td></tr>
+      <tr class="line"><td class="pos"></td><td class="desc" contenteditable="true">Radiateur sèche-serviettes 1200 × 500 mm, vanne thermostatique et raccordement au circuit existant</td><td class="qty num" contenteditable="true">1</td><td class="unit" contenteditable="true">pce</td><td class="pu num" contenteditable="true">1120.00</td><td class="tot num"></td><td class="rm no-print"><button type="button" title="Supprimer la ligne">×</button></td></tr>
+      <tr class="line"><td class="pos"></td><td class="desc" contenteditable="true">Adaptation de la distribution de chaleur, purge et équilibrage hydraulique</td><td class="qty num" contenteditable="true">1</td><td class="unit" contenteditable="true">forfait</td><td class="pu num" contenteditable="true">640.00</td><td class="tot num"></td><td class="rm no-print"><button type="button" title="Supprimer la ligne">×</button></td></tr>
+      <tr class="group-sub"><td colspan="5">Sous-total <span class="g-ref">Chauffage</span></td><td class="num g-total"></td></tr>
+    </tbody>
+
+    <tbody class="group" data-group="Ventilation">
+      <tr class="group-head"><td colspan="6"><span class="g-num">03</span><span class="g-name" contenteditable="true">Ventilation</span><span class="g-lead" contenteditable="true">L’air, au cœur du confort.</span><button type="button" class="add-line no-print" title="Ajouter une ligne">+ Ligne</button></td></tr>
+      <tr class="line"><td class="pos"></td><td class="desc" contenteditable="true">Extracteur d’air silencieux avec temporisation et détecteur d’humidité, y compris gaine et sortie en façade</td><td class="qty num" contenteditable="true">1</td><td class="unit" contenteditable="true">pce</td><td class="pu num" contenteditable="true">780.00</td><td class="tot num"></td><td class="rm no-print"><button type="button" title="Supprimer la ligne">×</button></td></tr>
+      <tr class="line"><td class="pos"></td><td class="desc" contenteditable="true">Mise en service de l’ensemble, contrôle d’étanchéité, réglages et instruction à l’utilisation</td><td class="qty num" contenteditable="true">1</td><td class="unit" contenteditable="true">forfait</td><td class="pu num" contenteditable="true">380.00</td><td class="tot num"></td><td class="rm no-print"><button type="button" title="Supprimer la ligne">×</button></td></tr>
+      <tr class="group-sub"><td colspan="5">Sous-total <span class="g-ref">Ventilation</span></td><td class="num g-total"></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <section class="totals-row">
+    <div class="totals-note">
+      <p class="eyebrow">CE QUI EST COMPRIS</p>
+      <p contenteditable="true">Fourniture du matériel, main-d’œuvre, déplacements, petit matériel de fixation, évacuation des déchets, essais et mise en service. Les travaux de carrelage, de plâtrerie, de peinture et d’électricité ne sont pas compris et font l’objet d’offres séparées.</p>
+    </div>
+    <dl class="totals">
+      <dt>Sous-total HT</dt><dd id="t-sub"></dd>
+      <dt>Remise <span class="pct" contenteditable="true" id="t-remise-pct">0</span> %</dt><dd id="t-remise"></dd>
+      <dt>Total HT</dt><dd id="t-ht"></dd>
+      <dt>TVA <span class="pct" contenteditable="true" id="t-tva-pct">8.1</span> %</dt><dd id="t-tva"></dd>
+      <dt class="rnd">Arrondi</dt><dd class="rnd" id="t-arrondi"></dd>
+      <dt class="grand">Total TTC <small>CHF</small></dt><dd class="grand" id="t-ttc"></dd>
+    </dl>
+  </section>
+
+  <section class="conditions">
+    <div>
+      <p class="eyebrow">CONDITIONS</p>
+      <dl class="cond">
+        <dt>Validité</dt><dd contenteditable="true">30 jours dès la date d’émission. Les prix s’entendent en francs suisses, TVA en sus au taux légal.</dd>
+        <dt>Délais</dt><dd contenteditable="true">Début des travaux à convenir à la commande, selon disponibilité du matériel. Durée estimée : 6 jours ouvrables.</dd>
+        <dt>Paiement</dt><dd contenteditable="true">30 % à la commande, 40 % au démarrage des travaux, solde à 30 jours net dès la facture finale.</dd>
+        <dt>Garantie</dt><dd contenteditable="true">2 ans sur les installations, selon la norme SIA 118. Garantie fabricant sur les appareils.</dd>
+        <dt>Régie</dt><dd contenteditable="true">Travaux supplémentaires non prévus : CHF 98.00 / h, matériel en sus, sur accord préalable.</dd>
+      </dl>
+    </div>
+    <div>
+      <p class="eyebrow">LA SUITE</p>
+      <ol class="steps">
+        <li><span>01</span><div><strong>Accord.</strong> Retournez-nous ce devis signé, par e-mail ou par courrier.</div></li>
+        <li><span>02</span><div><strong>Planification.</strong> Nous fixons ensemble la date d’intervention et commandons le matériel.</div></li>
+        <li><span>03</span><div><strong>Installation.</strong> Chantier préparé, équipements intégrés, fonctionnement contrôlé.</div></li>
+        <li><span>04</span><div><strong>Accompagnement.</strong> Prise en main, entretien et suivi de vos installations.</div></li>
+      </ol>
+    </div>
+  </section>
+
+  <div class="closing">
+  <section class="signatures">
+    <div class="sig">
+      <p class="eyebrow">POUR ENDRY SA</p>
+      <p contenteditable="true">Bussy FR, le 10 septembre 2026</p>
+      <div class="sig-line"></div>
+      <p class="sig-hint" contenteditable="true">Nom et signature</p>
+    </div>
+    <div class="sig accord">
+      <p class="eyebrow">BON POUR ACCORD · LE CLIENT</p>
+      <p contenteditable="true">Lieu et date : </p>
+      <div class="sig-line"></div>
+      <p class="sig-hint">Signature précédée de la mention « Bon pour accord »</p>
+    </div>
+  </section>
+
+  <footer class="band-foot">
+    <p class="foot-claim">Le confort. Dans chaque détail.</p>
+    <p>Endry SA · Route des Marechets 143 · 1541 Bussy FR · 026 663 30 60 · 079 962 30 60 · info@endry.ch</p>
+    <p class="foot-area">Sanitaire · Chauffage · Ventilation · Dépannage — Fribourg · Vaud · Valais</p>
+  </footer>
+  </div>
+
+</main>
+</body>
+</html>

@@ -79,6 +79,7 @@
     if(recap){
       var rows='';
       results.forEach(function(r){
+        rows+='<tbody class="r-block">';
         if(multi)rows+='<tr class="r-part"><td colspan="3">'+r.name+'</td></tr>';
         r.groups.forEach(function(g){rows+='<tr><td>'+g.num+'</td><td>'+g.name+'</td><td>'+money(g.total)+'</td></tr>';});
         if(r.remise)rows+='<tr class="r-sum"><td></td><td>Remise '+r.remisePct+' %</td><td>− '+money(r.remise)+'</td></tr>';
@@ -86,6 +87,7 @@
         rows+='<tr class="r-sum"><td></td><td>TVA '+r.tvaPct+' %</td><td>'+money(r.tva)+'</td></tr>';
         if(r.arrondi!==0)rows+='<tr class="r-sum"><td></td><td>Arrondi</td><td>'+(r.arrondi>0?'+ ':'− ')+money(Math.abs(r.arrondi))+'</td></tr>';
         rows+='<tr class="r-ttc"><td></td><td>Total TTC'+(multi?' '+r.name.toLowerCase():'')+', CHF</td><td>'+money(r.ttc)+'</td></tr>';
+        rows+='</tbody>';
       });
       recap.innerHTML=rows;
     }

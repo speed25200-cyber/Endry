@@ -114,7 +114,7 @@ button:focus-visible,[contenteditable]:focus-visible{outline:2px solid var(--bro
 
 /* Récapitulatif */
 .recap{padding:24px 0 4px;border-top:1px solid var(--line);margin-top:20px}
-.recap-table tr{break-inside:avoid}
+.recap-table tr,.recap-table tbody{break-inside:avoid}
 .recap-table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
 .recap-table td{padding:6px 0;border-bottom:1px solid var(--line)}
 .recap-table td:first-child{color:var(--muted);width:42px}

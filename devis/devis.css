@@ -102,6 +102,17 @@ button:focus-visible,[contenteditable]:focus-visible{outline:2px solid var(--bro
 .totals dd.grand{color:var(--text-bronze)}
 .totals .grand small{font-size:11px;font-weight:600;letter-spacing:.1em;color:var(--muted);margin-left:6px;vertical-align:middle}
 
+/* Récapitulatif */
+.recap{padding:24px 0 4px;border-top:1px solid var(--line);margin-top:20px;break-inside:avoid}
+.recap-table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+.recap-table td{padding:6px 0;border-bottom:1px solid var(--line)}
+.recap-table td:first-child{color:var(--muted);width:42px}
+.recap-table td:last-child{text-align:right;font-weight:500}
+.recap-table tr.r-sum td{border-bottom:0;padding-top:8px}
+.recap-table tr.r-ttc td{border-top:2px solid var(--ink);padding-top:10px;font-size:16px;font-weight:550;letter-spacing:-.03em}
+.recap-table tr.r-ttc td:last-child{color:var(--text-bronze)}
+.refs dd.ttc-mirror{font-weight:550;color:var(--text-bronze)}
+
 /* Conditions & étapes */
 .conditions{display:grid;grid-template-columns:1.25fr 1fr;gap:36px;padding:30px 0 6px;border-top:1px solid var(--line);margin-top:22px;break-inside:avoid}
 .cond{display:grid;grid-template-columns:auto 1fr;gap:9px 16px;font-size:12px;line-height:1.5}

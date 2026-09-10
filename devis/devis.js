@@ -60,6 +60,21 @@
     rndEls.forEach(function(el){el.classList.toggle('hidden',arrondi===0);});
     document.getElementById('t-arrondi').textContent=(arrondi>0?'+ ':'− ')+money(Math.abs(arrondi));
     document.getElementById('t-ttc').textContent=money(ttc);
+    document.querySelectorAll('.ttc-mirror').forEach(function(el){el.textContent='CHF '+money(ttc);});
+    var recap=document.getElementById('recap-body');
+    if(recap){
+      var rows='';
+      groups.forEach(function(g,gi){
+        var nm=g.querySelector('.g-name');var gt=g.querySelector('.g-total');
+        rows+='<tr><td>'+String(gi+1).padStart(2,'0')+'</td><td>'+(nm?nm.textContent.trim():'')+'</td><td>'+(gt?gt.textContent:'')+'</td></tr>';
+      });
+      if(remise)rows+='<tr class="r-sum"><td></td><td>Remise '+remisePct+' %</td><td>− '+money(remise)+'</td></tr>';
+      rows+='<tr class="r-sum"><td></td><td>Total HT</td><td>'+money(ht)+'</td></tr>';
+      rows+='<tr class="r-sum"><td></td><td>TVA '+tvaPct+' %</td><td>'+money(tva)+'</td></tr>';
+      if(arrondi!==0)rows+='<tr class="r-sum"><td></td><td>Arrondi</td><td>'+(arrondi>0?'+ ':'− ')+money(Math.abs(arrondi))+'</td></tr>';
+      rows+='<tr class="r-ttc"><td></td><td>Total TTC, CHF</td><td>'+money(ttc)+'</td></tr>';
+      recap.innerHTML=rows;
+    }
   }
 
   function normalizeMoney(el){

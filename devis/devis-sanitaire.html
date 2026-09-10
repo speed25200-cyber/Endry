@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="fr-CH">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Devis sanitaire — Endry SA</title>
+<meta name="description" content="Devis sanitaire Endry SA : salle de bain, salle de douche, toilette visiteur et conduites.">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#211a13">
+<link rel="icon" href="../assets/monogramme.png"><link rel="stylesheet" href="devis.css">
+<script defer src="devis.js"></script>
+</head>
+<body>
+
+<div class="toolbar no-print" role="toolbar" aria-label="Actions du devis">
+  <p><strong>Devis sanitaire</strong> · Cliquez sur un texte pour le modifier. Les totaux se calculent automatiquement.</p>
+  <div class="toolbar-actions">
+    <button type="button" id="btn-reset" class="tb-link">Réinitialiser</button>
+    <button type="button" id="btn-print" class="tb-primary">Imprimer / Enregistrer en PDF ↗</button>
+  </div>
+</div>
+
+<main class="sheet" id="devis">
+
+  <header class="band">
+    <img class="logo" src="../assets/logo.png" alt="Endry SA — Sanitaire, chauffage, ventilation" width="945" height="240">
+    <div class="band-title">
+      <p class="eyebrow gold">OFFRE · SANITAIRE</p>
+      <p class="doc-kind">Devis <span class="doc-no" contenteditable="true" data-field="numero">N° D-2026-0001</span></p>
+    </div>
+  </header>
+
+  <section class="meta">
+    <div class="meta-col">
+      <p class="eyebrow">DE LA PART DE</p>
+      <p class="party-name">Endry SA</p>
+      <p class="party-lines">Route des Marechets 143<br>1541 Bussy FR<br><span class="nowrap">Fixe 026 663 30 60</span><br><span class="nowrap">Mobile 079 962 30 60</span><br>info@endry.ch</p>
+      <p class="party-lines" contenteditable="true">IDE : CHE-___.___.___ TVA</p>
+    </div>
+    <div class="meta-col">
+      <p class="eyebrow">ADRESSÉ À</p>
+      <p class="party-name" contenteditable="true">Nom du client</p>
+      <p class="party-lines" contenteditable="true">Rue et numéro<br>NPA Localité<br>Téléphone<br>E-mail</p>
+    </div>
+    <dl class="refs">
+      <dt>Date</dt><dd contenteditable="true" data-field="date">10 septembre 2026</dd>
+      <dt>Validité</dt><dd contenteditable="true" data-field="validite">30 jours, soit jusqu’au 10 octobre 2026</dd>
+      <dt>Lieu du chantier</dt><dd contenteditable="true">Adresse du chantier</dd>
+      <dt>Votre contact</dt><dd contenteditable="true">Endry SA · 079 962 30 60</dd>
+      <dt>Référence</dt><dd contenteditable="true">Installations sanitaires</dd>
+    </dl>
+  </section>
+
+  <section class="objet">
+    <p class="eyebrow">OBJET</p>
+    <h1 contenteditable="true">Installations sanitaires. <span>Salle de bain, salle de douche, toilette visiteur et conduites.</span></h1>
+    <p class="intro" contenteditable="true">Madame, Monsieur, nous vous remercions de votre confiance. Nous avons le plaisir de vous soumettre notre offre pour la réalisation des installations sanitaires décrites ci-dessous, de la distribution d’eau jusqu’à la pose des appareils, avec essai de pression et protocoles.</p>
+  </section>
+
+  <section class="scope">
+    <p class="eyebrow">ÉTENDUE DES PRESTATIONS</p>
+    <ul class="scope-list" contenteditable="true">
+      <li>Distribution d’eau froide</li>
+      <li>Distribution d’eau chaude</li>
+      <li>Installation de distributeur d’eau</li>
+      <li>Installation de châssis de montage et gabarits</li>
+      <li>Raccordement des appareils EF + EC</li>
+      <li>Raccordement des appareils</li>
+      <li>Installation des appareils sanitaires et accessoires</li>
+      <li>Essai de pression avec protocoles</li>
+    </ul>
+  </section>
+
+  <div class="table-wrap">
+  <table class="lines" id="lines">
+    <colgroup><col class="c-pos"><col class="c-desc"><col class="c-qty"><col class="c-unit"><col class="c-pu"><col class="c-tot"></colgroup>
+    <thead>
+      <tr><th>Pos.</th><th>Désignation</th><th class="num">Qté</th><th>Unité</th><th class="num">Prix unit. CHF</th><th class="num">Total CHF</th></tr>
+    </thead>
+
+    <tbody class="group" data-group="Salle de bain">
+      <tr class="group-head"><td colspan="6"><span class="g-num">01</span><span class="g-name" contenteditable="true">Salle de bain</span><span class="g-lead" contenteditable="true">Pose et raccordement des appareils.</span><button type="button" class="add-line no-print" title="Ajouter une ligne">+ Ligne</button></td></tr>
+      <tr class="line"><td class="pos"></td><td class="desc" contenteditable="true">Installation complète de la salle de bain<ul><li>Installation de cuvette murale</li><li>Installation de miroir de toilette</li><li>Installation de lavabo</li><li>Installation de baignoire</li><li>Accessoires</li></ul></td><td class="qty num" contenteditable="true">1</td><td class="unit" contenteditable="true">forfait</td><td class="pu num" contenteditable="true">1200.00</td><td class="tot num"></td><td class="rm no-print"><button type="button" title="Supprimer la ligne">×</button></td></tr>
+      <tr class="group-sub"><td colspan="5">Sous-total <span class="g-ref">Salle de bain</span></td><td class="num g-total"></td></tr>
+    </tbody>
+
+    <tbody class="group" data-group="Salle de douche">
+      <tr class="group-head"><td colspan="6"><span class="g-num">02</span><span class="g-name" contenteditable="true">Salle de douche</span><span class="g-lead" contenteditable="true">Pose et raccordement des appareils.</span><button type="button" class="add-line no-print" title="Ajouter une ligne">+ Ligne</button></td></tr>
+      <tr class="line"><td class="pos"></td><td class="desc" contenteditable="true">Installation complète de la salle de douche<ul><li>Installation de lavabo double, si la configuration le permet</li><li>Installation de miroir de toilette</li><li>Installation de la douche</li><li>Accessoires</li></ul></td><td class="qty num" contenteditable="true">1</td><td class="unit" contenteditable="true">forfait</td><td class="pu num" contenteditable="true">870.00</td><td class="tot num"></td><td class="rm no-print"><button type="button" title="Supprimer la ligne">×</button></td></tr>
+      <tr class="group-sub"><td colspan="5">Sous-total <span class="g-ref">Salle de douche</span></td><td class="num g-total"></td></tr>
+    </tbody>
+
+    <tbody class="group" data-group="Toilette visiteur">
+      <tr class="group-head"><td colspan="6"><span class="g-num">03</span><span class="g-name" contenteditable="true">Toilette visiteur</span><span class="g-lead" contenteditable="true">Pose et raccordement des appareils.</span><button type="button" class="add-line no-print" title="Ajouter une ligne">+ Ligne</button></td></tr>
+      <tr class="line"><td class="pos"></td><td class="desc" contenteditable="true">Installation complète de la toilette visiteur<ul><li>Pose de toilette</li><li>Pose de lavabo</li><li>Pose de miroir</li><li>Accessoires</li></ul></td><td class="qty num" contenteditable="true">1</td><td class="unit" contenteditable="true">forfait</td><td class="pu num" contenteditable="true">540.00</td><td class="tot num"></td><td class="rm no-print"><button type="button" title="Supprimer la ligne">×</button></td></tr>
+      <tr class="group-sub"><td colspan="5">Sous-total <span class="g-ref">Toilette visiteur</span></td><td class="num g-total"></td></tr>
+    </tbody>
+
+    <tbody class="group" data-group="Conduites">
+      <tr class="group-head"><td colspan="6"><span class="g-num">04</span><span class="g-name" contenteditable="true">Conduites</span><span class="g-lead" contenteditable="true">Distribution d’eau et évacuation.</span><button type="button" class="add-line no-print" title="Ajouter une ligne">+ Ligne</button></td></tr>
+      <tr class="line"><td class="pos"></td><td class="desc" contenteditable="true">Réseaux de distribution et d’évacuation<ul><li><strong>Distribution eau froide</strong> — fixation sur rails, raccords à sertir, vanne d’arrêt, distribution sanitaire</li><li><strong>Distribution eau chaude</strong> — fixation sur rails, raccords à sertir, vanne d’arrêt, distribution sanitaire</li><li><strong>Réseau eau usée</strong> — conduite en PE, réseau principal, fixation sur colliers Polyfix</li></ul></td><td class="qty num" contenteditable="true">1</td><td class="unit" contenteditable="true">forfait</td><td class="pu num" contenteditable="true">400.00</td><td class="tot num"></td><td class="rm no-print"><button type="button" title="Supprimer la ligne">×</button></td></tr>
+      <tr class="group-sub"><td colspan="5">Sous-total <span class="g-ref">Conduites</span></td><td class="num g-total"></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <section class="totals-row">
+    <div class="totals-note">
+      <p class="eyebrow">CE QUI EST COMPRIS</p>
+      <p contenteditable="true">Main-d’œuvre d’installation et de raccordement, déplacements, petit matériel de fixation, essais de pression et protocoles. La fourniture des appareils sanitaires, de la robinetterie et des accessoires n’est pas comprise, sauf mention contraire. Les travaux de carrelage, de plâtrerie et d’électricité font l’objet d’offres séparées.</p>
+    </div>
+    <dl class="totals">
+      <dt>Sous-total HT</dt><dd id="t-sub"></dd>
+      <dt>Remise <span class="pct" contenteditable="true" id="t-remise-pct">0</span> %</dt><dd id="t-remise"></dd>
+      <dt>Total HT</dt><dd id="t-ht"></dd>
+      <dt>TVA <span class="pct" contenteditable="true" id="t-tva-pct">8.1</span> %</dt><dd id="t-tva"></dd>
+      <dt class="rnd">Arrondi</dt><dd class="rnd" id="t-arrondi"></dd>
+      <dt class="grand">Total TTC <small>CHF</small></dt><dd class="grand" id="t-ttc"></dd>
+    </dl>
+  </section>
+
+  <section class="conditions">
+    <div>
+      <p class="eyebrow">CONDITIONS</p>
+      <dl class="cond">
+        <dt>Validité</dt><dd contenteditable="true">30 jours dès la date d’émission. Les prix s’entendent en francs suisses, TVA en sus au taux légal.</dd>
+        <dt>Délais</dt><dd contenteditable="true">Début des travaux à convenir à la commande, en coordination avec les autres corps de métier.</dd>
+        <dt>Paiement</dt><dd contenteditable="true">30 jours net dès réception de la facture.</dd>
+        <dt>Garantie</dt><dd contenteditable="true">2 ans sur les travaux d’installation, selon la norme SIA 118. Garantie fabricant sur les appareils.</dd>
+        <dt>Régie</dt><dd contenteditable="true">Travaux supplémentaires non prévus : sur accord préalable, facturés au tarif horaire en vigueur.</dd>
+      </dl>
+    </div>
+    <div>
+      <p class="eyebrow">LA SUITE</p>
+      <ol class="steps">
+        <li><span>01</span><div><strong>Accord.</strong> Retournez-nous ce devis signé, par e-mail ou par courrier.</div></li>
+        <li><span>02</span><div><strong>Planification.</strong> Nous fixons ensemble la date d’intervention.</div></li>
+        <li><span>03</span><div><strong>Installation.</strong> Conduites posées, appareils raccordés, essai de pression avec protocole.</div></li>
+        <li><span>04</span><div><strong>Accompagnement.</strong> Prise en main, entretien et suivi de vos installations.</div></li>
+      </ol>
+    </div>
+  </section>
+
+  <div class="closing">
+  <section class="signatures">
+    <div class="sig">
+      <p class="eyebrow">POUR ENDRY SA</p>
+      <p contenteditable="true">Bussy FR, le 10 septembre 2026</p>
+      <div class="sig-line"></div>
+      <p class="sig-hint" contenteditable="true">Nom et signature</p>
+    </div>
+    <div class="sig accord">
+      <p class="eyebrow">BON POUR ACCORD · LE CLIENT</p>
+      <p contenteditable="true">Lieu et date : </p>
+      <div class="sig-line"></div>
+      <p class="sig-hint">Signature précédée de la mention « Bon pour accord »</p>
+    </div>
+  </section>
+
+  <footer class="band-foot">
+    <p class="foot-claim">Le confort. Dans chaque détail.</p>
+    <p>Endry SA · Route des Marechets 143 · 1541 Bussy FR · 026 663 30 60 · 079 962 30 60 · info@endry.ch</p>
+    <p class="foot-area">Sanitaire · Chauffage · Ventilation · Dépannage — Fribourg · Vaud · Valais</p>
+  </footer>
+  </div>
+
+</main>
+</body>
+</html>

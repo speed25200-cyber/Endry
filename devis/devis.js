@@ -1,7 +1,7 @@
 /* Devis Endry SA — numérotation, calculs et impression. */
 (function(){
   'use strict';
-  var KEY='endry-devis-v1';
+  var KEY='endry-devis-v1:'+location.pathname;
   var sheet=document.getElementById('devis');
   var table=document.getElementById('lines');
   /* Format suisse : 14’258.00 */

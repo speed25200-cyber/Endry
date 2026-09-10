@@ -42,7 +42,7 @@ button:focus-visible,[contenteditable]:focus-visible{outline:2px solid var(--bro
 .party-lines{font-size:12.5px;color:var(--muted);line-height:1.55}
 .party-lines+.party-lines{margin-top:6px}
 .refs{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:12.5px;align-content:start}
-.refs dt{color:var(--muted)}
+.refs dt{color:var(--muted);white-space:nowrap}
 .refs dd{font-weight:500}
 
 .objet{padding:26px 0 22px}
@@ -98,12 +98,23 @@ button:focus-visible,[contenteditable]:focus-visible{outline:2px solid var(--bro
 .totals .pct{display:inline-block;min-width:2.5ch;text-align:right;padding:0 3px;color:var(--text-bronze);font-weight:500}
 .totals .rnd{color:var(--muted);font-size:12px}
 .totals .rnd.hidden{display:none}
-.totals .grand{border-bottom:0;border-top:2px solid var(--ink);margin-top:2px;padding-top:10px;font-size:18px;font-weight:550;letter-spacing:-.03em}
+.totals .grand{border-bottom:0;border-top:2px solid var(--ink);margin-top:2px;padding-top:10px;font-size:17px;font-weight:550;letter-spacing:-.03em;white-space:nowrap}
 .totals dd.grand{color:var(--text-bronze)}
 .totals .grand small{font-size:11px;font-weight:600;letter-spacing:.1em;color:var(--muted);margin-left:6px;vertical-align:middle}
 
+/* Parties séparées (ex. chauffage à part) */
+.part-page{margin-top:36px;padding-top:30px;border-top:3px solid var(--brown)}
+.part-head{padding:0 0 22px}
+.part-head h2{font-size:25px;font-weight:550;letter-spacing:-.045em;line-height:1.1;text-wrap:balance;max-width:34ch}
+.part-head h2 span{color:var(--bronze)}
+.part-head .intro{margin-top:12px}
+.objet-note{margin-top:10px;font-size:12px;color:var(--text-bronze)}
+.recap-table tr.r-part td{text-align:left;padding:14px 0 6px;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text-bronze);border-bottom:1px solid var(--ink)}
+.recap-table tr.r-part:first-child td{padding-top:0}
+
 /* Récapitulatif */
-.recap{padding:24px 0 4px;border-top:1px solid var(--line);margin-top:20px;break-inside:avoid}
+.recap{padding:24px 0 4px;border-top:1px solid var(--line);margin-top:20px}
+.recap-table tr{break-inside:avoid}
 .recap-table{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
 .recap-table td{padding:6px 0;border-bottom:1px solid var(--line)}
 .recap-table td:first-child{color:var(--muted);width:42px}
@@ -169,6 +180,7 @@ button:focus-visible,[contenteditable]:focus-visible{outline:2px solid var(--bro
   tbody.group{break-inside:avoid}
   .group-head td{break-after:avoid}
   .totals-row,.conditions,.signatures,.closing{break-inside:avoid}
+  .part-page{break-before:page;margin-top:0;padding-top:6px;border-top:0}
   [contenteditable]{background:transparent!important;outline:0!important}
   .table-wrap{overflow:visible}
 }

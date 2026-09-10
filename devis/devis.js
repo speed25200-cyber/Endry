@@ -3,7 +3,6 @@
   'use strict';
   var KEY='endry-devis-v1:'+location.pathname;
   var sheet=document.getElementById('devis');
-  var table=document.getElementById('lines');
   /* Format suisse : 14’258.00 */
   function chf(n){
     var neg=n<0;n=Math.abs(Math.round(n*100)/100);
@@ -26,53 +25,68 @@
     return tr;
   }
 
-  function recalc(){
-    var groups=table.querySelectorAll('tbody.group');var subtotal=0;
+  function q(root,sel){return root.querySelector(sel);}
+  function pct(root,sel,dflt){var el=q(root,sel);return el?parse(el.textContent):dflt;}
+
+  function recalcPart(part){
+    var table=q(part,'table.lines');if(!table)return null;
+    var groups=table.querySelectorAll('tbody.group');var subtotal=0;var recapGroups=[];
     groups.forEach(function(g,gi){
       var num=String(gi+1).padStart(2,'0');
-      var gNum=g.querySelector('.g-num');if(gNum)gNum.textContent=num;
-      var name=g.querySelector('.g-name');var ref=g.querySelector('.g-ref');
+      var gNum=q(g,'.g-num');if(gNum)gNum.textContent=num;
+      var name=q(g,'.g-name');var ref=q(g,'.g-ref');
       if(name&&ref)ref.textContent=name.textContent.trim();
       var sum=0;
       g.querySelectorAll('tr.line').forEach(function(tr,li){
-        var q=parse(tr.querySelector('.qty').textContent);
-        var p=parse(tr.querySelector('.pu').textContent);
-        var t=q*p;sum+=t;
-        tr.querySelector('.pos').textContent=(gi+1)+'.'+(li+1);
-        tr.querySelector('.tot').textContent=money(t);
+        var qty=parse(q(tr,'.qty').textContent);
+        var p=parse(q(tr,'.pu').textContent);
+        var t=qty*p;sum+=t;
+        q(tr,'.pos').textContent=(gi+1)+'.'+(li+1);
+        q(tr,'.tot').textContent=money(t);
       });
-      var gt=g.querySelector('.g-total');if(gt)gt.textContent=money(sum);
-      subtotal+=sum;
+      var gt=q(g,'.g-total');if(gt)gt.textContent=money(sum);
+      subtotal+=sum;recapGroups.push({num:num,name:name?name.textContent.trim():'',total:sum});
     });
-    var remisePct=parse(document.getElementById('t-remise-pct').textContent);
-    var tvaPct=parse(document.getElementById('t-tva-pct').textContent);
+    var remisePct=pct(part,'.t-remise-pct',0);
+    var tvaPct=pct(part,'.t-tva-pct',8.1);
     var remise=subtotal*remisePct/100;
     var ht=subtotal-remise;
     var tva=ht*tvaPct/100;
     var ttcBrut=ht+tva;
     var ttc=round05(ttcBrut);
     var arrondi=Math.round((ttc-ttcBrut)*100)/100;
-    document.getElementById('t-sub').textContent=money(subtotal);
-    document.getElementById('t-remise').textContent=remise?'− '+money(remise):money(0);
-    document.getElementById('t-ht').textContent=money(ht);
-    document.getElementById('t-tva').textContent=money(tva);
-    var rndEls=document.querySelectorAll('.totals .rnd');
-    rndEls.forEach(function(el){el.classList.toggle('hidden',arrondi===0);});
-    document.getElementById('t-arrondi').textContent=(arrondi>0?'+ ':'− ')+money(Math.abs(arrondi));
-    document.getElementById('t-ttc').textContent=money(ttc);
-    document.querySelectorAll('.ttc-mirror').forEach(function(el){el.textContent='CHF '+money(ttc);});
+    var set=function(sel,val){var el=q(part,sel);if(el)el.textContent=val;};
+    set('.t-sub',money(subtotal));
+    set('.t-remise',remise?'− '+money(remise):money(0));
+    set('.t-ht',money(ht));
+    set('.t-tva',money(tva));
+    part.querySelectorAll('.totals .rnd').forEach(function(el){el.classList.toggle('hidden',arrondi===0);});
+    set('.t-arrondi',(arrondi>0?'+ ':'− ')+money(Math.abs(arrondi)));
+    set('.t-ttc',money(ttc));
+    return {name:part.getAttribute('data-part')||'',groups:recapGroups,remisePct:remisePct,remise:remise,ht:ht,tvaPct:tvaPct,tva:tva,arrondi:arrondi,ttc:ttc};
+  }
+
+  function recalc(){
+    var parts=sheet.querySelectorAll('.part');if(!parts.length)parts=[sheet];
+    var results=[];
+    parts.forEach(function(p){var r=recalcPart(p);if(r)results.push(r);});
+    var multi=results.length>1;
+    document.querySelectorAll('.ttc-mirror').forEach(function(el){
+      if(!multi){el.textContent=results.length?'CHF '+money(results[0].ttc):'';return;}
+      el.innerHTML=results.map(function(r){return '<span class="nowrap">'+r.name+' CHF '+money(r.ttc)+'</span>';}).join('<br>');
+    });
     var recap=document.getElementById('recap-body');
     if(recap){
       var rows='';
-      groups.forEach(function(g,gi){
-        var nm=g.querySelector('.g-name');var gt=g.querySelector('.g-total');
-        rows+='<tr><td>'+String(gi+1).padStart(2,'0')+'</td><td>'+(nm?nm.textContent.trim():'')+'</td><td>'+(gt?gt.textContent:'')+'</td></tr>';
+      results.forEach(function(r){
+        if(multi)rows+='<tr class="r-part"><td colspan="3">'+r.name+'</td></tr>';
+        r.groups.forEach(function(g){rows+='<tr><td>'+g.num+'</td><td>'+g.name+'</td><td>'+money(g.total)+'</td></tr>';});
+        if(r.remise)rows+='<tr class="r-sum"><td></td><td>Remise '+r.remisePct+' %</td><td>− '+money(r.remise)+'</td></tr>';
+        rows+='<tr class="r-sum"><td></td><td>Total HT</td><td>'+money(r.ht)+'</td></tr>';
+        rows+='<tr class="r-sum"><td></td><td>TVA '+r.tvaPct+' %</td><td>'+money(r.tva)+'</td></tr>';
+        if(r.arrondi!==0)rows+='<tr class="r-sum"><td></td><td>Arrondi</td><td>'+(r.arrondi>0?'+ ':'− ')+money(Math.abs(r.arrondi))+'</td></tr>';
+        rows+='<tr class="r-ttc"><td></td><td>Total TTC'+(multi?' '+r.name.toLowerCase():'')+', CHF</td><td>'+money(r.ttc)+'</td></tr>';
       });
-      if(remise)rows+='<tr class="r-sum"><td></td><td>Remise '+remisePct+' %</td><td>− '+money(remise)+'</td></tr>';
-      rows+='<tr class="r-sum"><td></td><td>Total HT</td><td>'+money(ht)+'</td></tr>';
-      rows+='<tr class="r-sum"><td></td><td>TVA '+tvaPct+' %</td><td>'+money(tva)+'</td></tr>';
-      if(arrondi!==0)rows+='<tr class="r-sum"><td></td><td>Arrondi</td><td>'+(arrondi>0?'+ ':'− ')+money(Math.abs(arrondi))+'</td></tr>';
-      rows+='<tr class="r-ttc"><td></td><td>Total TTC, CHF</td><td>'+money(ttc)+'</td></tr>';
       recap.innerHTML=rows;
     }
   }

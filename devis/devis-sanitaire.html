@@ -53,6 +53,7 @@
   <section class="objet">
     <p class="eyebrow">OBJET</p>
     <h1 contenteditable="true">Installations sanitaires. <span>Salle de bain, salle de douche, toilette visiteur et conduites.</span></h1>
+    <p class="objet-note">Partie chauffage en page séparée, avec un montant distinct.</p>
     <p class="intro" contenteditable="true">Monsieur, nous vous remercions de votre confiance. Nous avons le plaisir de vous soumettre notre offre pour la réalisation des installations sanitaires décrites ci-dessous, de la distribution d’eau jusqu’à la pose des appareils, avec essai de pression et protocoles.</p>
   </section>
 
@@ -70,8 +71,9 @@
     </ul>
   </section>
 
+  <div class="part" data-part="Sanitaire">
   <div class="table-wrap">
-  <table class="lines" id="lines">
+  <table class="lines">
     <colgroup><col class="c-pos"><col class="c-desc"><col class="c-qty"><col class="c-unit"><col class="c-pu"><col class="c-tot"></colgroup>
     <thead>
       <tr><th>Pos.</th><th>Désignation</th><th class="num">Qté</th><th>Unité</th><th class="num">Prix unit. CHF</th><th class="num">Total CHF</th></tr>
@@ -109,17 +111,56 @@
       <p contenteditable="true">Main-d’œuvre d’installation et de raccordement, déplacements, petit matériel de fixation, essais de pression et protocoles. La fourniture des appareils sanitaires, de la robinetterie et des accessoires n’est pas comprise, sauf mention contraire. Les travaux de carrelage, de plâtrerie et d’électricité font l’objet d’offres séparées.</p>
     </div>
     <dl class="totals">
-      <dt>Sous-total HT</dt><dd id="t-sub"></dd>
-      <dt>Remise <span class="pct" contenteditable="true" id="t-remise-pct">0</span> %</dt><dd id="t-remise"></dd>
-      <dt>Total HT</dt><dd id="t-ht"></dd>
-      <dt>TVA <span class="pct" contenteditable="true" id="t-tva-pct">8.1</span> %</dt><dd id="t-tva"></dd>
-      <dt class="rnd">Arrondi</dt><dd class="rnd" id="t-arrondi"></dd>
-      <dt class="grand">Total TTC <small>CHF</small></dt><dd class="grand" id="t-ttc"></dd>
+      <dt>Sous-total HT</dt><dd class="t-sub"></dd>
+      <dt>Remise <span class="pct" contenteditable="true" class="pct t-remise-pct">0</span> %</dt><dd class="t-remise"></dd>
+      <dt>Total HT</dt><dd class="t-ht"></dd>
+      <dt>TVA <span class="pct" contenteditable="true" class="pct t-tva-pct">8.1</span> %</dt><dd class="t-tva"></dd>
+      <dt class="rnd">Arrondi</dt><dd class="rnd t-arrondi"></dd>
+      <dt class="grand">Total TTC sanitaire <small>CHF</small></dt><dd class="grand t-ttc"></dd>
     </dl>
   </section>
 
+  </div>
+
+  <div class="part part-page" data-part="Chauffage">
+  <section class="part-head">
+    <p class="eyebrow">OFFRE · CHAUFFAGE — PARTIE SÉPARÉE</p>
+    <h2 contenteditable="true">Chauffage. <span>Démontage des radiateurs.</span></h2>
+    <p class="intro" contenteditable="true">Cette partie fait l’objet d’un montant distinct. Elle n’est pas additionnée au devis sanitaire et peut être commandée séparément.</p>
+  </section>
+
+  <div class="table-wrap">
+  <table class="lines">
+    <colgroup><col class="c-pos"><col class="c-desc"><col class="c-qty"><col class="c-unit"><col class="c-pu"><col class="c-tot"></colgroup>
+    <thead>
+      <tr><th>Pos.</th><th>Désignation</th><th class="num">Qté</th><th>Unité</th><th class="num">Prix unit. CHF</th><th class="num">Total CHF</th></tr>
+    </thead>
+    <tbody class="group" data-group="Démontage des radiateurs">
+      <tr class="group-head"><td colspan="6"><span class="g-num">01</span><span class="g-name" contenteditable="true">Démontage des radiateurs</span><span class="g-lead" contenteditable="true">Vidange, dépose et remise en eau.</span><button type="button" class="add-line no-print" title="Ajouter une ligne">+ Ligne</button></td></tr>
+      <tr class="line"><td class="pos"></td><td class="desc" contenteditable="true">Démontage des radiateurs existants<ul><li>Démontage de 6 radiateurs</li><li>Ébouage de l’installation</li><li>6 robinets d’arrêt</li><li>2 × remplissage et 2 × vidange</li></ul></td><td class="qty num" contenteditable="true">1</td><td class="unit" contenteditable="true">forfait</td><td class="pu num" contenteditable="true">1400.00</td><td class="tot num"></td><td class="rm no-print"><button type="button" title="Supprimer la ligne">×</button></td></tr>
+      <tr class="group-sub"><td colspan="5">Sous-total <span class="g-ref">Démontage des radiateurs</span></td><td class="num g-total"></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <section class="totals-row">
+    <div class="totals-note">
+      <p class="eyebrow">CE QUI EST COMPRIS</p>
+      <p contenteditable="true">Main-d’œuvre, vidange et remplissage de l’installation, ébouage, fourniture et pose des robinets d’arrêt. Montant indépendant du devis sanitaire.</p>
+    </div>
+    <dl class="totals">
+      <dt>Sous-total HT</dt><dd class="t-sub"></dd>
+      <dt>Remise <span class="pct t-remise-pct" contenteditable="true">0</span> %</dt><dd class="t-remise"></dd>
+      <dt>Total HT</dt><dd class="t-ht"></dd>
+      <dt>TVA <span class="pct t-tva-pct" contenteditable="true">8.1</span> %</dt><dd class="t-tva"></dd>
+      <dt class="rnd">Arrondi</dt><dd class="rnd t-arrondi"></dd>
+      <dt class="grand">Total TTC chauffage <small>CHF</small></dt><dd class="grand t-ttc"></dd>
+    </dl>
+  </section>
+  </div>
+
   <section class="recap">
-    <p class="eyebrow">RÉCAPITULATIF</p>
+    <p class="eyebrow">RÉCAPITULATIF · DEUX MONTANTS DISTINCTS, NON CUMULÉS</p>
     <table class="recap-table"><tbody id="recap-body"></tbody></table>
   </section>
 

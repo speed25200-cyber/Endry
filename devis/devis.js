@@ -2,6 +2,9 @@
 (function(){
   'use strict';
   var KEY='endry-devis-v1:'+location.pathname;
+  var DE=(document.documentElement.lang||'fr').toLowerCase().indexOf('de')===0;
+  var L=DE?{locale:'de-CH',remise:'Rabatt',ht:'Total exkl. MWST',tva:'MWST',arrondi:'Rundung',ttc:'Total inkl. MWST',validity:function(d){return '30 Tage, bis '+d;},sign:'Bussy FR, den ',signRe:/^Bussy FR, den /,reset:'Zur leeren Vorlage zurückkehren? Die Änderungen an dieser Offerte gehen verloren.'}
+             :{locale:'fr-CH',remise:'Remise',ht:'Total HT',tva:'TVA',arrondi:'Arrondi',ttc:'Total TTC',validity:function(d){return '30 jours, soit jusqu’au '+d;},sign:'Bussy FR, le ',signRe:/^Bussy FR, le /,reset:'Repartir du modèle vierge ? Les modifications de ce devis seront perdues.'};
   var sheet=document.getElementById('devis');
   /* Format suisse : 14’258.00 */
   function chf(n){
@@ -10,7 +13,7 @@
     var int=parts[0].replace(/\B(?=(\d{3})+(?!\d))/g,'\u2019');
     return (neg?'− ':'')+int+'.'+parts[1];
   }
-  var dateFmt=new Intl.DateTimeFormat('fr-CH',{day:'numeric',month:'long',year:'numeric'});
+  var dateFmt=new Intl.DateTimeFormat(L.locale,{day:'numeric',month:'long',year:'numeric'});
 
   function parse(text){
     var s=(text||'').replace(/[’'’\s]/g,'').replace(',','.').replace(/[^0-9.\-]/g,'');
@@ -82,11 +85,11 @@
         rows+='<tbody class="r-block">';
         if(multi)rows+='<tr class="r-part"><td colspan="3">'+r.name+'</td></tr>';
         r.groups.forEach(function(g){rows+='<tr><td>'+g.num+'</td><td>'+g.name+'</td><td>'+money(g.total)+'</td></tr>';});
-        if(r.remise)rows+='<tr class="r-sum"><td></td><td>Remise '+r.remisePct+' %</td><td>− '+money(r.remise)+'</td></tr>';
-        rows+='<tr class="r-sum"><td></td><td>Total HT</td><td>'+money(r.ht)+'</td></tr>';
-        rows+='<tr class="r-sum"><td></td><td>TVA '+r.tvaPct+' %</td><td>'+money(r.tva)+'</td></tr>';
-        if(r.arrondi!==0)rows+='<tr class="r-sum"><td></td><td>Arrondi</td><td>'+(r.arrondi>0?'+ ':'− ')+money(Math.abs(r.arrondi))+'</td></tr>';
-        rows+='<tr class="r-ttc"><td></td><td>Total TTC'+(multi?' '+r.name.toLowerCase():'')+', CHF</td><td>'+money(r.ttc)+'</td></tr>';
+        if(r.remise)rows+='<tr class="r-sum"><td></td><td>'+L.remise+' '+r.remisePct+' %</td><td>− '+money(r.remise)+'</td></tr>';
+        rows+='<tr class="r-sum"><td></td><td>'+L.ht+'</td><td>'+money(r.ht)+'</td></tr>';
+        rows+='<tr class="r-sum"><td></td><td>'+L.tva+' '+r.tvaPct+' %</td><td>'+money(r.tva)+'</td></tr>';
+        if(r.arrondi!==0)rows+='<tr class="r-sum"><td></td><td>'+L.arrondi+'</td><td>'+(r.arrondi>0?'+ ':'− ')+money(Math.abs(r.arrondi))+'</td></tr>';
+        rows+='<tr class="r-ttc"><td></td><td>'+L.ttc+(multi?' '+r.name.toLowerCase():'')+', CHF</td><td>'+money(r.ttc)+'</td></tr>';
         rows+='</tbody>';
       });
       recap.innerHTML=rows;
@@ -114,9 +117,9 @@
     var today=new Date();var limit=new Date(today);limit.setDate(limit.getDate()+30);
     var d=sheet.querySelector('[data-field="date"]');var v=sheet.querySelector('[data-field="validite"]');
     if(d)d.textContent=dateFmt.format(today);
-    if(v)v.textContent='30 jours, soit jusqu’au '+dateFmt.format(limit);
+    if(v)v.textContent=L.validity(dateFmt.format(limit));
     var sig=sheet.querySelector('.sig p[contenteditable]');
-    if(sig&&/^Bussy FR, le /.test(sig.textContent))sig.textContent='Bussy FR, le '+dateFmt.format(today);
+    if(sig&&L.signRe.test(sig.textContent))sig.textContent=L.sign+dateFmt.format(today);
   }
 
   sheet.addEventListener('input',function(e){recalc();save();});
@@ -152,7 +155,7 @@
 
   document.getElementById('btn-print').addEventListener('click',function(){window.print();});
   document.getElementById('btn-reset').addEventListener('click',function(){
-    if(!confirm('Repartir du modèle vierge ? Les modifications de ce devis seront perdues.'))return;
+    if(!confirm(L.reset))return;
     try{localStorage.removeItem(KEY);}catch(e){}
     location.reload();
   });

@@ -1,0 +1,9 @@
+{
+  "name": "endry-sa",
+  "main": "dist/server/index.js",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": true,
+  "vars": {"ADMIN_AUTH_MODE": "password"},
+  "d1_databases": [{"binding": "DB", "database_name": "endry-sa", "database_id": "REMPLACER_PAR_ID_D1", "migrations_dir": "drizzle"}],
+  "r2_buckets": [{"binding": "BUCKET", "bucket_name": "endry-sa-photos"}]
+}

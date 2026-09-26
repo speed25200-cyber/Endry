@@ -423,7 +423,7 @@ struct VueErreur: View {
 struct BoutonPrincipal: ButtonStyle {
     var couleur: Color = .encre
 
-    func makeBody(configuration: Configuration) -> some View {
+    func makeBody(configuration: ButtonStyleConfiguration) -> some View {
         EtiquetteBouton(label: configuration.label, presse: configuration.isPressed, couleur: couleur, principal: true)
     }
 }
@@ -431,7 +431,7 @@ struct BoutonPrincipal: ButtonStyle {
 struct BoutonSecondaire: ButtonStyle {
     var couleur: Color = .encre
 
-    func makeBody(configuration: Configuration) -> some View {
+    func makeBody(configuration: ButtonStyleConfiguration) -> some View {
         EtiquetteBouton(label: configuration.label, presse: configuration.isPressed, couleur: couleur, principal: false)
     }
 }

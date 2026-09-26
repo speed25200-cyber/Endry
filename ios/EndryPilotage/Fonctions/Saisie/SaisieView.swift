@@ -15,6 +15,7 @@ struct SaisieView: View {
     @State private var selectionPhotos: [PhotosPickerItem] = []
     @State private var scannerPresente = false
     @State private var cameraPresentee = false
+    @State private var photosPresentees = false
     @FocusState private var focusTexte: Bool
 
     var body: some View {
@@ -48,6 +49,7 @@ struct SaisieView: View {
         .onChange(of: dictee.transcription) { _, nouvelle in
             if !nouvelle.isEmpty { modele.texte = base + nouvelle }
         }
+        .photosPicker(isPresented: $photosPresentees, selection: $selectionPhotos, maxSelectionCount: 10, matching: .images, photoLibrary: .shared())
         .onChange(of: selectionPhotos) { _, elements in
             Task { await importer(elements) }
         }
@@ -129,10 +131,7 @@ struct SaisieView: View {
                 if VNDocumentCameraViewController.isSupported {
                     boutonAjout("Scanner", icone: "doc.viewfinder") { scannerPresente = true }
                 }
-                PhotosPicker(selection: $selectionPhotos, maxSelectionCount: 10, matching: .images, photoLibrary: .shared()) {
-                    etiquetteAjout("Photos", icone: "photo.on.rectangle")
-                }
-                .buttonStyle(.plain)
+                boutonAjout("Photos", icone: "photo.on.rectangle") { photosPresentees = true }
                 if UIImagePickerController.isSourceTypeAvailable(.camera) {
                     boutonAjout("Caméra", icone: "camera") { cameraPresentee = true }
                 }

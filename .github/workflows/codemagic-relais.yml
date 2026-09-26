@@ -1,0 +1,20 @@
+# Relais vers l'API Codemagic : état des builds et journaux d'erreur, lisibles dans les logs de ce job.
+# Se déclenche quand .github/codemagic/demande.json change, ou à la main.
+name: Codemagic (relais)
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/codemagic/demande.json"
+permissions:
+  contents: read
+jobs:
+  relais:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Interroger Codemagic
+        env:
+          CM_JETON: ${{ secrets.CODEMAGIC_API_TOKEN || secrets.CODEMAGIC_TOKEN || secrets.CM_API_TOKEN || secrets.CODEMAGIC_API_KEY || secrets.CODEMAGIC }}
+        run: python3 .github/codemagic/relais.py

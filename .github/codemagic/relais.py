@@ -35,7 +35,7 @@ if demande.get("action") == "lancer":
     print("== Build démarré :", r)
 
 import time
-commit = os.environ.get("GITHUB_SHA", "")
+commit = demande.get("commit") or os.environ.get("GITHUB_SHA", "")
 builds = (appel(f"/builds?appId={app['_id']}") or {}).get("builds", [])
 if demande.get("action") == "attendre" and commit:
     # Attend le build Codemagic de ce commit (jusqu'à ~25 min).

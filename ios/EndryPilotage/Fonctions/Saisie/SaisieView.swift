@@ -1,0 +1,387 @@
+import EndryKit
+import PhotosUI
+import SwiftUI
+import UIKit
+import UniformTypeIdentifiers
+import VisionKit
+
+/// Saisie terrain : dictée, scanner de documents, photos, envoi au bureau.
+struct SaisieView: View {
+    @Environment(ModeleApp.self) private var app
+    @Bindable var modele: ModeleSaisie
+
+    @State private var dictee = Dictee()
+    @State private var base = ""
+    @State private var selectionPhotos: [PhotosPickerItem] = []
+    @State private var scannerPresente = false
+    @State private var cameraPresentee = false
+    @FocusState private var focusTexte: Bool
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Espace.l) {
+                    VStack(alignment: .leading, spacing: Espace.xxs) {
+                        Text("Saisie terrain").styleSurtitre()
+                        Text("Dites-le, c’est transmis.")
+                            .styleTitre(30, relativeTo: .largeTitle)
+                            .foregroundStyle(Color.encre)
+                    }
+                    .padding(.top, Espace.m)
+
+                    if case .transmis(let message) = modele.etat {
+                        confirmation(message)
+                            .transition(.scale(scale: 0.9).combined(with: .opacity))
+                    } else {
+                        editeur
+                    }
+                }
+                .padding(.horizontal, Espace.bord)
+                .padding(.bottom, 130)
+                .animation(.spring(response: 0.5, dampingFraction: 0.8), value: modele.etat)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .scrollIndicators(.hidden)
+            .background(Color.fond)
+            .toolbar(.hidden, for: .navigationBar)
+        }
+        .onChange(of: dictee.transcription) { _, nouvelle in
+            if !nouvelle.isEmpty { modele.texte = base + nouvelle }
+        }
+        .onChange(of: selectionPhotos) { _, elements in
+            Task { await importer(elements) }
+        }
+        .fullScreenCover(isPresented: $scannerPresente) {
+            ScannerDocuments { pages in
+                scannerPresente = false
+                ajouterScan(pages)
+            } annuler: {
+                scannerPresente = false
+            }
+            .ignoresSafeArea()
+        }
+        .fullScreenCover(isPresented: $cameraPresentee) {
+            CameraPhoto { image in
+                cameraPresentee = false
+                if let image, let data = image.jpegData(compressionQuality: 0.82) {
+                    modele.ajouter(PieceSaisie(nom: "photo-\(horodatage()).jpg", typeMIME: "image/jpeg", donnees: data, origine: .photo))
+                }
+            }
+            .ignoresSafeArea()
+        }
+        .onDisappear { dictee.arreter() }
+        .sensoryFeedback(.success, trigger: modele.etat) { _, nouveau in
+            if case .transmis = nouveau { return true }
+            return false
+        }
+    }
+
+    // MARK: - Éditeur
+
+    private var editeur: some View {
+        VStack(alignment: .leading, spacing: Espace.l) {
+            MicroAnime(ecoute: dictee.ecoute, niveau: dictee.niveau, historique: dictee.historique) {
+                Task {
+                    if !dictee.ecoute {
+                        focusTexte = false
+                        let t = modele.texte
+                        base = t.isEmpty || t.hasSuffix(" ") ? t : t + " "
+                    }
+                    await dictee.basculer()
+                }
+            }
+            .frame(maxWidth: .infinity)
+
+            Group {
+                switch dictee.etat {
+                case .ecoute:
+                    Text("J’écoute… (français de Suisse)")
+                case .refuse(let m), .indisponible(let m):
+                    Text(m).foregroundStyle(Color.rouille)
+                case .repos:
+                    Text("Touchez le micro et parlez : bons, heures, matériel, remarques de chantier.")
+                }
+            }
+            .styleTexte(14, relativeTo: .subheadline, graisse: .medium)
+            .foregroundStyle(Color.encreDouce)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+
+            ZStack(alignment: .topLeading) {
+                if modele.texte.isEmpty {
+                    Text("Ou écrivez ici…")
+                        .styleTexte(16)
+                        .foregroundStyle(Color.encrePale)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 8)
+                }
+                TextEditor(text: $modele.texte)
+                    .styleTexte(16)
+                    .scrollContentBackground(.hidden)
+                    .focused($focusTexte)
+                    .frame(minHeight: 120)
+                    .accessibilityIdentifier("texte-saisie")
+            }
+            .padding(Espace.s)
+            .surfaceCarte(rayon: 22)
+
+            HStack(spacing: Espace.s) {
+                if VNDocumentCameraViewController.isSupported {
+                    boutonAjout("Scanner", icone: "doc.viewfinder") { scannerPresente = true }
+                }
+                PhotosPicker(selection: $selectionPhotos, maxSelectionCount: 10, matching: .images, photoLibrary: .shared()) {
+                    etiquetteAjout("Photos", icone: "photo.on.rectangle")
+                }
+                .buttonStyle(.plain)
+                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                    boutonAjout("Caméra", icone: "camera") { cameraPresentee = true }
+                }
+            }
+
+            if !modele.pieces.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: Espace.s) {
+                        ForEach(modele.pieces) { piece in
+                            VignettePiece(piece: piece) {
+                                withAnimation(.snappy) { modele.retirer(piece) }
+                            }
+                            .transition(.scale.combined(with: .opacity))
+                        }
+                    }
+                    .padding(.vertical, Espace.xxs)
+                }
+                .scrollClipDisabled()
+                .animation(.spring(response: 0.4, dampingFraction: 0.75), value: modele.pieces.map(\.id))
+            }
+
+            if case .erreur(let message) = modele.etat {
+                Label(message, systemImage: "exclamationmark.circle.fill")
+                    .styleTexte(14, relativeTo: .subheadline, graisse: .medium)
+                    .foregroundStyle(Color.rouille)
+            }
+
+            Button {
+                dictee.arreter()
+                focusTexte = false
+                Task { await modele.envoyer() }
+            } label: {
+                HStack(spacing: Espace.xs) {
+                    if modele.etat == .envoi {
+                        ProgressView().tint(Color.fond)
+                    } else {
+                        Image(systemName: "paperplane.fill")
+                    }
+                    Text(modele.etat == .envoi ? "Transmission…" : "Transmettre au bureau")
+                }
+            }
+            .buttonStyle(BoutonPrincipal())
+            .disabled(!modele.peutEnvoyer || app.session.api == nil)
+            .accessibilityIdentifier("transmettre")
+        }
+    }
+
+    private func confirmation(_ message: String) -> some View {
+        VStack(spacing: Espace.l) {
+            ZStack {
+                Circle().fill(Color.vertControle.opacity(0.12)).frame(width: 120, height: 120)
+                Image(systemName: "checkmark")
+                    .font(.system(size: 46, weight: .semibold))
+                    .foregroundStyle(Color.vertControle)
+                    .symbolEffect(.bounce, value: message)
+            }
+            Text("Transmis").styleTitre(32, relativeTo: .largeTitle).foregroundStyle(Color.encre)
+            Text(message).styleTexte(16).foregroundStyle(Color.encreDouce).multilineTextAlignment(.center)
+            Button("Nouvelle saisie") {
+                withAnimation(.spring) { modele.recommencer() }
+                selectionPhotos = []
+            }
+            .buttonStyle(BoutonSecondaire())
+            .accessibilityIdentifier("nouvelle-saisie")
+        }
+        .padding(Espace.xl)
+        .frame(maxWidth: .infinity)
+        .surfaceCarte()
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("confirmation-transmis")
+    }
+
+    private func boutonAjout(_ titre: String, icone: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) { etiquetteAjout(titre, icone: icone) }
+            .buttonStyle(.plain)
+    }
+
+    private func etiquetteAjout(_ titre: String, icone: String) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: icone).font(.system(size: 20, weight: .medium))
+            Text(titre).styleTexte(12, relativeTo: .caption, graisse: .semibold)
+        }
+        .foregroundStyle(Color.encre)
+        .frame(maxWidth: .infinity, minHeight: 72)
+        .surfaceCarte(rayon: 18)
+    }
+
+    // MARK: - Pièces
+
+    private func importer(_ elements: [PhotosPickerItem]) async {
+        guard !elements.isEmpty else { return }
+        for element in elements {
+            guard let data = try? await element.loadTransferable(type: Data.self) else { continue }
+            let type = element.supportedContentTypes.first
+            let heic = type?.identifier == "public.heic"
+            let donnees: Data
+            let mime: String
+            let ext: String
+            if heic || (type?.conforms(to: .jpeg) ?? false) || (type?.conforms(to: .png) ?? false) {
+                donnees = data
+                mime = heic ? "image/heic" : (type?.conforms(to: .png) ?? false) ? "image/png" : "image/jpeg"
+                ext = heic ? "heic" : (type?.conforms(to: .png) ?? false) ? "png" : "jpg"
+            } else if let image = UIImage(data: data), let jpeg = image.jpegData(compressionQuality: 0.85) {
+                donnees = jpeg
+                mime = "image/jpeg"
+                ext = "jpg"
+            } else {
+                continue
+            }
+            modele.ajouter(PieceSaisie(nom: "photo-\(horodatage())-\(modele.pieces.count + 1).\(ext)", typeMIME: mime, donnees: donnees, origine: .photo))
+        }
+        selectionPhotos = []
+    }
+
+    private func ajouterScan(_ pages: [UIImage]) {
+        guard !pages.isEmpty else { return }
+        // Un scan de plusieurs pages devient un seul PDF.
+        let format = UIGraphicsPDFRendererFormat()
+        let limites = CGRect(x: 0, y: 0, width: 595, height: 842)
+        let pdf = UIGraphicsPDFRenderer(bounds: limites, format: format).pdfData { contexte in
+            for page in pages {
+                contexte.beginPage()
+                let echelle = min(limites.width / page.size.width, limites.height / page.size.height)
+                let taille = CGSize(width: page.size.width * echelle, height: page.size.height * echelle)
+                page.draw(in: CGRect(x: (limites.width - taille.width) / 2, y: (limites.height - taille.height) / 2, width: taille.width, height: taille.height))
+            }
+        }
+        modele.ajouter(PieceSaisie(nom: "scan-\(horodatage()).pdf", typeMIME: "application/pdf", donnees: pdf, origine: .scan))
+    }
+
+    private func horodatage() -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyyMMdd-HHmmss"
+        return f.string(from: Date())
+    }
+}
+
+private struct VignettePiece: View {
+    var piece: PieceSaisie
+    var retirer: () -> Void
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Group {
+                if piece.typeMIME.hasPrefix("image/"), let image = UIImage(data: piece.donnees) {
+                    Image(uiImage: image).resizable().scaledToFill()
+                } else {
+                    ZStack {
+                        Color.surfaceCreuse
+                        VStack(spacing: 4) {
+                            Image(systemName: piece.origine == .scan ? "doc.viewfinder" : "doc")
+                                .font(.system(size: 24, weight: .light))
+                            Text(piece.tailleLisible).styleTexte(10, relativeTo: .caption2)
+                        }
+                        .foregroundStyle(Color.bronze)
+                    }
+                }
+            }
+            .frame(width: 84, height: 108)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Color.filet, lineWidth: 0.5))
+
+            Button(action: retirer) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(Color.fond)
+                    .frame(width: 22, height: 22)
+                    .background(Color.encre.opacity(0.8), in: Circle())
+            }
+            .offset(x: 6, y: -6)
+            .accessibilityLabel(Text("Retirer \(piece.nom)"))
+        }
+    }
+}
+
+/// Scanner de documents VisionKit (bons de livraison, factures surlignées…).
+struct ScannerDocuments: UIViewControllerRepresentable {
+    var terminer: ([UIImage]) -> Void
+    var annuler: () -> Void
+
+    func makeUIViewController(context: Context) -> VNDocumentCameraViewController {
+        let controleur = VNDocumentCameraViewController()
+        controleur.delegate = context.coordinator
+        return controleur
+    }
+
+    func updateUIViewController(_ controleur: VNDocumentCameraViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinateur { Coordinateur(terminer: terminer, annuler: annuler) }
+
+    final class Coordinateur: NSObject, VNDocumentCameraViewControllerDelegate {
+        let terminer: ([UIImage]) -> Void
+        let annuler: () -> Void
+
+        init(terminer: @escaping ([UIImage]) -> Void, annuler: @escaping () -> Void) {
+            self.terminer = terminer
+            self.annuler = annuler
+        }
+
+        func documentCameraViewController(_ controller: VNDocumentCameraViewController, didFinishWith scan: VNDocumentCameraScan) {
+            terminer((0..<scan.pageCount).map { scan.imageOfPage(at: $0) })
+        }
+
+        func documentCameraViewControllerDidCancel(_ controller: VNDocumentCameraViewController) {
+            annuler()
+        }
+
+        func documentCameraViewController(_ controller: VNDocumentCameraViewController, didFailWithError error: Error) {
+            annuler()
+        }
+    }
+}
+
+/// Appareil photo simple.
+struct CameraPhoto: UIViewControllerRepresentable {
+    var terminer: (UIImage?) -> Void
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let controleur = UIImagePickerController()
+        controleur.sourceType = .camera
+        controleur.delegate = context.coordinator
+        return controleur
+    }
+
+    func updateUIViewController(_ controleur: UIImagePickerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinateur { Coordinateur(terminer: terminer) }
+
+    final class Coordinateur: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let terminer: (UIImage?) -> Void
+
+        init(terminer: @escaping (UIImage?) -> Void) {
+            self.terminer = terminer
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            terminer(info[.originalImage] as? UIImage)
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            terminer(nil)
+        }
+    }
+}
+
+#Preview("Saisie — démo") {
+    let app = ModeleApp()
+    app.activerDemo()
+    return SaisieView(modele: app.saisie!)
+        .environment(app)
+}

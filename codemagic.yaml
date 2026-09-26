@@ -1,0 +1,158 @@
+# Codemagic — application iPhone « Endry Pilotage » (dossier ios/).
+# Documentation : ios/README.md, section « Codemagic et TestFlight ».
+#
+# Deux workflows :
+#   ios-tests      build + tests (paquet EndryKit, tests unitaires, tests UI, captures clair/sombre)
+#                  à chaque push et pull request qui touche ios/ ou ce fichier.
+#   ios-testflight signature + IPA + envoi TestFlight, sur un tag « ios-v* » ou lancé à la main.
+#
+# Aucun secret dans ce fichier : ils vivent dans le groupe de variables Codemagic « endry_app_store ».
+
+definitions:
+  outils: &outils
+    name: Outils (XcodeGen, Metal)
+    script: |
+      set -e
+      brew install xcodegen || brew upgrade xcodegen
+      xcodebuild -version
+      # Depuis Xcode 26, le compilateur Metal (shader de la carte héros) est un composant à part.
+      xcodebuild -downloadComponent MetalToolchain || true
+  projet: &projet
+    name: Générer le projet Xcode
+    working_directory: ios
+    script: xcodegen generate
+
+workflows:
+  ios-tests:
+    name: iOS · build et tests
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+    environment:
+      xcode: latest
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: "*"
+          include: true
+          source: true
+      cancel_previous_builds: true
+    when:
+      changeset:
+        includes:
+          - "ios/"
+          - "codemagic.yaml"
+    scripts:
+      - *outils
+      - *projet
+      - name: Tests du paquet EndryKit
+        working_directory: ios/EndryKit
+        script: swift test
+      - name: Build et tests de l'app (simulateur)
+        working_directory: ios
+        script: |
+          set -o pipefail
+          # Dernier iPhone disponible sur le runtime iOS le plus récent de l'image.
+          SIM_ID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          d = json.load(sys.stdin)["devices"]
+          def version(k):
+              v = k.rsplit(".", 1)[-1].replace("iOS-", "").split("-")
+              return tuple(int(x) for x in v if x.isdigit())
+          runtimes = sorted((k for k in d if ".iOS-" in k and d[k]), key=version)
+          for k in reversed(runtimes):
+              iphones = [x for x in d[k] if x["name"].startswith("iPhone") and "SE" not in x["name"]]
+              if iphones:
+                  print(iphones[0]["udid"]); break
+          ')
+          echo "Simulateur : $SIM_ID"
+          xcrun simctl boot "$SIM_ID" || true
+          xcodebuild test \
+            -project EndryPilotage.xcodeproj \
+            -scheme EndryPilotage \
+            -destination "id=$SIM_ID" \
+            -resultBundlePath build/Tests.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty --report junit --output build/junit.xml
+        test_report: ios/build/junit.xml
+      - name: Extraire les captures d'écran
+        working_directory: ios
+        script: |
+          mkdir -p build/captures
+          xcrun xcresulttool export attachments --path build/Tests.xcresult --output-path build/captures || true
+          ls -la build/captures || true
+          cd build && zip -qr Tests.xcresult.zip Tests.xcresult || true
+    artifacts:
+      - ios/build/captures/**
+      - ios/build/Tests.xcresult.zip
+      - /tmp/xcodebuild_logs/*.log
+
+  ios-testflight:
+    name: iOS · TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 90
+    environment:
+      xcode: latest
+      groups:
+        # ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8, APPLE_TEAM_ID, CERTIFICATE_PRIVATE_KEY
+        # (+ APP_STORE_APPLE_ID, facultatif : identifiant numérique de l'app dans App Store Connect)
+        - endry_app_store
+      vars:
+        BUNDLE_ID: ch.endry.pilotage
+        BUNDLE_ID_WIDGET: ch.endry.pilotage.widget
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "ios-v*"
+          include: true
+    scripts:
+      - *outils
+      - *projet
+      - name: Identifiants App Store Connect
+        script: |
+          set -e
+          # Noms attendus par l'outillage Codemagic (app-store-connect, xcode-project).
+          echo "APP_STORE_CONNECT_KEY_IDENTIFIER=$ASC_KEY_ID" >> "$CM_ENV"
+          echo "APP_STORE_CONNECT_ISSUER_ID=$ASC_ISSUER_ID" >> "$CM_ENV"
+          {
+            echo "APP_STORE_CONNECT_PRIVATE_KEY<<FIN_CLE_ASC"
+            echo "$ASC_KEY_P8"
+            echo "FIN_CLE_ASC"
+          } >> "$CM_ENV"
+      - name: Certificats et profils (app + widget)
+        script: |
+          set -e
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          app-store-connect fetch-signing-files "$BUNDLE_ID_WIDGET" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles --project ios/EndryPilotage.xcodeproj
+      - name: Numéro de build
+        working_directory: ios
+        script: |
+          set -e
+          NUMERO="$PROJECT_BUILD_NUMBER"
+          if [ -n "$APP_STORE_APPLE_ID" ]; then
+            DERNIER=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || echo 0)
+            NUMERO=$((DERNIER + 1))
+          fi
+          echo "Build n° $NUMERO"
+          agvtool new-version -all "$NUMERO"
+      - name: Construire l'IPA
+        script: |
+          xcode-project build-ipa \
+            --project ios/EndryPilotage.xcodeproj \
+            --scheme EndryPilotage \
+            --config Release
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        api_key: $ASC_KEY_P8
+        key_id: $ASC_KEY_ID
+        issuer_id: $ASC_ISSUER_ID
+        submit_to_testflight: true

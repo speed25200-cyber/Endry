@@ -1,0 +1,94 @@
+import SwiftUI
+
+/// Gros bouton micro : respiration au repos, anneaux et forme d'onde qui réagissent au niveau audio pendant la dictée.
+struct MicroAnime: View {
+    var ecoute: Bool
+    var niveau: Float
+    var historique: [Float]
+    var diametre: CGFloat = 132
+    var action: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
+
+    var body: some View {
+        VStack(spacing: Espace.l) {
+            Button(action: action) {
+                ZStack {
+                    // Anneaux concentriques : ils s'écartent avec la voix.
+                    ForEach(0..<3, id: \.self) { i in
+                        Circle()
+                            .strokeBorder(Color.or.opacity(ecoute ? 0.45 - Double(i) * 0.12 : 0.18 - Double(i) * 0.05), lineWidth: 1)
+                            .frame(width: diametre + CGFloat(i + 1) * 26, height: diametre + CGFloat(i + 1) * 26)
+                            .scaleEffect(ecoute && !reduireAnimations ? 1 + CGFloat(niveau) * (0.10 + CGFloat(i) * 0.06) : 1)
+                            .animation(.spring(response: 0.25, dampingFraction: 0.6), value: niveau)
+                    }
+
+                    Circle()
+                        .fill(ecoute ? AnyShapeStyle(Color.espresso) : AnyShapeStyle(.degradeOr))
+                        .frame(width: diametre, height: diametre)
+                        .overlay(Circle().strokeBorder(Color.or.opacity(ecoute ? 0.9 : 0.5), lineWidth: ecoute ? 2 : 1))
+                        .shadow(color: Color.bronzeMoyen.opacity(ecoute ? 0.2 : 0.45), radius: 24, y: 10)
+
+                    Image(systemName: ecoute ? "stop.fill" : "mic.fill")
+                        .font(.system(size: diametre * 0.3, weight: .semibold))
+                        .foregroundStyle(ecoute ? Color.or : Color.espresso)
+                        .contentTransition(.symbolEffect(.replace))
+                }
+                .keyframeAnimator(initialValue: 1.0, trigger: ecoute) { contenu, echelle in
+                    contenu.scaleEffect(echelle)
+                } keyframes: { _ in
+                    KeyframeTrack {
+                        SpringKeyframe(0.9, duration: 0.12)
+                        SpringKeyframe(1.06, duration: 0.22)
+                        SpringKeyframe(1.0, duration: 0.3)
+                    }
+                }
+                .phaseAnimator(ecoute || reduireAnimations ? [false] : [false, true]) { contenu, phase in
+                    contenu.scaleEffect(phase ? 1.035 : 1)
+                } animation: { _ in .easeInOut(duration: 2.2) }
+            }
+            .buttonStyle(.plain)
+            .frame(height: diametre + 90)
+            .sensoryFeedback(.impact(weight: .heavy), trigger: ecoute)
+            .accessibilityLabel(Text(ecoute ? "Arrêter la dictée" : "Commencer la dictée"))
+            .accessibilityIdentifier("micro")
+
+            FormeOnde(historique: historique, active: ecoute)
+                .frame(height: 36)
+                .padding(.horizontal, Espace.xl)
+                .accessibilityHidden(true)
+        }
+    }
+}
+
+/// Forme d'onde : barres arrondies alimentées par l'historique du niveau audio.
+struct FormeOnde: View {
+    var historique: [Float]
+    var active: Bool
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 3) {
+            ForEach(Array(historique.enumerated()), id: \.offset) { index, valeur in
+                Capsule()
+                    .fill(active ? AnyShapeStyle(.degradeOr) : AnyShapeStyle(Color.filet))
+                    .frame(width: 3, height: max(3, CGFloat(active ? valeur : 0.05) * 36 * enveloppe(index)))
+                    .animation(.spring(response: 0.22, dampingFraction: 0.7), value: valeur)
+            }
+        }
+    }
+
+    /// Les barres du centre montent plus haut que celles des bords.
+    private func enveloppe(_ i: Int) -> CGFloat {
+        let n = CGFloat(max(historique.count - 1, 1))
+        let x = CGFloat(i) / n
+        return 0.45 + 0.55 * sin(.pi * x)
+    }
+}
+
+#Preview {
+    VStack {
+        MicroAnime(ecoute: false, niveau: 0, historique: Array(repeating: 0, count: 28)) {}
+        MicroAnime(ecoute: true, niveau: 0.6, historique: (0..<28).map { _ in Float.random(in: 0...1) }) {}
+    }
+    .background(Color.fond)
+}

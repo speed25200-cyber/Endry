@@ -7,6 +7,7 @@ final class EndryPilotageUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    @MainActor
     private func lancer(_ arguments: [String] = ["-demo"]) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-uitests", "-AppleLanguages", "(fr)", "-AppleLocale", "fr_CH"] + arguments
@@ -14,11 +15,13 @@ final class EndryPilotageUITests: XCTestCase {
         return app
     }
 
+    @MainActor
     private func titreDecisions(_ app: XCUIApplication) -> XCUIElement {
         app.descendants(matching: .any)["titre-a-decider"].firstMatch
     }
 
     /// Fait défiler jusqu'à ce que l'élément existe et soit touchable (listes paresseuses).
+    @MainActor
     @discardableResult
     private func atteindre(_ element: XCUIElement, dans app: XCUIApplication, essais: Int = 8) -> XCUIElement {
         var n = 0
@@ -29,6 +32,7 @@ final class EndryPilotageUITests: XCTestCase {
         return element
     }
 
+    @MainActor
     func testConnexionDemoDepuisAccueil() {
         let app = lancer([])
         let demo = app.buttons["bouton-demo"]
@@ -41,6 +45,7 @@ final class EndryPilotageUITests: XCTestCase {
         XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 5))
     }
 
+    @MainActor
     func testOuiNonCorriger() {
         let app = lancer()
         XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 5))
@@ -74,6 +79,7 @@ final class EndryPilotageUITests: XCTestCase {
         XCTAssertTrue(corriger.waitForNonExistence(timeout: 5))
     }
 
+    @MainActor
     func testGlisserPourEnvoyer() {
         let app = lancer()
         XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 5))
@@ -86,6 +92,7 @@ final class EndryPilotageUITests: XCTestCase {
         XCTAssertTrue(carte.waitForNonExistence(timeout: 5))
     }
 
+    @MainActor
     func testSaisieTerrain() {
         let app = lancer()
         let onglet = app.buttons["onglet-saisie"]
@@ -99,6 +106,7 @@ final class EndryPilotageUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Transmis"].waitForExistence(timeout: 5))
     }
 
+    @MainActor
     func testCapturesClairEtSombre() {
         for schema in ["-clair", "-sombre"] {
             let app = lancer(["-demo", schema])
@@ -113,6 +121,7 @@ final class EndryPilotageUITests: XCTestCase {
         }
     }
 
+    @MainActor
     private func capturer(_ app: XCUIApplication, _ nom: String) {
         let piece = XCTAttachment(screenshot: app.screenshot())
         piece.name = nom

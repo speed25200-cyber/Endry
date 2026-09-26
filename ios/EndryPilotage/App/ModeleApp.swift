@@ -41,7 +41,7 @@ final class ModeleApp {
         }
         if Configuration.lancementDemo {
             self.session.activerDemo(latence: Configuration.testsUI ? .milliseconds(80) : .milliseconds(450))
-            verrou.actif = false
+            verrou.marquerDeverrouille()
         }
         reconstruire()
     }

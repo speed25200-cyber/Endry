@@ -1,4 +1,5 @@
 import EndryKit
+import UIKit
 import XCTest
 @testable import EndryPilotage
 

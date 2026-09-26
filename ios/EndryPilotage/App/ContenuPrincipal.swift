@@ -1,4 +1,5 @@
 import EndryKit
+import QuickLook
 import SwiftUI
 
 /// Les cinq écrans, gardés en mémoire (position de défilement conservée), sous la barre d'onglets en verre.

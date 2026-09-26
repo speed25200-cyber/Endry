@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Tirer-pour-actualiser personnalisé : anneau doré qui se remplit, monogramme au centre, retour haptique au seuil.
 struct TirerPourActualiser: ViewModifier {
-    var action: () async -> Void
+    var action: @MainActor () async -> Void
 
     @State private var tirage: CGFloat = 0
     @State private var arme = false
@@ -80,7 +80,7 @@ struct IndicateurActualisation: View {
 }
 
 extension View {
-    func tirerPourActualiser(_ action: @escaping () async -> Void) -> some View {
+    func tirerPourActualiser(_ action: @escaping @MainActor () async -> Void) -> some View {
         modifier(TirerPourActualiser(action: action))
     }
 }

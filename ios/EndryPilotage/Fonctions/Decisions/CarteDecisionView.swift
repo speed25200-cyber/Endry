@@ -7,7 +7,7 @@ struct CarteDecisionView: View {
     var actionsPossibles: Bool
     var enCours: Bool
     var enAvant: Bool
-    var agir: (ActionDecision, String?) async -> Bool
+    var agir: @MainActor (ActionDecision, String?) async -> Bool
     var ouvrirPiece: (Piece) -> Void
 
     @State private var texteDeplie = false

@@ -15,7 +15,7 @@ struct ConsignesSheet: View {
 
     var mode: Mode
     var carte: Carte
-    var envoyer: (String) async -> Bool
+    var envoyer: @MainActor (String) async -> Bool
 
     @Environment(\.dismiss) private var fermer
     @State private var texte = ""

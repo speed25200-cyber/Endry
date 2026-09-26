@@ -1,0 +1,215 @@
+{
+  "encaisser": {
+    "factures": [
+      {
+        "facture_id": "3187",
+        "numero": "RE-2026-0412",
+        "titre": "Remplacement chaudière mazout par PAC air-eau",
+        "client": "Famille Rochat",
+        "montant": 13695.45,
+        "echeance": "2026-10-10",
+        "retard_jours": 0
+      },
+      {
+        "facture_id": "3179",
+        "numero": "RE-2026-0405",
+        "titre": "Salle de bains étage — installation sanitaire",
+        "client": "M. et Mme Chappuis",
+        "montant": 8420.8,
+        "echeance": "2026-09-14",
+        "retard_jours": 12
+      },
+      {
+        "facture_id": "3171",
+        "numero": "RE-2026-0397",
+        "titre": "Détartrage boiler 300 L et remplacement anode",
+        "client": "Mme Favre",
+        "montant": 486.35,
+        "echeance": "2026-09-05",
+        "retard_jours": 21
+      },
+      {
+        "facture_id": "3158",
+        "numero": "RE-2026-0381",
+        "titre": "Ventilation double flux — acompte 2",
+        "client": "PPE Les Vergers",
+        "montant": 21500.0,
+        "echeance": "2026-08-20",
+        "retard_jours": 37
+      },
+      {
+        "facture_id": "3140",
+        "numero": "RE-2026-0366",
+        "titre": "Dépannage circulateur chauffage au sol",
+        "client": "M. Jaquier",
+        "montant": 742.1,
+        "echeance": "2026-07-18",
+        "retard_jours": 70
+      },
+      {
+        "facture_id": "3190",
+        "numero": "RE-2026-0415",
+        "titre": "Raccordement cuisine et lave-vaisselle",
+        "client": "M. et Mme Chappuis",
+        "montant": 1265.0,
+        "echeance": "2026-10-20",
+        "retard_jours": 0
+      }
+    ],
+    "total": 46109.7,
+    "anciennete": {
+      "a_echoir": 14960.45,
+      "0_30": 8907.15,
+      "31_60": 21500.0,
+      "plus_60": 742.1
+    }
+  },
+  "payer": {
+    "factures": [
+      {
+        "id": "FF-881",
+        "fournisseur": "Grossiste Sanitaire Romand SA",
+        "numero": "F-240918",
+        "montant": 4213.6,
+        "echeance": "2026-09-29",
+        "objet": "Matériel salle de bains Chappuis",
+        "statut": "à payer",
+        "jours_restants": 3
+      },
+      {
+        "id": "FF-884",
+        "fournisseur": "Chauffage Distribution Broye",
+        "numero": "2026-5512",
+        "montant": 9870.0,
+        "echeance": "2026-10-01",
+        "objet": "Pompe à chaleur 9 kW — chantier Rochat",
+        "statut": "à payer",
+        "jours_restants": 5
+      },
+      {
+        "id": "FF-879",
+        "fournisseur": "Ventilation Léman Sàrl",
+        "numero": "VL-7731",
+        "montant": 2388.25,
+        "echeance": "2026-10-15",
+        "objet": "Gaines et bouches — PPE Les Vergers",
+        "statut": "à payer",
+        "jours_restants": 19
+      },
+      {
+        "id": "FF-886",
+        "fournisseur": "Outillage Gruyère SA",
+        "numero": "OG-10042",
+        "montant": 318.9,
+        "echeance": "2026-10-24",
+        "objet": "Consommables atelier",
+        "statut": "à payer",
+        "jours_restants": 28
+      }
+    ],
+    "total": 16790.75,
+    "cette_semaine": [
+      {
+        "id": "FF-881",
+        "fournisseur": "Grossiste Sanitaire Romand SA",
+        "numero": "F-240918",
+        "montant": 4213.6,
+        "echeance": "2026-09-29",
+        "objet": "Matériel salle de bains Chappuis",
+        "statut": "à payer",
+        "jours_restants": 3
+      },
+      {
+        "id": "FF-884",
+        "fournisseur": "Chauffage Distribution Broye",
+        "numero": "2026-5512",
+        "montant": 9870.0,
+        "echeance": "2026-10-01",
+        "objet": "Pompe à chaleur 9 kW — chantier Rochat",
+        "statut": "à payer",
+        "jours_restants": 5
+      }
+    ],
+    "total_semaine": 14083.6
+  },
+  "offres": {
+    "offres": [
+      {
+        "offre_id": "812",
+        "numero": "OF-2026-0233",
+        "titre": "Rénovation complète salle de bains et WC séparé",
+        "client": "Villa Bersier",
+        "montant": 28640.0,
+        "emise_le": "2026-09-08",
+        "valable_jusqu_au": "2026-10-08"
+      },
+      {
+        "offre_id": "815",
+        "numero": "OF-2026-0236",
+        "titre": "Pompe à chaleur géothermique 12 kW",
+        "client": "M. Clément",
+        "montant": 46380.5,
+        "emise_le": "2026-09-15",
+        "valable_jusqu_au": "2026-10-15"
+      },
+      {
+        "offre_id": "817",
+        "numero": "OF-2026-0239",
+        "titre": "Adoucisseur d'eau et nouvelle nourrice",
+        "client": "Famille Dubey",
+        "montant": 5420.0,
+        "emise_le": "2026-09-22",
+        "valable_jusqu_au": "2026-10-22"
+      }
+    ],
+    "total": 80440.5
+  },
+  "a_refacturer": {
+    "achats": [
+      {
+        "id": "AR-12",
+        "fournisseur": "Grossiste Sanitaire Romand SA",
+        "libelle": "Siphon design et bonde clic-clac (hors offre)",
+        "chantier": "M. et Mme Chappuis",
+        "montant": 186.4,
+        "date": "2026-09-19"
+      },
+      {
+        "id": "AR-13",
+        "fournisseur": "Chauffage Distribution Broye",
+        "libelle": "Vase d’expansion 35 L supplémentaire",
+        "chantier": "Famille Rochat",
+        "montant": 264.0,
+        "date": "2026-09-21"
+      },
+      {
+        "id": "AR-14",
+        "fournisseur": "Outillage Gruyère SA",
+        "libelle": "Location carotteuse 2 jours",
+        "chantier": "PPE Les Vergers",
+        "montant": 390.0,
+        "date": "2026-09-09"
+      }
+    ],
+    "total": 840.4
+  },
+  "versements_non_identifies": [
+    {
+      "id": "VN-3",
+      "date": "2026-09-23",
+      "montant": 1500.0,
+      "libelle": "VIREMENT M. DUPASQUIER ACOMPTE"
+    },
+    {
+      "id": "VN-4",
+      "date": "2026-09-17",
+      "montant": 486.35,
+      "libelle": "TWINT *FAVRE"
+    }
+  ],
+  "heures_secretariat": {
+    "heures": 31.5,
+    "montant": 2047.5,
+    "mois": "septembre 2026"
+  }
+}

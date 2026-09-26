@@ -1,0 +1,4 @@
+{
+  "erreur": "non_authentifie",
+  "message": "Jeton expiré ou révoqué."
+}

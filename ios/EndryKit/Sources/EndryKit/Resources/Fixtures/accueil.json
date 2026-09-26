@@ -1,0 +1,297 @@
+{
+  "salut": "Bonjour Monsieur Endry",
+  "date": "samedi 26 septembre 2026",
+  "pause": false,
+  "decisions": [
+    {
+      "type": "validation",
+      "reference": "V-7K3F9Q",
+      "genre": "E-mail",
+      "titre": "Réponse à Mme Bersier — offre salle de bains",
+      "motif": "Mme Bersier demande si le WC suspendu peut être remplacé par un modèle avec lavabo intégré. Réponse proposée avec variante chiffrée.",
+      "cree": "2026-09-26T07:42:00+02:00",
+      "controle": {
+        "ok": true,
+        "resume": "Contrôle qualité réussi : montants, destinataire et pièce jointe vérifiés.",
+        "points_a_verifier": []
+      },
+      "texte": "Bonjour Madame Bersier,\n\nMerci pour votre message. Le WC suspendu peut tout à fait être remplacé par un modèle avec lave-mains intégré (Geberit AquaClean ou équivalent). La variante représente une plus-value de CHF 1’180.00 HT, pose comprise.\n\nVous trouverez en annexe l’offre mise à jour OF-2026-0233-B. Nous restons à disposition pour une visite de la salle d’exposition.\n\nMeilleures salutations\n\nEndry SA\nSanitaire · Chauffage · Ventilation\n026 663 30 60",
+      "destinataires": [
+        "m.bersier@example.ch"
+      ],
+      "objet": "Votre offre OF-2026-0233 — variante WC",
+      "pieces": [
+        {
+          "nom": "OF-2026-0233-B.pdf",
+          "url": "/app/doc/offre/812"
+        }
+      ],
+      "outil": "mail_repondre",
+      "modifiable": true
+    },
+    {
+      "type": "validation",
+      "reference": "V-2M8R4T",
+      "genre": "Facture",
+      "titre": "Envoyer la facture RE-2026-0415 à M. et Mme Chappuis",
+      "motif": "Travaux de raccordement cuisine terminés le 24 septembre. Facture préparée dans Bexio d’après le rapport de régie.",
+      "cree": "2026-09-26T07:55:00+02:00",
+      "controle": {
+        "ok": false,
+        "resume": "1 point à vérifier avant envoi.",
+        "points_a_verifier": [
+          {
+            "controle": "Heures facturées",
+            "detail": "Le rapport indique 6 h 30 mais la facture compte 7 h.",
+            "document": "Rapport de régie du 24.09.2026"
+          }
+        ]
+      },
+      "texte": "Bonjour Monsieur et Madame Chappuis,\n\nVeuillez trouver ci-joint notre facture RE-2026-0415 relative au raccordement de votre cuisine et du lave-vaisselle.\n\nNous vous remercions de votre confiance.\n\nEndry SA",
+      "destinataires": [
+        "chappuis.famille@example.ch"
+      ],
+      "objet": "Facture RE-2026-0415 — raccordement cuisine",
+      "pieces": [
+        {
+          "nom": "RE-2026-0415.pdf",
+          "url": "/app/doc/facture/3190"
+        }
+      ],
+      "outil": "envoyer_facture",
+      "modifiable": true
+    },
+    {
+      "type": "validation",
+      "reference": "V-9P1X6D",
+      "genre": "Offre",
+      "titre": "Créer l’offre adoucisseur pour la famille Dubey dans Bexio",
+      "motif": "Demande reçue par téléphone le 22 septembre. Montant calculé selon le barème 2026.",
+      "cree": "2026-09-25T16:10:00+02:00",
+      "controle": {
+        "ok": true,
+        "resume": "Contrôle qualité réussi.",
+        "points_a_verifier": []
+      },
+      "outil": "bexio_creer_offre",
+      "modifiable": true,
+      "pieces": [
+        {
+          "nom": "Projet OF-2026-0239.pdf",
+          "url": "/app/doc/offre/817"
+        }
+      ]
+    },
+    {
+      "type": "question",
+      "reference": "Q-4HD2XP",
+      "genre": "Question",
+      "titre": "Chantier Rochat : date de mise en service de la PAC ?",
+      "motif": "Le fournisseur livre la pompe à chaleur le 30 septembre. Le client demande quand il aura de nouveau de l’eau chaude. Quelle date dois-je lui annoncer ?",
+      "cree": "2026-09-25T18:03:00+02:00"
+    },
+    {
+      "type": "validation",
+      "reference": "V-5T7B2N",
+      "genre": "Paiement",
+      "titre": "Préparer le paiement Chauffage Distribution Broye — CHF 9’870.00",
+      "motif": "Facture 2026-5512 à échéance le 1er octobre. Le paiement sera préparé dans l’e-banking ; il restera à le signer vous-même.",
+      "cree": "2026-09-25T11:20:00+02:00",
+      "controle": {
+        "ok": true,
+        "resume": "IBAN identique aux paiements précédents.",
+        "points_a_verifier": []
+      },
+      "outil": "preparer_paiement",
+      "modifiable": false
+    }
+  ],
+  "encaisser": {
+    "factures": [
+      {
+        "facture_id": "3187",
+        "numero": "RE-2026-0412",
+        "titre": "Remplacement chaudière mazout par PAC air-eau",
+        "client": "Famille Rochat",
+        "montant": 13695.45,
+        "echeance": "2026-10-10",
+        "retard_jours": 0
+      },
+      {
+        "facture_id": "3179",
+        "numero": "RE-2026-0405",
+        "titre": "Salle de bains étage — installation sanitaire",
+        "client": "M. et Mme Chappuis",
+        "montant": 8420.8,
+        "echeance": "2026-09-14",
+        "retard_jours": 12
+      },
+      {
+        "facture_id": "3171",
+        "numero": "RE-2026-0397",
+        "titre": "Détartrage boiler 300 L et remplacement anode",
+        "client": "Mme Favre",
+        "montant": 486.35,
+        "echeance": "2026-09-05",
+        "retard_jours": 21
+      },
+      {
+        "facture_id": "3158",
+        "numero": "RE-2026-0381",
+        "titre": "Ventilation double flux — acompte 2",
+        "client": "PPE Les Vergers",
+        "montant": 21500.0,
+        "echeance": "2026-08-20",
+        "retard_jours": 37
+      },
+      {
+        "facture_id": "3140",
+        "numero": "RE-2026-0366",
+        "titre": "Dépannage circulateur chauffage au sol",
+        "client": "M. Jaquier",
+        "montant": 742.1,
+        "echeance": "2026-07-18",
+        "retard_jours": 70
+      },
+      {
+        "facture_id": "3190",
+        "numero": "RE-2026-0415",
+        "titre": "Raccordement cuisine et lave-vaisselle",
+        "client": "M. et Mme Chappuis",
+        "montant": 1265.0,
+        "echeance": "2026-10-20",
+        "retard_jours": 0
+      }
+    ],
+    "total": 46109.7,
+    "anciennete": {
+      "a_echoir": 14960.45,
+      "0_30": 8907.15,
+      "31_60": 21500.0,
+      "plus_60": 742.1
+    }
+  },
+  "offres": {
+    "offres": [
+      {
+        "offre_id": "812",
+        "numero": "OF-2026-0233",
+        "titre": "Rénovation complète salle de bains et WC séparé",
+        "client": "Villa Bersier",
+        "montant": 28640.0,
+        "emise_le": "2026-09-08",
+        "valable_jusqu_au": "2026-10-08"
+      },
+      {
+        "offre_id": "815",
+        "numero": "OF-2026-0236",
+        "titre": "Pompe à chaleur géothermique 12 kW",
+        "client": "M. Clément",
+        "montant": 46380.5,
+        "emise_le": "2026-09-15",
+        "valable_jusqu_au": "2026-10-15"
+      },
+      {
+        "offre_id": "817",
+        "numero": "OF-2026-0239",
+        "titre": "Adoucisseur d'eau et nouvelle nourrice",
+        "client": "Famille Dubey",
+        "montant": 5420.0,
+        "emise_le": "2026-09-22",
+        "valable_jusqu_au": "2026-10-22"
+      }
+    ],
+    "total": 80440.5
+  },
+  "payer": {
+    "factures": [
+      {
+        "id": "FF-881",
+        "fournisseur": "Grossiste Sanitaire Romand SA",
+        "numero": "F-240918",
+        "montant": 4213.6,
+        "echeance": "2026-09-29",
+        "objet": "Matériel salle de bains Chappuis",
+        "statut": "à payer",
+        "jours_restants": 3
+      },
+      {
+        "id": "FF-884",
+        "fournisseur": "Chauffage Distribution Broye",
+        "numero": "2026-5512",
+        "montant": 9870.0,
+        "echeance": "2026-10-01",
+        "objet": "Pompe à chaleur 9 kW — chantier Rochat",
+        "statut": "à payer",
+        "jours_restants": 5
+      },
+      {
+        "id": "FF-879",
+        "fournisseur": "Ventilation Léman Sàrl",
+        "numero": "VL-7731",
+        "montant": 2388.25,
+        "echeance": "2026-10-15",
+        "objet": "Gaines et bouches — PPE Les Vergers",
+        "statut": "à payer",
+        "jours_restants": 19
+      },
+      {
+        "id": "FF-886",
+        "fournisseur": "Outillage Gruyère SA",
+        "numero": "OG-10042",
+        "montant": 318.9,
+        "echeance": "2026-10-24",
+        "objet": "Consommables atelier",
+        "statut": "à payer",
+        "jours_restants": 28
+      }
+    ],
+    "total": 16790.75,
+    "cette_semaine": [
+      {
+        "id": "FF-881",
+        "fournisseur": "Grossiste Sanitaire Romand SA",
+        "numero": "F-240918",
+        "montant": 4213.6,
+        "echeance": "2026-09-29",
+        "objet": "Matériel salle de bains Chappuis",
+        "statut": "à payer",
+        "jours_restants": 3
+      },
+      {
+        "id": "FF-884",
+        "fournisseur": "Chauffage Distribution Broye",
+        "numero": "2026-5512",
+        "montant": 9870.0,
+        "echeance": "2026-10-01",
+        "objet": "Pompe à chaleur 9 kW — chantier Rochat",
+        "statut": "à payer",
+        "jours_restants": 5
+      }
+    ],
+    "total_semaine": 14083.6
+  },
+  "chantiers_7_jours": [
+    {
+      "id": "D-1042",
+      "titre": "Rochat — PAC air-eau",
+      "lieu": "Épalinges",
+      "dates": "lun. 28 – mer. 30 sept.",
+      "debut": "2026-09-28"
+    },
+    {
+      "id": "D-1051",
+      "titre": "PPE Les Vergers — ventilation",
+      "lieu": "Payerne",
+      "dates": "mar. 29 sept. – ven. 2 oct.",
+      "debut": "2026-09-29"
+    },
+    {
+      "id": "D-1057",
+      "titre": "Favre — contrôle boiler",
+      "lieu": "Romont",
+      "dates": "jeu. 1er oct.",
+      "debut": "2026-10-01"
+    }
+  ]
+}

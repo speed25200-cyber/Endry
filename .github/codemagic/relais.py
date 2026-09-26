@@ -41,22 +41,32 @@ for b in builds[: max(5, demande.get("n", 1))]:
           f"branche={b.get('branch')} tag={b.get('tag')} commit={(b.get('commit') or {}).get('hash', '')[:7]} "
           f"début={b.get('startedAt')} fin={b.get('finishedAt')} message={b.get('message')}")
 
-for b in builds[: demande.get("n", 1)]:
+cibles = [b for b in builds[: max(5, demande.get("n", 1))] if b.get("status") == "failed"][: demande.get("n", 1)]
+for b in cibles:
     print(f"\n==== Détail du build {b.get('_id')} ({b.get('status')})")
     detail = appel(f"/builds/{b['_id']}") or {}
     b = detail.get("build", b)
     for etape in b.get("buildActions", []) or []:
         print(f"  [{etape.get('status')}] {etape.get('name')}")
-        if etape.get("status") in ("failed", "canceled", "timeout") and etape.get("logUrl"):
-            journal = appel(etape["logUrl"], brut=True) or ""
-            lignes = journal.splitlines()
-            print("  ---- fin du journal ----")
-            for l in lignes[-150:]:
-                print("  | " + l)
-            erreurs = [l for l in lignes if "error:" in l]
-            if erreurs:
-                print("  ---- lignes « error: » ----")
-                for l in erreurs[:80]:
-                    print("  ! " + l)
+        if etape.get("status") not in ("failed", "canceled", "timeout"):
+            continue
+        print("  clés :", sorted(etape.keys()))
+        candidats = [etape.get("logUrl"), etape.get("logsUrl"),
+                     f"{API}/builds/{b['_id']}/step/{etape.get('_id')}",
+                     f"{API}/builds/{b['_id']}/actions/{etape.get('_id')}/log"]
+        journal = ""
+        for url in [c for c in candidats if c]:
+            journal = appel(url, brut=True) or ""
+            if journal:
+                print("  journal lu depuis", url.replace(API, "API"))
+                break
+        lignes = journal.splitlines()
+        erreurs = [l for l in lignes if "error:" in l or "** BUILD FAILED" in l or "** TEST FAILED" in l or "failed" in l.lower() and "Test Case" in l]
+        print(f"  ---- {len(erreurs)} lignes d'erreur ----")
+        for l in erreurs[:120]:
+            print("  ! " + l[:400])
+        print("  ---- fin du journal ----")
+        for l in lignes[-120:]:
+            print("  | " + l[:400])
     if b.get("message"):
         print("  message :", b.get("message"))

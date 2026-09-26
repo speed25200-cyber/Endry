@@ -34,7 +34,18 @@ if demande.get("action") == "lancer":
     r = appel("/builds", "POST", {"appId": app["_id"], "workflowId": demande["workflow"], "branch": demande["branche"]})
     print("== Build démarré :", r)
 
+import time
+commit = os.environ.get("GITHUB_SHA", "")
 builds = (appel(f"/builds?appId={app['_id']}") or {}).get("builds", [])
+if demande.get("action") == "attendre" and commit:
+    # Attend le build Codemagic de ce commit (jusqu'à ~25 min).
+    for _ in range(100):
+        miens = [b for b in builds if (b.get("commit") or {}).get("hash", "").startswith(commit[:7])]
+        if miens and all(b.get("status") in ("finished", "failed", "canceled", "timeout", "skipped", "warning") for b in miens):
+            break
+        print("… en attente du build Codemagic de", commit[:7], [b.get("status") for b in miens])
+        time.sleep(15)
+        builds = (appel(f"/builds?appId={app['_id']}") or {}).get("builds", [])
 print(f"\n== {len(builds)} builds (les plus récents d'abord)")
 for b in builds[: max(5, demande.get("n", 1))]:
     print(f"- {b.get('_id')} {b.get('status')} workflow={b.get('workflowId') or b.get('fileWorkflowId')} "

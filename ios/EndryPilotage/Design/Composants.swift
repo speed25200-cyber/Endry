@@ -422,34 +422,49 @@ struct VueErreur: View {
 
 struct BoutonPrincipal: ButtonStyle {
     var couleur: Color = .encre
-    @Environment(\.isEnabled) private var actif
 
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .styleTexte(16, relativeTo: .body, graisse: .semibold)
-            .foregroundStyle(Color.fond)
-            .frame(maxWidth: .infinity, minHeight: 52)
-            .padding(.horizontal, Espace.m)
-            .background(couleur.opacity(actif ? 1 : 0.35), in: Capsule())
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.snappy(duration: 0.2), value: configuration.isPressed)
+        EtiquetteBouton(label: configuration.label, presse: configuration.isPressed, couleur: couleur, principal: true)
     }
 }
 
 struct BoutonSecondaire: ButtonStyle {
     var couleur: Color = .encre
-    @Environment(\.isEnabled) private var actif
 
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .styleTexte(16, relativeTo: .body, graisse: .semibold)
-            .foregroundStyle(couleur.opacity(actif ? 1 : 0.4))
-            .frame(maxWidth: .infinity, minHeight: 52)
-            .padding(.horizontal, Espace.m)
-            .background(Color.surfaceCreuse.opacity(configuration.isPressed ? 1 : 0.7), in: Capsule())
-            .overlay(Capsule().strokeBorder(Color.filet, lineWidth: 0.5))
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.snappy(duration: 0.2), value: configuration.isPressed)
+        EtiquetteBouton(label: configuration.label, presse: configuration.isPressed, couleur: couleur, principal: false)
+    }
+}
+
+/// Rendu commun des boutons ; lit `isEnabled` dans une vue (et non dans le ButtonStyle).
+private struct EtiquetteBouton<Etiquette: View>: View {
+    var label: Etiquette
+    var presse: Bool
+    var couleur: Color
+    var principal: Bool
+    @Environment(\.isEnabled) private var actif
+
+    var body: some View {
+        if principal {
+            label
+                .styleTexte(16, relativeTo: .body, graisse: .semibold)
+                .foregroundStyle(Color.fond)
+                .frame(maxWidth: .infinity, minHeight: 52)
+                .padding(.horizontal, Espace.m)
+                .background(couleur.opacity(actif ? 1 : 0.35), in: Capsule())
+                .scaleEffect(presse ? 0.97 : 1)
+                .animation(.snappy(duration: 0.2), value: presse)
+        } else {
+            label
+                .styleTexte(16, relativeTo: .body, graisse: .semibold)
+                .foregroundStyle(couleur.opacity(actif ? 1 : 0.4))
+                .frame(maxWidth: .infinity, minHeight: 52)
+                .padding(.horizontal, Espace.m)
+                .background(Color.surfaceCreuse.opacity(presse ? 1 : 0.7), in: Capsule())
+                .overlay(Capsule().strokeBorder(Color.filet, lineWidth: 0.5))
+                .scaleEffect(presse ? 0.97 : 1)
+                .animation(.snappy(duration: 0.2), value: presse)
+        }
     }
 }
 

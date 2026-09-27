@@ -49,7 +49,7 @@
 	<key>NSFaceIDUsageDescription</key>
 	<string>Face ID protège l’accès aux données de l’entreprise.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Le micro sert à dicter vos consignes et vos saisies de chantier.</string>
+	<string>Le micro sert à dicter vos consignes et vos saisies de chantier, et à parler à l’assistant vocal.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Vos photos de chantier peuvent être jointes à une saisie.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

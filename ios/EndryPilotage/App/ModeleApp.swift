@@ -21,6 +21,8 @@ final class ModeleApp {
     /// Lien d'accès reçu par lien profond, en attente de confirmation de l'hôte.
     var lienEnAttente: LienAcces?
     var reglagesPresentes = false
+    /// Assistant vocal plein écran (toucher long du micro central).
+    var assistantPresente = false
     var toast: Toast?
 
     private(set) var decisions: ModeleDecisions?
@@ -33,6 +35,35 @@ final class ModeleApp {
     @ObservationIgnored let fileSaisies = FileSaisies.parDefaut()
     @ObservationIgnored let reseau = SurveillanceReseau()
     @ObservationIgnored private var dernierJetonEnvoye: String?
+
+    // MARK: - Assistant vocal
+
+    /// Nouvelle conversation : moteur temps réel si le PC fournit une session éphémère, sinon moteur local.
+    func nouvelAssistant() -> AssistantVocal {
+        AssistantVocal(
+            fabrique: { await self.moteurPrefere() },
+            repli: { self.moteurLocal() }
+        )
+    }
+
+    private func moteurPrefere() async -> any MoteurVoix {
+        if !session.estDemo, let api = session.api, let voix = try? await api.sessionVoix(), voix.disponible {
+            return MoteurTempsReel(session: voix, executeur: ExecuteurOutils(api: api))
+        }
+        return moteurLocal()
+    }
+
+    private func moteurLocal() -> any MoteurVoix {
+        MoteurLocal(
+            donnees: {
+                RepondeurLocal.Donnees(accueil: self.decisions?.accueil, argent: self.argent?.argent, chantiers: self.chantiers?.tous ?? [])
+            },
+            transmettre: { demande in
+                guard let saisie = self.saisie else { return .refusee("Connectez d’abord l’app au bureau.") }
+                return await saisie.transmettre(demande: demande)
+            }
+        )
+    }
 
     init(session: ModeleSession? = nil) {
         if let session {

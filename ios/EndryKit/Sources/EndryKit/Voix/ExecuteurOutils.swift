@@ -3,7 +3,7 @@ import Foundation
 /// Exécute les outils appelés par le modèle vocal, avec le jeton de l'appareil, et renvoie un résumé JSON compact.
 /// `proposer_decision` n'exécute rien : il affiche la carte et attend le geste du patron.
 public struct ExecuteurOutils: Sendable {
-    public enum Effet: Equatable, Sendable {
+    public enum Effet: Hashable, Sendable {
         case aucun
         /// Afficher une carte contextuelle pendant la conversation.
         case afficherDecision(String)

@@ -1,4 +1,5 @@
 import AVFoundation
+import EndryKit
 import Foundation
 import Observation
 import Speech
@@ -89,7 +90,8 @@ nonisolated final class MoteurDictee: @unchecked Sendable {
         return await AVAudioApplication.requestRecordPermission()
     }
 
-    func demarrer(surTexte: @escaping @Sendable (String, Bool) -> Void, surNiveau: @escaping @Sendable (Float) -> Void) throws {
+    /// `conversation` : micro et haut-parleur partagés avec la synthèse vocale (assistant local).
+    func demarrer(conversation: Bool = false, surTexte: @escaping @Sendable (String, Bool) -> Void, surNiveau: @escaping @Sendable (Float) -> Void) throws {
         verrou.lock()
         defer { verrou.unlock() }
         guard let reconnaisseur, reconnaisseur.isAvailable else { throw ErreurDictee.indisponible }
@@ -98,13 +100,19 @@ nonisolated final class MoteurDictee: @unchecked Sendable {
         tache = nil
 
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.record, mode: .measurement, options: .duckOthers)
+        if conversation {
+            try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth, .allowBluetoothA2DP])
+        } else {
+            try session.setCategory(.record, mode: .measurement, options: .duckOthers)
+        }
         try session.setActive(true, options: .notifyOthersOnDeactivation)
 
         let requete = SFSpeechAudioBufferRecognitionRequest()
         requete.shouldReportPartialResults = true
         requete.addsPunctuation = true
         requete.taskHint = .dictation
+        // Vocabulaire métier : marques, pièces, lieux romands.
+        requete.contextualStrings = VocabulaireMetier.termes
         if reconnaisseur.supportsOnDeviceRecognition {
             requete.requiresOnDeviceRecognition = true
         }
@@ -130,7 +138,7 @@ nonisolated final class MoteurDictee: @unchecked Sendable {
         }
     }
 
-    func arreter() {
+    func arreter(garderSession: Bool = false) {
         verrou.lock()
         defer { verrou.unlock() }
         if moteurAudio.isRunning {
@@ -141,7 +149,9 @@ nonisolated final class MoteurDictee: @unchecked Sendable {
         requete = nil
         tache?.finish()
         tache = nil
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        if !garderSession {
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        }
     }
 
     /// Niveau RMS normalisé 0…1.

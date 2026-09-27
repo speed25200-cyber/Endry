@@ -55,6 +55,23 @@ SF Mono tabulaire. Tout suit Dynamic Type (captures CI en XXL sur iPhone SE).
 5. Premier affichage : modèle **App Launch** ; l'écran Aujourd'hui s'affiche depuis le cache hors ligne,
    cible < 300 ms entre le lancement et la première image utile.
 
+## Assistant vocal
+
+Toucher court du micro central : dictée d'une saisie terrain. **Toucher long** : assistant vocal plein écran
+(sphère d'or liquide en Metal, transcription en direct, cartes contextuelles).
+
+- **Moteur temps réel** (`Voix/MoteurTempsReel.swift`) : API Realtime parole-à-parole en **WebSocket natif**
+  (`URLSessionWebSocketTask`), sans aucune dépendance tierce : pas de WebRTC à embarquer. L'app ne détient
+  jamais de clé : elle demande une session éphémère au PC (`POST /app/api/v1/voix/session`) et utilise le
+  `client_secret` de courte durée. Audio en `.voiceChat` (annulation d'écho, haut-parleur, AirPods, CarPlay),
+  PCM 16 bits 24 kHz, barge-in (la voix s'arrête net, la réponse est tronquée à ce qui a été entendu).
+- **Moteur local** (`Voix/MoteurLocal.swift`), repli automatique si le PC répond `disponible: false` :
+  SpeechAnalyzer / SpeechTranscriber sur iOS 26, SFSpeechRecognizer fr-CH sinon (vocabulaire métier en
+  `contextualStrings`), réponses locales (qui doit quoi, chantiers, décisions), synthèse avec la meilleure voix
+  française installée ; tout le reste part en saisie vers l'assistant du PC (gardée hors ligne).
+- **La voix ne valide jamais un envoi** : `proposer_decision` affiche la carte, le patron fait le geste
+  (« Oui » ou « Glisser pour envoyer »).
+
 ## Sécurité
 
 - Le jeton est rangé **uniquement dans le trousseau iOS** (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`), dans un

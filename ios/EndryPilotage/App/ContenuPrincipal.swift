@@ -18,7 +18,9 @@ struct ContenuPrincipal: View {
                 ecran(.entreprise) { EntrepriseView() }
             }
 
-            BarreOnglets(selection: $app.onglet, badgeDecisions: app.decisions?.nombreDecisions ?? 0)
+            BarreOnglets(selection: $app.onglet, badgeDecisions: app.decisions?.nombreDecisions ?? 0) {
+                app.assistantPresente = true
+            }
                 .padding(.bottom, 4)
                 .ignoresSafeArea(.keyboard)
         }
@@ -43,6 +45,9 @@ struct ContenuPrincipal: View {
         }
         .sheet(isPresented: $app.reglagesPresentes) {
             ReglagesView()
+        }
+        .fullScreenCover(isPresented: $app.assistantPresente) {
+            VueAssistantVocal()
         }
         .overlay {
             if app.documents.chargement != nil {

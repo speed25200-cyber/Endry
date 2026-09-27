@@ -382,6 +382,32 @@ public final class ModeleSaisie {
         }
     }
 
+    /// Demande dictée à l'assistant vocal : envoyée seule, sans toucher à la saisie en cours d'écriture.
+    /// Sans réseau, elle rejoint la file et partira au retour du réseau.
+    public enum ResultatDemande: Equatable, Sendable {
+        case transmise
+        case gardee
+        case refusee(String)
+    }
+
+    public func transmettre(demande: String) async -> ResultatDemande {
+        let texteEnvoye = demande.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !texteEnvoye.isEmpty else { return .refusee("La demande est vide.") }
+        do {
+            _ = try await api.saisie(texte: texteEnvoye, fichiers: [])
+            await chargerHistorique()
+            return .transmise
+        } catch {
+            if error.estProblemeReseau {
+                await file.ajouter(texte: texteEnvoye, fichiers: [])
+                enAttente = await file.saisies
+                return .gardee
+            }
+            rapport?(error)
+            return .refusee(error.message)
+        }
+    }
+
     /// Transmet les saisies en attente (retour du réseau, premier plan, actualisation).
     public func viderFile() async {
         let transmises = await file.vider(avec: api)

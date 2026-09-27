@@ -231,6 +231,24 @@ final class FileSaisiesTests: XCTestCase {
         XCTAssertEqual(journal.filter { $0 == "POST /app/api/v1/saisie" }.count, 1)
     }
 
+    func testDemandeVocaleGardeeHorsLigne() async {
+        let dossier = FileManager.default.temporaryDirectory.appendingPathComponent("voix-\(UUID().uuidString)")
+        let api = TransportIntermittent()
+        let modele = ModeleSaisie(api: api, file: FileSaisies(dossier: dossier))
+        modele.texte = "Brouillon en cours"
+        let horsLigne = await modele.transmettre(demande: "Mets le chantier de Moudon au 12 octobre")
+        XCTAssertEqual(horsLigne, .gardee)
+        XCTAssertEqual(modele.enAttente.count, 1)
+        // La saisie en cours d'écriture n'est pas touchée.
+        XCTAssertEqual(modele.texte, "Brouillon en cours")
+
+        api.enPanne = false
+        let enLigne = await modele.transmettre(demande: "Prépare une facture pour la régie Dubois")
+        XCTAssertEqual(enLigne, .transmise)
+        let vide = await modele.transmettre(demande: "  ")
+        XCTAssertEqual(vide, .refusee("La demande est vide."))
+    }
+
     func testHistoriqueStatuts() async {
         let modele = ModeleSaisie(api: APIDemo(latence: .zero))
         await modele.chargerHistorique()

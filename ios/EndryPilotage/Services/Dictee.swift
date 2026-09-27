@@ -101,7 +101,7 @@ nonisolated final class MoteurDictee: @unchecked Sendable {
 
         let session = AVAudioSession.sharedInstance()
         if conversation {
-            try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth, .allowBluetoothA2DP])
+            try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP, .allowBluetoothA2DP])
         } else {
             try session.setCategory(.record, mode: .measurement, options: .duckOthers)
         }

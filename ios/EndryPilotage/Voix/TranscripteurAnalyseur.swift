@@ -63,17 +63,17 @@ nonisolated final class TranscripteurAnalyseur: Transcripteur, @unchecked Sendab
         let (flux, continuation) = AsyncStream<AnalyzerInput>.makeStream()
 
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth, .allowBluetoothA2DP])
+        try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP, .allowBluetoothA2DP])
         try session.setActive(true, options: .notifyOthersOnDeactivation)
 
         let entree = moteurAudio.inputNode
         let formatMicro = entree.outputFormat(forBus: 0)
         let convertisseur = AVAudioConverter(from: formatMicro, to: format)
-        verrou.lock()
-        self.analyseur = analyseur
-        self.continuation = continuation
-        self.convertisseur = convertisseur
-        verrou.unlock()
+        verrou.withLock {
+            self.analyseur = analyseur
+            self.continuation = continuation
+            self.convertisseur = convertisseur
+        }
 
         entree.removeTap(onBus: 0)
         entree.installTap(onBus: 0, bufferSize: 2_048, format: formatMicro) { [weak self] tampon, _ in

@@ -220,7 +220,7 @@ nonisolated final class CanalAudioTempsReel: @unchecked Sendable {
     func demarrer(surMorceau: @escaping @Sendable (Data) -> Void, surNiveau: @escaping @Sendable (Float) -> Void) throws {
         guard let formatReseau, let formatLecture else { throw ErreurVoix.indisponible }
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth, .allowBluetoothA2DP])
+        try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP, .allowBluetoothA2DP])
         try session.setActive(true, options: .notifyOthersOnDeactivation)
 
         let entree = moteur.inputNode

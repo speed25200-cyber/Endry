@@ -139,7 +139,7 @@ final class MoteurLocal: MoteurVoix {
         surEvenement?(.patron(definitif: question, provisoire: ""))
         surEvenement?(.phase(.reflexion))
 
-        if let cerveau, let reponse = await cerveau.repondre(question) {
+        if let cerveau, let reponse = await cerveau.repondre(question, delai: .seconds(20)) {
             for effet in reponse.effets { surEvenement?(.effet(effet)) }
             await dire(reponse.texte)
             await terminerTour()

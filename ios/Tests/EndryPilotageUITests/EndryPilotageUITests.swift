@@ -171,12 +171,15 @@ final class EndryPilotageUITests: XCTestCase {
         toucher(bouton)
         let suggestion = app.buttons["suggestion-0"]
         XCTAssertTrue(suggestion.waitForExistence(timeout: 8))
-        let limite = Date().addingTimeInterval(8)
-        while !suggestion.isEnabled && Date() < limite { usleep(200_000) }
+        let limite = Date().addingTimeInterval(25)
+        while !suggestion.isEnabled && Date() < limite { usleep(250_000) }
+        if !suggestion.isEnabled { capturer(app, "7-assistant-pas-pret") }
+        XCTAssertTrue(suggestion.isEnabled, "L’assistant n’est pas prêt.")
         suggestion.tap()
         let reponse = app.descendants(matching: .any)["reponse-assistant"].firstMatch
-        XCTAssertTrue(reponse.waitForExistence(timeout: 40), "L’assistant n’a pas répondu.")
-        capturer(app, "7-assistant")
+        let repondu = reponse.waitForExistence(timeout: 30)
+        capturer(app, repondu ? "7-assistant" : "7-assistant-sans-reponse")
+        XCTAssertTrue(repondu, "L’assistant n’a pas répondu.")
         app.buttons["fermer-assistant"].tap()
         XCTAssertTrue(bouton.waitForExistence(timeout: 5))
     }

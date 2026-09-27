@@ -12,9 +12,25 @@ struct ReponseCerveau: Sendable {
 
 /// Cerveau de la conversation vocale quand le PC ne fournit pas de session temps réel.
 @MainActor
-protocol CerveauVocal: AnyObject {
+protocol CerveauVocal: AnyObject, Sendable {
     /// `nil` : le cerveau n'a pas su répondre, le moteur retombe sur les réponses locales.
     func repondre(_ question: String) async -> ReponseCerveau?
+}
+
+extension CerveauVocal {
+    /// Réponse dans le délai, sinon `nil` : le moteur répond localement plutôt que de laisser le patron attendre.
+    func repondre(_ question: String, delai: Duration) async -> ReponseCerveau? {
+        await withTaskGroup(of: ReponseCerveau?.self) { groupe in
+            groupe.addTask { await self.repondre(question) }
+            groupe.addTask {
+                try? await Task.sleep(for: delai)
+                return nil
+            }
+            let premiere = await groupe.next() ?? nil
+            groupe.cancelAll()
+            return premiere
+        }
+    }
 }
 
 enum FabriqueCerveau {
@@ -22,6 +38,8 @@ enum FabriqueCerveau {
     @MainActor
     static func creer(executeur: ExecuteurOutils?,
                       transmettre: @escaping @MainActor @Sendable (String) async -> ModeleSaisie.ResultatDemande) -> (any CerveauVocal)? {
+        // Tests d'interface : réponses locales, déterministes.
+        guard !Configuration.testsUI else { return nil }
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *), let executeur, SystemLanguageModel.default.isAvailable {
             return CerveauAppleIntelligence(executeur: executeur, transmettre: transmettre)

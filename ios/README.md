@@ -70,8 +70,22 @@ L’adresse n’est jamais codée en dur. Quand le tunnel `trycloudflare.com` ch
 (`http://100.x.y.z:8080`), le serveur répond 401 ou ne répond plus : l’app affiche **« Connexion perdue : collez le
 nouveau lien »** ; il suffit de coller le nouveau lien (Réglages › Coller un nouveau lien).
 
-> Tailscale : l’app autorise les connexions HTTP locales (`NSAllowsLocalNetworking`). Si iOS refuse l’adresse
-> `http://100.x.y.z`, publiez le service en HTTPS avec `tailscale serve` (nom en `*.ts.net`) et envoyez ce lien-là.
+### Connexion recommandée : Tailscale (réseau privé, adresse fixe en HTTPS)
+
+Le PC n’est visible que de vos appareils Tailscale (WireGuard) ; aucun port ouvert, rien d’exposé sur Internet.
+
+1. **Console** [login.tailscale.com](https://login.tailscale.com/admin/dns) › **DNS** : activer **MagicDNS** et
+   **HTTPS Certificates**.
+2. **PC Windows** : installer Tailscale, se connecter ; menu Tailscale › **Run unattended** (fonctionne sans session
+   ouverte). Console › Machines › PC › **Disable key expiry**.
+3. **PC, invite de commandes** : `tailscale serve --bg 8080` (port de l’assistant). L’adresse affichée,
+   `https://<pc>.<tailnet>.ts.net`, est fixe et dispose d’un vrai certificat HTTPS.
+4. **Assistant** : utiliser cette adresse dans les liens d’accès : `https://<pc>.<tailnet>.ts.net/app/acces/<secret>`.
+5. **iPhone** : app Tailscale (App Store), même compte ; Réglages de l’app Tailscale › **VPN On Demand** pour
+   qu’elle se reconnecte seule. Puis, dans Endry, coller le lien.
+
+> Le tunnel `trycloudflare.com` n’est alors plus nécessaire. L’app autorise aussi `http://100.x.y.z:8080`
+> (`NSAllowsLocalNetworking`), mais l’adresse HTTPS `*.ts.net` est préférable.
 
 ## Codemagic et TestFlight
 

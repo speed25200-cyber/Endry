@@ -60,7 +60,7 @@ final class ModeleAppTests: XCTestCase {
     }
 
     func testPolicesEmbarquees() {
-        for nom in ["InterTight-SemiBold", "InterTight-Medium", "Inter-Regular", "Inter-Medium", "Inter-SemiBold"] {
+        for nom in ["CormorantGaramond-Medium", "CormorantGaramond-SemiBold", "CormorantGaramond-MediumItalic", "Cinzel-SemiBold"] {
             XCTAssertNotNil(UIFont(name: nom, size: 12), "police manquante : \(nom)")
         }
     }

@@ -38,32 +38,31 @@ enum Onglet: String, CaseIterable, Identifiable, Hashable {
 
     var icone: String {
         switch self {
-        case .aujourdhui: "sun.horizon"
-        case .chantiers: "hammer"
+        case .aujourdhui: "house"
+        case .chantiers: "calendar"
         case .saisie: "mic"
         case .finances: "chart.line.uptrend.xyaxis"
-        case .entreprise: "building.2"
+        case .entreprise: "person"
         }
     }
 
     var iconeActive: String {
         switch self {
-        case .aujourdhui: "sun.horizon.fill"
-        case .chantiers: "hammer.fill"
+        case .aujourdhui: "house.fill"
+        case .chantiers: "calendar"
         case .saisie: "mic.fill"
         case .finances: "chart.line.uptrend.xyaxis"
-        case .entreprise: "building.2.fill"
+        case .entreprise: "person.fill"
         }
     }
 }
 
-/// Barre d'onglets flottante en verre sombre ; onglet actif en or, micro doré surélevé au centre.
+/// Dock de la maison : pilule brune, icônes crème, micro crème au centre (toucher long : assistant vocal).
 struct BarreOnglets: View {
     @Binding var selection: Onglet
     var badgeDecisions: Int
     /// Toucher long du micro : assistant vocal plein écran.
     var ouvrirAssistant: () -> Void = {}
-    @Namespace private var espace
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
     var body: some View {
@@ -79,10 +78,12 @@ struct BarreOnglets: View {
         }
         .padding(.horizontal, 6)
         .frame(height: 66)
-        .background(Color(clair: 0xFBF8F2, sombre: 0x070605, opaciteClair: 0.55, opaciteSombre: 0.55), in: Capsule())
-        .verre(Capsule(), interactif: true)
-        .overlay(Capsule().strokeBorder(Color.bordureOr, lineWidth: Espace.filet))
-        .shadow(color: Color.ombre, radius: 26, y: 12)
+        .background {
+            Capsule()
+                .fill(Color.espresso.opacity(0.94))
+                .overlay(Capsule().stroke(Color(hex: 0x443A2C), lineWidth: 1))
+        }
+        .shadow(color: .black.opacity(0.35), radius: 22, y: 10)
         .padding(.horizontal, Espace.m)
         .sensoryFeedback(.selection, trigger: selection)
     }
@@ -90,48 +91,30 @@ struct BarreOnglets: View {
     private func bouton(_ onglet: Onglet) -> some View {
         let actif = selection == onglet
         return Button {
-            withAnimation(reduireAnimations ? .easeOut(duration: 0.15) : .endry) {
+            withAnimation(reduireAnimations ? .fonduDoux : .endryVif) {
                 selection = onglet
             }
         } label: {
-            VStack(spacing: 4) {
-                Image(systemName: actif ? onglet.iconeActive : onglet.icone)
-                    .font(.system(size: 18, weight: actif ? .semibold : .regular))
-                    .symbolEffect(.bounce.down, value: actif)
-                    .foregroundStyle(actif ? AnyShapeStyle(.degradeOr) : AnyShapeStyle(Color.encrePale))
-                    .overlay(alignment: .topTrailing) {
-                        if onglet == .aujourdhui, badgeDecisions > 0 {
-                            Text("\(badgeDecisions)")
-                                .font(Police.titre(10, relativeTo: .caption2))
-                                .monospacedDigit()
-                                .foregroundStyle(Color.espressoProfond)
-                                .padding(.horizontal, 4)
-                                .frame(minWidth: 16, minHeight: 16)
-                                .background(Color.or, in: Capsule())
-                                .offset(x: 11, y: -7)
-                                .contentTransition(.numericText(value: Double(badgeDecisions)))
-                                .accessibilityHidden(true)
-                        }
-                    }
-                Text(onglet.titre)
-                    .font(Police.texte(10, relativeTo: .caption2, graisse: actif ? .semibold : .medium))
-                    .foregroundStyle(actif ? Color.bronze : Color.encrePale)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                // Point lumineux sous l'onglet actif.
-                ZStack {
-                    if actif {
-                        Circle()
-                            .fill(Color.or)
-                            .frame(width: 4, height: 4)
-                            .shadow(color: Color.or, radius: 4)
-                            .matchedGeometryEffect(id: "point", in: espace)
+            Image(systemName: actif ? onglet.iconeActive : onglet.icone)
+                .font(.system(size: 20, weight: actif ? .semibold : .regular))
+                .symbolEffect(.bounce.down, value: actif)
+                .foregroundStyle(actif ? Color.or : Color(hex: 0x8F8575))
+                .overlay(alignment: .topTrailing) {
+                    if onglet == .aujourdhui, badgeDecisions > 0 {
+                        Text("\(badgeDecisions)")
+                            .font(.system(size: 10, weight: .bold))
+                            .monospacedDigit()
+                            .foregroundStyle(Color.espresso)
+                            .padding(.horizontal, 4)
+                            .frame(minWidth: 16, minHeight: 16)
+                            .background(Color.or, in: Capsule())
+                            .offset(x: 11, y: -8)
+                            .contentTransition(.numericText(value: Double(badgeDecisions)))
+                            .accessibilityHidden(true)
                     }
                 }
-                .frame(height: 4)
-            }
-            .frame(maxWidth: .infinity, minHeight: 56)
-            .contentShape(Rectangle())
+                .frame(maxWidth: .infinity, minHeight: 56)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text(onglet == .aujourdhui && badgeDecisions > 0 ? "\(onglet.titre), \(badgeDecisions) décisions en attente" : onglet.titre))
@@ -153,17 +136,14 @@ struct BoutonMicroCentral: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(Color.or.opacity(actif || presse ? 0.35 : 0.18))
-                .frame(width: 76, height: 76)
-                .blur(radius: 14)
+                .stroke(Color.or.opacity(actif || presse ? 0.55 : 0.25), lineWidth: 1)
+                .frame(width: 62, height: 62)
             Circle()
-                .fill(.degradeOr)
-                .frame(width: 60, height: 60)
-                .overlay(Circle().strokeBorder(Color.orClair.opacity(0.7), lineWidth: Espace.filet).padding(1))
-                .shadow(color: Color.or.opacity(0.45), radius: 16, y: 6)
+                .fill(Color.or)
+                .frame(width: 52, height: 52)
             Image(systemName: presse ? "waveform" : "mic.fill")
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundStyle(Color.espressoProfond)
+                .font(.system(size: 21, weight: .semibold))
+                .foregroundStyle(Color.espresso)
                 .contentTransition(.symbolEffect(.replace))
         }
         .scaleEffect(presse ? 1.08 : 1)
@@ -172,7 +152,6 @@ struct BoutonMicroCentral: View {
         } animation: { _ in
             .easeInOut(duration: 1.8)
         }
-        .offset(y: -16)
         .contentShape(Circle())
         .gesture(
             LongPressGesture(minimumDuration: 0.45)

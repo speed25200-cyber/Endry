@@ -32,14 +32,17 @@ Réglages (pastille « E » en haut de Décisions) : serveur actuel, nouveau lie
 
 ## Design et performance
 
-**Identité.** Noir chaud `#0B0A09`, or signature `#C9A55C` (lumière `#E8D3A2`, ombre `#8C6E35`), texte ivoire `#F4EFE6`.
-Deux couleurs d'état : sauge (« fait ») et ambre (« attend ») ; la rouille est réservée aux gestes destructifs.
-Le thème clair (ivoire et bronze) a ses propres valeurs, il n'est pas une inversion ; il suit le réglage système,
-avec un choix Système / Clair / Sombre dans Réglages › Affichage. Jetons dans `EndryPilotage/Design/Palette.swift`.
+**Identité : la maison Endry SA (style « Galerie »).** Couleurs du logo et du site : brun `#211A13`, crème dorée
+`#F9DBA3`, bronze `#9F722A`, papier `#F6F5F2`. Monogramme EY et logo détourés (`Assets.xcassets`), photos de
+réalisations du site en plein écran (`PhotosMarque`). L'écran Aujourd'hui est une photo vivante sous une feuille
+brune ; les décisions sont des cartes papier dans un carrousel, et toucher une carte ouvre sa fiche complète
+(texte intégral, destinataires, contrôle, pièces jointes, chantier lié, tous les gestes). Thème clair : papier et
+encre brune ; choix Système / Clair / Sombre dans Réglages › Affichage. Jetons dans `EndryPilotage/Design/Palette.swift`.
 
-**Typographie.** Échelle fixe 34 / 28 / 22 / 17 / 15 / 13 (`Echelle` dans `Typographie.swift`) : toute taille est
-ramenée au palier le plus proche. Titres Inter Tight Semibold, interlettrage −2.5 % ; texte Inter ; montants en
-SF Mono tabulaire. Tout suit Dynamic Type (captures CI en XXL sur iPhone SE).
+**Typographie.** Titres en Cormorant Garamond (proche du « ENDRY SA » du logo), étiquettes en capitales Cinzel
+(comme la devise « Sanitaire Chauffage Ventilation »), texte et chiffres tabulaires en SF Pro (police du site).
+Échelle fixe 34 / 28 / 22 / 17 / 15 / 13 (`Echelle` dans `Typographie.swift`), tout suit Dynamic Type.
+Polices embarquées sous licence OFL (instances statiques tirées des polices variables de Google Fonts).
 
 **Mouvement.** Un seul ressort, `Animation.endry` (`response 0.42`, `dampingFraction 0.86`), aucune animation linéaire ;
 « Réduire les animations » remplace les déplacements par des fondus (`Animation.endry(reduire:)`).

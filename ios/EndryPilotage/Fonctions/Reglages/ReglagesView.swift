@@ -125,7 +125,7 @@ struct ReglagesView: View {
 
                 Section("À propos") {
                     LabeledContent("Version", value: version)
-                    LabeledContent("Polices", value: "Inter, Inter Tight (OFL)")
+                    LabeledContent("Polices", value: "Cormorant Garamond, Cinzel (OFL)")
                     Text("Aucun outil de suivi ni publicité. Le jeton est rangé uniquement dans le trousseau de cet iPhone.")
                         .styleTexte(13, relativeTo: .footnote)
                         .foregroundStyle(Color.encreDouce)

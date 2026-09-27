@@ -46,19 +46,29 @@ final class EndryPilotageUITests: XCTestCase {
         }
     }
 
-    /// Pile de décisions : passe les cartes (« Plus tard ») jusqu'à ce que l'élément voulu soit devant.
+    /// Carrousel des décisions : revient au début, puis fait défiler jusqu'à ce que l'élément soit touchable.
     @MainActor
     @discardableResult
     private func amener(_ element: XCUIElement, dans app: XCUIApplication, essais: Int = 7) -> XCUIElement {
-        let suivante = app.buttons["decision-suivante"]
+        let carrousel = app.scrollViews["carrousel-decisions"].firstMatch
+        if !carrousel.waitForExistence(timeout: 3) { return atteindre(element, dans: app) }
+        atteindre(carrousel, dans: app)
+        if element.exists, element.isHittable { return element }
+        for _ in 0..<essais { carrousel.swipeRight() }
         for _ in 0..<essais {
-            if element.exists {
-                return atteindre(element, dans: app)
-            }
-            guard suivante.waitForExistence(timeout: 2) else { break }
-            atteindre(suivante, dans: app).tap()
+            if element.exists, element.isHittable { return element }
+            carrousel.swipeLeft()
+            usleep(300_000)
         }
-        return atteindre(element, dans: app)
+        return element
+    }
+
+    /// Ouvre la fiche complète d'une décision (toucher la carte du carrousel).
+    @MainActor
+    private func ouvrirFiche(_ reference: String, dans app: XCUIApplication) {
+        let apercu = amener(app.buttons["apercu-\(reference)"], dans: app)
+        XCTAssertTrue(apercu.waitForExistence(timeout: 3))
+        apercu.tap()
     }
 
     @MainActor
@@ -79,33 +89,46 @@ final class EndryPilotageUITests: XCTestCase {
         let app = lancer()
         XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 5))
 
-        // Oui simple (créer une offre dans Bexio : pas d'envoi au client).
+        // Oui directement sur la carte (offre Bexio : rien ne part chez un tiers).
         let oui = amener(app.buttons["oui-V-9P1X6D"], dans: app)
         XCTAssertTrue(oui.waitForExistence(timeout: 3))
         oui.tap()
         XCTAssertTrue(oui.waitForNonExistence(timeout: 5))
 
-        // Non : confirmation obligatoire.
-        let non = amener(app.buttons["non-V-5T7B2N"], dans: app)
+        // Non : depuis la fiche complète, confirmation obligatoire.
+        ouvrirFiche("V-5T7B2N", dans: app)
+        let non = app.buttons["non-V-5T7B2N"]
         XCTAssertTrue(non.waitForExistence(timeout: 3))
-        non.tap()
+        atteindre(non, dans: app).tap()
         let ecarter = app.buttons["Écarter"]
         XCTAssertTrue(ecarter.waitForExistence(timeout: 3))
         ecarter.tap()
-        XCTAssertTrue(non.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["apercu-V-5T7B2N"].waitForNonExistence(timeout: 5))
 
-        // Corriger : consignes écrites.
-        app.swipeDown(velocity: .fast)
-        app.swipeDown(velocity: .fast)
-        let corriger = amener(app.buttons["corriger-V-2M8R4T"], dans: app)
+        // Corriger : consignes écrites, depuis la fiche.
+        ouvrirFiche("V-2M8R4T", dans: app)
+        let corriger = app.buttons["corriger-V-2M8R4T"]
         XCTAssertTrue(corriger.waitForExistence(timeout: 3))
-        corriger.tap()
+        atteindre(corriger, dans: app).tap()
         let champ = app.textViews["champ-consignes"]
         XCTAssertTrue(champ.waitForExistence(timeout: 3))
         champ.tap()
         champ.typeText("Compter 6 h 30 au lieu de 7 h.")
         app.buttons["envoyer-consignes"].tap()
-        XCTAssertTrue(corriger.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["apercu-V-2M8R4T"].waitForNonExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testFicheComplete() {
+        let app = lancer()
+        XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 5))
+        ouvrirFiche("V-7K3F9Q", dans: app)
+        // La fiche montre tout : destinataires, texte complet, pièce jointe, gestes.
+        XCTAssertTrue(app.staticTexts["Proposition de l’assistant"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["fermer-fiche"].exists)
+        capturer(app, "6-fiche-decision")
+        app.buttons["fermer-fiche"].tap()
+        XCTAssertTrue(app.buttons["fermer-fiche"].waitForNonExistence(timeout: 3))
     }
 
     @MainActor

@@ -1,62 +1,62 @@
 import SwiftUI
 import UIKit
 
-/// Palette « banque privée » : noir chaud et or signature en sombre, ivoire et bronze en clair.
-/// Le thème clair n'est pas une inversion : ses surfaces sont du papier ivoire, ses accents du bronze
-/// (l'or pur manque de contraste sur fond clair). Deux couleurs d'état seulement : sauge (« fait »)
-/// et ambre (« attend ») ; la rouille est réservée aux gestes destructifs.
+/// Palette de la maison Endry SA, tirée du logo et du site :
+/// brun du logo `#211A13`, crème dorée des lettres `#F9DBA3`, bronze du « Y » `#9F722A`, papier `#F6F5F2`.
+/// Thème sombre (par défaut, « Galerie ») : fond brun, cartes papier crème. Thème clair : papier et encre brune.
+/// Deux couleurs d'état : sauge (« fait ») et ambre (« attend ») ; la rouille est réservée aux gestes destructifs.
 extension Color {
     // MARK: Fonds et surfaces
 
-    /// Fond : noir chaud #0B0A09 (jamais #000 pur) ou ivoire.
-    static let fond = Color(clair: 0xF4EFE6, sombre: 0x0B0A09)
-    /// Surfaces des cartes, légèrement relevées.
-    static let surface = Color(clair: 0xFBF8F2, sombre: 0x151311)
-    /// Surface creusée (tuiles, champs, pistes).
-    static let surfaceCreuse = Color(clair: 0xEAE3D6, sombre: 0x1F1C18)
+    /// Fond : brun du logo, ou papier du site.
+    static let fond = Color(clair: 0xF6F5F2, sombre: 0x211A13)
+    /// Surfaces posées sur le fond (panneaux, tuiles).
+    static let surface = Color(clair: 0xFFFFFF, sombre: 0x2B2219)
+    /// Surface creusée (champs, pistes, pastilles).
+    static let surfaceCreuse = Color(clair: 0xECE5D8, sombre: 0x3A3024)
 
     // MARK: Encres (contraste AA sur fond et surface)
 
-    /// Texte principal : ivoire #F4EFE6 en sombre, brun presque noir en clair.
-    static let encre = Color(clair: 0x1B1814, sombre: 0xF4EFE6)
-    static let encreDouce = Color(clair: 0x5A5247, sombre: 0xB3AB9E)
-    /// Légendes : 4.5:1 minimum sur le fond.
-    static let encrePale = Color(clair: 0x6E6557, sombre: 0x8A8275)
-    /// Filets et séparateurs.
-    static let filet = Color(clair: 0xDDD3C2, sombre: 0x2A2621)
+    static let encre = Color(clair: 0x241E17, sombre: 0xF7F2E9)
+    static let encreDouce = Color(clair: 0x5F5850, sombre: 0xC1B7A7)
+    static let encrePale = Color(clair: 0x6F6A63, sombre: 0x9C9282)
+    static let filet = Color(clair: 0xDDD9D2, sombre: 0x443A2C)
 
-    // MARK: Or signature
+    // MARK: Or de la maison
 
-    /// Or signature #C9A55C, lumière #E8D3A2, ombre #8C6E35.
-    static let or = Color(hex: 0xC9A55C)
-    static let orClair = Color(hex: 0xE8D3A2)
-    static let orOmbre = Color(hex: 0x8C6E35)
-    /// Accent lisible dans les deux thèmes : or en sombre, bronze profond en clair (texte, icônes).
-    static let bronze = Color(clair: 0x7A5C28, sombre: 0xC9A55C)
-    static let bronzeMoyen = Color(hex: 0xA8874A)
-    /// Bordure fine des surfaces : or à 18 %, 0.5 pt.
-    static let bordureOr = Color.or.opacity(0.18)
+    /// Crème dorée des lettres du logo : accents, bouton micro, titres en italique.
+    static let or = Color(hex: 0xF9DBA3)
+    static let orClair = Color(hex: 0xFFF0D4)
+    /// Bronze du « Y » du monogramme.
+    static let orOmbre = Color(hex: 0x9F722A)
+    /// Accent de texte lisible dans les deux thèmes : crème dorée en sombre, bronze profond en clair.
+    static let bronze = Color(clair: 0x865D20, sombre: 0xF9DBA3)
+    static let bronzeMoyen = Color(hex: 0x9F722A)
+    /// Filet fin des surfaces.
+    static let bordureOr = Color(clair: 0xDDD9D2, sombre: 0x443A2C)
 
-    // MARK: Matière sombre (cartes héros, curseur d'envoi) : identique dans les deux thèmes
+    // MARK: Papier (cartes de décision, fiches) : identique dans les deux thèmes
 
-    static let espresso = Color(hex: 0x14120F)
-    static let espressoProfond = Color(hex: 0x070605)
+    static let papier = Color(hex: 0xF6F5F2)
+    static let papierCreuse = Color(hex: 0xECE5D8)
+    static let encrePapier = Color(hex: 0x241E17)
+    static let encrePapierDouce = Color(hex: 0x6F6A63)
+    static let bronzePapier = Color(hex: 0x865D20)
+
+    // MARK: Brun du logo (cartes héros, curseur d'envoi, dock) : identique dans les deux thèmes
+
+    static let espresso = Color(hex: 0x211A13)
+    static let espressoProfond = Color(hex: 0x17120D)
 
     // MARK: États
 
-    /// Sauge : « fait », « oui ».
-    static let sauge = Color(clair: 0x4D6B4E, sombre: 0x9CB89A)
-    /// Ambre : « attend ».
-    static let ambre = Color(clair: 0x8A5A12, sombre: 0xE2AE55)
-    /// Rouille : gestes destructifs et erreurs uniquement.
-    static let rouille = Color(clair: 0xA2402A, sombre: 0xE8836C)
-    /// Ancien nom de la couleur « fait » (conservé pour les écrans).
+    static let sauge = Color(clair: 0x4F6B4A, sombre: 0x9DBB97)
+    static let ambre = Color(clair: 0x8A5A12, sombre: 0xE2B25C)
+    static let rouille = Color(clair: 0x8A4B3A, sombre: 0xE0907E)
     static let vertControle = sauge
 
-    /// Ombre portée : profonde en sombre, à peine perceptible sur le papier ivoire.
-    static let ombre = Color(clair: 0x3A2E1A, sombre: 0x000000, opaciteClair: 0.10, opaciteSombre: 0.5)
-    /// Reflet du haut des surfaces (lumière rasante).
-    static let reflet = Color(clair: 0xFFFFFF, sombre: 0xFFFFFF, opaciteClair: 0.7, opaciteSombre: 0.045)
+    static let ombre = Color(clair: 0x3A2819, sombre: 0x000000, opaciteClair: 0.08, opaciteSombre: 0.45)
+    static let reflet = Color(clair: 0xFFFFFF, sombre: 0xFFFFFF, opaciteClair: 0.6, opaciteSombre: 0.03)
 
     init(hex: UInt32, opacite: Double = 1) {
         self.init(
@@ -85,12 +85,12 @@ extension Color {
 extension ShapeStyle where Self == LinearGradient {
     /// Or brossé : accents, bouton micro, curseur d'envoi.
     static var degradeOr: LinearGradient {
-        LinearGradient(colors: [.orClair, .or, .orOmbre], startPoint: .topLeading, endPoint: .bottomTrailing)
+        LinearGradient(colors: [.orClair, .or, Color(hex: 0xE6C88E)], startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 
     /// Or pour le texte : reflet plus lumineux au centre.
     static var texteOr: LinearGradient {
-        LinearGradient(colors: [Color(hex: 0xB8914A), .orClair, .or, Color(hex: 0x9E7B3C)],
+        LinearGradient(colors: [Color(hex: 0xE6C88E), .orClair, .or, Color(hex: 0xD9B878)],
                        startPoint: .leading, endPoint: .trailing)
     }
 }
@@ -107,7 +107,7 @@ enum Espace {
     /// Marge latérale des écrans : 16 pt.
     static let bord: CGFloat = 16
     /// Rayon des cartes.
-    static let rayon: CGFloat = 28
+    static let rayon: CGFloat = 22
     static let rayonPetit: CGFloat = 16
     /// Épaisseur des filets dorés.
     static let filet: CGFloat = 0.5

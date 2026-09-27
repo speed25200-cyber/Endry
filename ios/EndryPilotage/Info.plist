@@ -56,11 +56,10 @@
 	<string>La reconnaissance vocale transforme votre dictée en texte, sur l’iPhone lorsque c’est possible.</string>
 	<key>UIAppFonts</key>
 	<array>
-		<string>InterTight-Medium.ttf</string>
-		<string>InterTight-SemiBold.ttf</string>
-		<string>Inter-Regular.ttf</string>
-		<string>Inter-Medium.ttf</string>
-		<string>Inter-SemiBold.ttf</string>
+		<string>CormorantGaramond-Medium.ttf</string>
+		<string>CormorantGaramond-SemiBold.ttf</string>
+		<string>CormorantGaramond-MediumItalic.ttf</string>
+		<string>Cinzel-SemiBold.ttf</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict>

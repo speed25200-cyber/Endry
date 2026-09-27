@@ -1,169 +1,338 @@
 import EndryKit
 import SwiftUI
 
-/// Écran « Aujourd'hui » : salutation, résumé en une phrase, pile de décisions,
-/// argent de la semaine, chantiers des prochains jours. L'en-tête se condense au défilement.
+/// Écran « Aujourd'hui », style Galerie : photo de réalisation Endry en plein écran, logo, salutation,
+/// puis une feuille brune qui monte avec le carrousel des décisions (cartes papier), l'argent de la semaine
+/// et les chantiers. Toucher une carte ouvre sa fiche complète.
 struct DecisionsView: View {
     @Environment(ModeleApp.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
     var modele: ModeleDecisions
 
     @State private var visible = false
-    @State private var condense = false
+    @State private var defilement: CGFloat = 0
+    @State private var carteVisible: String?
+    @State private var fiche: Carte?
+
+    private let hauteurPhoto: CGFloat = 520
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: Espace.l) {
-                    entete
-                        .apparitionEnCascade(index: 0, visible: visible)
+            ZStack(alignment: .top) {
+                Color.espresso.ignoresSafeArea()
+                PhotoVivante(nom: PhotosMarque.accueil, ancre: UnitPoint(x: 0.4, y: 0.5))
+                    .frame(height: hauteurPhoto + max(0, -defilement))
+                    .overlay(VoilePhoto(haut: 0.7, bas: 0.95))
+                    .offset(y: defilement > 0 ? -defilement * 0.35 : 0)
+                    .ignoresSafeArea(edges: .top)
 
-                    if modele.horsLigne {
-                        BandeauHorsLigne(majLe: modele.majLe)
+                ScrollView {
+                    VStack(spacing: 0) {
+                        entete
+                            .frame(height: hauteurPhoto - 150, alignment: .bottom)
+                        FeuilleMaison {
+                            feuille
+                        }
                     }
-                    if modele.enPause {
-                        BandeauPause()
-                    }
-
-                    contenu
                 }
-                .padding(.horizontal, Espace.bord)
-                .padding(.top, Espace.xs)
-                .padding(.bottom, 120)
-            }
-            .scrollIndicators(.hidden)
-            .tirerPourActualiser { await modele.charger() }
-            .onScrollGeometryChange(for: Bool.self) { geometrie in
-                geometrie.contentOffset.y + geometrie.contentInsets.top > 96
-            } action: { _, nouveau in
-                withAnimation(.endry(reduire: reduireAnimations)) { condense = nouveau }
-            }
-            .overlay(alignment: .top) {
-                if condense {
-                    EnTeteCondense(titre: "Aujourd’hui", detail: modele.nombreDecisions > 0 ? "\(modele.nombreDecisions) à décider" : nil)
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                .scrollIndicators(.hidden)
+                .tirerPourActualiser { await modele.charger() }
+                .onScrollGeometryChange(for: CGFloat.self) { geometrie in
+                    geometrie.contentOffset.y + geometrie.contentInsets.top
+                } action: { _, valeur in
+                    defilement = valeur
                 }
             }
-            .background(FondAmbiant())
+            .overlay(alignment: .top) { barreHaute }
             .toolbar(.hidden, for: .navigationBar)
         }
         .toast(Binding(get: { modele.toast }, set: { modele.toast = $0 }))
         .sensoryFeedback(.success, trigger: modele.nombreDecisions) { ancien, nouveau in nouveau < ancien }
+        .sheet(item: $fiche) { carte in
+            FicheDecision(carte: carte, modele: modele)
+        }
+        .onChange(of: app.referenceCiblee) { _, reference in
+            guard let reference else { return }
+            withAnimation(.endry(reduire: reduireAnimations)) { carteVisible = reference }
+            if let carte = modele.cartes.first(where: { $0.reference == reference }) { fiche = carte }
+        }
         .task {
             if modele.etat == .initial { await modele.charger() }
             visible = true
         }
     }
 
-    // MARK: - En-tête
+    // MARK: - En-tête sur la photo
+
+    /// Logo et réglages, fixes ; s'estompent quand la feuille recouvre la photo.
+    private var barreHaute: some View {
+        HStack(alignment: .center) {
+            LogoMarque(largeur: 150)
+            Spacer()
+            Button {
+                app.reglagesPresentes = true
+            } label: {
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Color.or)
+                    .frame(width: 44, height: 44)
+                    .background(Color.espresso.opacity(0.45), in: Circle())
+                    .overlay(Circle().stroke(Color.or.opacity(0.4), lineWidth: Espace.filet))
+            }
+            .accessibilityLabel(Text(app.session.estDemo ? "Réglages, mode démo" : "Réglages"))
+            .accessibilityIdentifier("bouton-reglages")
+        }
+        .padding(.horizontal, Espace.bord + 4)
+        .padding(.top, Espace.xs)
+        .opacity(max(0, 1 - defilement / 220))
+    }
 
     private var entete: some View {
-        VStack(alignment: .leading, spacing: Espace.s) {
-            HStack(alignment: .center) {
-                Text((modele.accueil?.date ?? DateEndry.longue(Date())).capitalizedPremiere)
-                    .font(Police.texte(11, relativeTo: .caption2, graisse: .semibold))
-                    .textCase(.uppercase)
-                    .tracking(1.2)
-                    .foregroundStyle(Color.bronze)
-                Spacer()
-                Button {
-                    app.reglagesPresentes = true
-                } label: {
-                    ZStack {
-                        Circle().fill(Color.surface)
-                        Circle().strokeBorder(Color.bordureOr, lineWidth: Espace.filet)
-                        Text("E").font(Police.titre(17, relativeTo: .body)).foregroundStyle(.degradeOr)
-                        if app.session.estDemo {
-                            Circle().fill(Color.or).frame(width: 8, height: 8)
-                                .overlay(Circle().stroke(Color.fond, lineWidth: 2))
-                                .offset(x: 15, y: -15)
-                        }
-                    }
-                    .frame(width: 44, height: 44)
-                }
-                .accessibilityLabel(Text(app.session.estDemo ? "Réglages, mode démo" : "Réglages"))
-                .accessibilityIdentifier("bouton-reglages")
-            }
-            Text(modele.accueil?.salut ?? "Bonjour")
-                .styleTitre(34, relativeTo: .largeTitle)
-                .foregroundStyle(Color.encre)
+        VStack(alignment: .leading, spacing: Espace.xs) {
+            Text((modele.accueil?.date ?? DateEndry.longue(Date())).capitalizedPremiere)
+                .font(Police.etiquette(Echelle.micro))
+                .textCase(.uppercase)
+                .tracking(2.4)
+                .foregroundStyle(Color.or)
+                .apparitionEnCascade(index: 0, visible: visible)
+            Text(salutation.debut)
+                .styleTitre(34, relativeTo: .largeTitle, graisse: .medium)
+                .foregroundStyle(Color(hex: 0xF7F2E9))
+                .apparitionEnCascade(index: 1, visible: visible)
+            Text(salutation.fin)
+                .styleTitre(34, relativeTo: .largeTitle, graisse: .italique)
+                .foregroundStyle(Color.or)
                 .fixedSize(horizontal: false, vertical: true)
+                .apparitionEnCascade(index: 2, visible: visible)
                 .accessibilityAddTraits(.isHeader)
             if let accueil = modele.accueil {
                 Text(ResumeDuJour.phrase(accueil: accueil, decisions: modele.nombreDecisions))
-                    .styleTexte(17, relativeTo: .body)
-                    .foregroundStyle(Color.encreDouce)
+                    .styleTexte(15, relativeTo: .subheadline)
+                    .foregroundStyle(Color(hex: 0xE9DFCF))
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 4)
+                    .apparitionEnCascade(index: 3, visible: visible)
                     .accessibilityIdentifier("resume-du-jour")
-            } else {
-                Squelette(hauteur: 17, largeur: 260)
             }
         }
-        .padding(.top, Espace.s)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Espace.bord + 4)
+        .padding(.bottom, Espace.l)
+        .environment(\.colorScheme, .dark)
     }
 
-    // MARK: - Contenu
+    /// « Bonjour, » puis le nom en italique doré (le serveur envoie « Bonjour Monsieur Endry »).
+    private var salutation: (debut: String, fin: String) {
+        let brut = modele.accueil?.salut ?? "Bonjour"
+        let mots = brut.split(separator: " ", maxSplits: 1).map(String.init)
+        guard mots.count == 2 else { return (brut, "") }
+        let debut = mots[0].hasSuffix(",") ? mots[0] : mots[0] + ","
+        return (debut, mots[1])
+    }
+
+    // MARK: - Feuille
 
     @ViewBuilder
-    private var contenu: some View {
-        switch modele.etat {
-        case .chargement where modele.accueil == nil, .initial:
-            SqueletteCarte()
-            Squelette(hauteur: 220, rayon: Espace.rayon)
-        case .erreur(let erreur) where modele.accueil == nil:
-            VueErreur(erreur: erreur) { Task { await modele.charger() } }
-        default:
-            if let accueil = modele.accueil {
-                titreDecisions
-                    .apparitionEnCascade(index: 1, visible: visible)
-
-                Group {
-                    if modele.cartes.isEmpty {
-                        EtatVide(titre: "Rien à décider. Tout roule.",
-                                 message: "L’assistant vous préviendra dès qu’une proposition attendra votre accord.")
-                            .transition(.opacity.combined(with: .scale(scale: 0.96)))
-                    } else {
-                        PileDecisions(modele: modele)
+    private var feuille: some View {
+        VStack(alignment: .leading, spacing: Espace.l) {
+            if modele.horsLigne {
+                BandeauHorsLigne(majLe: modele.majLe)
+                    .padding(.horizontal, Espace.bord)
+            }
+            if modele.enPause {
+                BandeauPause()
+                    .padding(.horizontal, Espace.bord)
+            }
+            switch modele.etat {
+            case .chargement where modele.accueil == nil, .initial:
+                Squelette(hauteur: 250, rayon: Espace.rayon).padding(.horizontal, Espace.bord)
+            case .erreur(let erreur) where modele.accueil == nil:
+                VueErreur(erreur: erreur) { Task { await modele.charger() } }
+            default:
+                decisions
+                if let accueil = modele.accueil {
+                    ResumeArgent(accueil: accueil) { app.onglet = .finances }
+                        .padding(.horizontal, Espace.bord)
+                        .transitionDefilement()
+                    if !accueil.chantiers7Jours.isEmpty {
+                        ChantiersSemaine(semaine: accueil.chantiers7Jours) {
+                            app.vueChantiers = .planning
+                            app.onglet = .chantiers
+                        }
+                        .transitionDefilement()
                     }
                 }
-                .apparitionEnCascade(index: 2, visible: visible)
+            }
+        }
+        .padding(.top, Espace.l)
+        .padding(.bottom, 130)
+    }
 
-                VStack(alignment: .leading, spacing: Espace.s) {
-                    EnTeteSection(titre: "L’argent de la semaine", action: { app.onglet = .finances }, libelleAction: "Finances")
-                    CarteHeros(encaisser: accueil.encaisser, offres: accueil.offres, payer: accueil.payer) {
-                        app.onglet = .finances
-                    }
-                }
-                .transitionDefilement()
-                .apparitionEnCascade(index: 3, visible: visible)
+    private var indexVisible: Int {
+        modele.cartes.firstIndex { $0.reference == carteVisible } ?? 0
+    }
 
-                if !accueil.chantiers7Jours.isEmpty {
-                    AgendaSemaine(semaine: accueil.chantiers7Jours) {
-                        app.vueChantiers = .planning
-                        app.onglet = .chantiers
-                    }
-                    .transitionDefilement()
-                    .apparitionEnCascade(index: 4, visible: visible)
+    @ViewBuilder
+    private var decisions: some View {
+        VStack(alignment: .leading, spacing: Espace.s) {
+            HStack(alignment: .center) {
+                Text("À décider · \(modele.nombreDecisions)")
+                    .font(Police.etiquette(12, relativeTo: .caption))
+                    .textCase(.uppercase)
+                    .tracking(2.4)
+                    .foregroundStyle(Color.bronze)
+                    .contentTransition(.numericText(value: Double(modele.nombreDecisions)))
+                    .accessibilityAddTraits(.isHeader)
+                    .accessibilityIdentifier("titre-a-decider")
+                Spacer()
+                if !modele.decisionsAutorisees {
+                    Pastille(texte: "Lecture seule", couleur: .ambre, icone: "lock.fill")
+                } else if modele.cartes.count > 1 {
+                    PointsPagination(nombre: modele.cartes.count, actif: indexVisible)
                 }
+            }
+            .padding(.horizontal, Espace.bord + 4)
+
+            if modele.cartes.isEmpty {
+                EtatVide(titre: "Rien à décider. Tout roule.",
+                         message: "L’assistant vous préviendra dès qu’une proposition attendra votre accord.")
+                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
+            } else {
+                ScrollView(.horizontal) {
+                    LazyHStack(spacing: Espace.s) {
+                        ForEach(modele.cartes) { carte in
+                            CarteApercuDecision(
+                                carte: carte,
+                                actionsPossibles: modele.actionsPossibles,
+                                enCours: modele.enCours.contains(carte.reference),
+                                ouvrir: { fiche = carte },
+                                agir: { action in await modele.agir(action, sur: carte) }
+                            )
+                            .containerRelativeFrame(.horizontal) { largeur, _ in largeur * 0.82 }
+                            .scrollTransition(.interactive, axis: .horizontal) { contenu, phase in
+                                contenu
+                                    .scaleEffect(phase.isIdentity ? 1 : 0.94)
+                                    .opacity(phase.isIdentity ? 1 : 0.7)
+                            }
+                            .id(carte.reference)
+                            .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                        }
+                    }
+                    .scrollTargetLayout()
+                    .padding(.vertical, Espace.s)
+                }
+                .scrollIndicators(.hidden)
+                .scrollClipDisabled()
+                .contentMargins(.horizontal, Espace.bord + 4, for: .scrollContent)
+                .scrollTargetBehavior(.viewAligned)
+                .scrollPosition(id: $carteVisible)
+                .animation(.endry(reduire: reduireAnimations), value: modele.cartes.map(\.reference))
+                .accessibilityIdentifier("carrousel-decisions")
             }
         }
     }
+}
 
-    private var titreDecisions: some View {
-        HStack(alignment: .firstTextBaseline, spacing: Espace.xs) {
-            Text("À décider").styleTitre(28, relativeTo: .title).foregroundStyle(Color.encre)
-            Text("\(modele.nombreDecisions)")
-                .font(Police.chiffres(28, relativeTo: .title, graisse: .medium))
-                .foregroundStyle(Color.bronze)
-                .contentTransition(.numericText(value: Double(modele.nombreDecisions)))
-            Spacer()
-            if !modele.decisionsAutorisees {
-                Pastille(texte: "Lecture seule", couleur: .ambre, icone: "lock.fill")
+/// L'argent de la semaine : à encaisser en grand, à payer et offres en attente ; ouvre les Finances.
+struct ResumeArgent: View {
+    var accueil: Accueil
+    var ouvrir: () -> Void
+
+    var body: some View {
+        Button(action: ouvrir) {
+            VStack(alignment: .leading, spacing: Espace.m) {
+                HStack {
+                    Text("L’argent de la semaine").styleSurtitre()
+                    Spacer()
+                    Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.bronze)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("À encaisser").styleTexte(13, relativeTo: .footnote).foregroundStyle(Color.encreDouce)
+                    MontantAnime(montant: accueil.encaisser.total, taille: 34, afficherCentimes: false)
+                }
+                HStack(spacing: Espace.s) {
+                    chiffre("À payer · 7 jours", accueil.payer.totalSemaine)
+                    Rectangle().fill(Color.filet).frame(width: Espace.filet, height: 34)
+                    chiffre("Offres en attente", accueil.offres.total)
+                }
             }
+            .padding(Espace.m)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .surfaceCarte(rayon: Espace.rayon)
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
-        .accessibilityIdentifier("titre-a-decider")
+        .buttonStyle(.plain)
+        .accessibilityHint(Text("Ouvre l’espace Finances"))
+    }
+
+    private func chiffre(_ titre: String, _ montant: Double) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(titre).styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encrePale)
+            Text(FormatSuisse.chfArrondi(montant))
+                .font(Police.chiffres(17, relativeTo: .headline))
+                .foregroundStyle(Color.encre)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Chantiers de la semaine : cartes avec la photo de la réalisation ; ouvre le Planning.
+struct ChantiersSemaine: View {
+    var semaine: [Semaine]
+    var ouvrir: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Espace.s) {
+            HStack {
+                Text("Cette semaine").styleSurtitre()
+                Spacer()
+                Button("Planning", action: ouvrir)
+                    .styleTexte(14, relativeTo: .subheadline, graisse: .medium)
+                    .foregroundStyle(Color.bronze)
+            }
+            .padding(.horizontal, Espace.bord + 4)
+            ScrollView(.horizontal) {
+                HStack(spacing: Espace.s) {
+                    ForEach(semaine) { item in
+                        Button(action: ouvrir) {
+                            HStack(spacing: Espace.s) {
+                                Image(PhotosMarque.pour(id: item.id))
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 64, height: 64)
+                                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                    .accessibilityHidden(true)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    if let date = item.dateDebut {
+                                        Text("\(DateEndry.jourAbrege(date)) \(DateEndry.numeroJour(date))")
+                                            .font(Police.etiquette(Echelle.micro))
+                                            .textCase(.uppercase)
+                                            .tracking(1.6)
+                                            .foregroundStyle(Color.bronze)
+                                    }
+                                    Text(item.titre)
+                                        .styleTexte(14, relativeTo: .subheadline, graisse: .semibold)
+                                        .foregroundStyle(Color.encre)
+                                        .lineLimit(2)
+                                    if let lieu = item.lieu {
+                                        Text(lieu).styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encrePale)
+                                    }
+                                }
+                                .frame(width: 150, alignment: .leading)
+                            }
+                            .padding(Espace.s)
+                            .surfaceCarte(rayon: Espace.rayonPetit)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollIndicators(.hidden)
+            .scrollClipDisabled()
+            .contentMargins(.horizontal, Espace.bord + 4, for: .scrollContent)
+            .scrollTargetBehavior(.viewAligned)
+        }
     }
 }
 

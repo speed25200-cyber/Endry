@@ -70,6 +70,8 @@ struct ContenuPrincipal: View {
             .blur(radius: actif ? 0 : 8)
             .allowsHitTesting(actif)
             .accessibilityHidden(!actif)
+            // L'écran actif passe devant : les écrans masqués ne recouvrent jamais ses champs.
+            .zIndex(actif ? 1 : 0)
             .animation(.endry, value: actif)
     }
 }

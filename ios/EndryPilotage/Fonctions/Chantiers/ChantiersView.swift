@@ -120,54 +120,74 @@ struct LigneChantier: View {
     var dossier: Dossier
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Espace.s) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(dossier.client.isEmpty ? dossier.titre : dossier.client)
-                    .styleTitre(19, relativeTo: .headline)
-                    .foregroundStyle(Color.encre)
-                Spacer()
-                if let montant = dossier.montant {
-                    MontantView(montant: montant, taille: 17, afficherCentimes: false, style: .headline)
+        VStack(alignment: .leading, spacing: 0) {
+            ZStack(alignment: .bottomLeading) {
+                Image(PhotosMarque.pour(id: dossier.id))
+                    .resizable()
+                    .scaledToFill()
+                    .frame(height: 118)
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+                    .overlay(VoilePhoto(haut: 0.15, bas: 0.85))
+                    .accessibilityHidden(true)
+                HStack(alignment: .lastTextBaseline) {
+                    Text(dossier.client.isEmpty ? dossier.titre : dossier.client)
+                        .styleTitre(22, relativeTo: .title3)
+                        .foregroundStyle(Color(hex: 0xF7F2E9))
+                        .lineLimit(1)
+                    Spacer()
+                    if let montant = dossier.montant {
+                        Text(FormatSuisse.chfArrondi(montant))
+                            .font(Police.chiffres(15, relativeTo: .subheadline))
+                            .foregroundStyle(Color.or)
+                    }
                 }
+                .padding(.horizontal, Espace.m)
+                .padding(.bottom, Espace.s)
             }
-            Text(dossier.titre)
-                .styleTexte(14, relativeTo: .subheadline)
-                .foregroundStyle(Color.encreDouce)
-                .lineLimit(2)
-            HStack(spacing: Espace.xs) {
-                if let lieu = dossier.lieu {
-                    Label(lieu, systemImage: "mappin.and.ellipse")
-                        .styleTexte(12, relativeTo: .caption, graisse: .medium)
-                        .foregroundStyle(Color.encrePale)
-                }
-                if let dates = dossier.dates {
-                    Label(dates, systemImage: "calendar")
-                        .styleTexte(12, relativeTo: .caption, graisse: .medium)
-                        .foregroundStyle(Color.encrePale)
-                }
-                Spacer()
-                if dossier.decisionEnAttente {
-                    Pastille(texte: "Décision en attente", couleur: .bronze, icone: "circle.fill")
-                }
-            }
-            .labelStyle(.titleAndIcon)
 
-            RailAvancement(index: dossier.etapeIndex)
-                .padding(.top, Espace.xxs)
-            HStack {
-                Text(dossier.etapeLibelle)
-                    .styleTexte(12, relativeTo: .caption, graisse: .semibold)
-                    .foregroundStyle(Color.bronze)
-                Spacer()
-                Text("Étape \(dossier.etapeIndex + 1) / 7")
-                    .styleTexte(11, relativeTo: .caption2)
-                    .foregroundStyle(Color.encrePale)
-                    .monospacedDigit()
+            VStack(alignment: .leading, spacing: Espace.s) {
+                Text(dossier.titre)
+                    .styleTexte(14, relativeTo: .subheadline)
+                    .foregroundStyle(Color.encreDouce)
+                    .lineLimit(2)
+                HStack(spacing: Espace.xs) {
+                    if let lieu = dossier.lieu {
+                        Label(lieu, systemImage: "mappin.and.ellipse")
+                            .styleTexte(12, relativeTo: .caption, graisse: .medium)
+                            .foregroundStyle(Color.encrePale)
+                    }
+                    if let dates = dossier.dates {
+                        Label(dates, systemImage: "calendar")
+                            .styleTexte(12, relativeTo: .caption, graisse: .medium)
+                            .foregroundStyle(Color.encrePale)
+                    }
+                    Spacer()
+                    if dossier.decisionEnAttente {
+                        Pastille(texte: "Décision en attente", couleur: .bronze, icone: "circle.fill")
+                    }
+                }
+                .labelStyle(.titleAndIcon)
+
+                RailAvancement(index: dossier.etapeIndex)
+                    .padding(.top, Espace.xxs)
+                HStack {
+                    Text(dossier.etapeLibelle)
+                        .styleTexte(12, relativeTo: .caption, graisse: .semibold)
+                        .foregroundStyle(Color.bronze)
+                    Spacer()
+                    Text("Étape \(dossier.etapeIndex + 1) / 7")
+                        .styleTexte(11, relativeTo: .caption2)
+                        .foregroundStyle(Color.encrePale)
+                        .monospacedDigit()
+                }
             }
+            .padding(Espace.m)
         }
-        .padding(Espace.l)
+        .clipShape(RoundedRectangle(cornerRadius: Espace.rayon, style: .continuous))
         .surfaceCarte()
         .contentShape(RoundedRectangle(cornerRadius: Espace.rayon, style: .continuous))
+        .accessibilityElement(children: .combine)
     }
 }
 

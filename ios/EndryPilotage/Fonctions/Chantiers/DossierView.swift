@@ -11,25 +11,31 @@ struct DossierView: View {
         let dossier = modele.dossier
         ScrollView {
             VStack(alignment: .leading, spacing: Espace.l) {
-                VStack(alignment: .leading, spacing: Espace.xs) {
-                    HStack {
-                        ReferenceView(texte: dossier.id)
-                        if dossier.decisionEnAttente {
-                            Pastille(texte: "Décision en attente", couleur: .bronze, icone: "circle.fill")
+                ZStack(alignment: .bottomLeading) {
+                    PhotoVivante(nom: PhotosMarque.pour(id: dossier.id))
+                        .frame(height: 300)
+                        .overlay(VoilePhoto(haut: 0.55, bas: 1))
+                    VStack(alignment: .leading, spacing: Espace.xs) {
+                        HStack {
+                            Text((dossier.lieu ?? dossier.id).uppercased())
+                                .font(Police.etiquette(Echelle.micro))
+                                .tracking(2.2)
+                                .foregroundStyle(Color.or)
+                            if dossier.decisionEnAttente {
+                                Pastille(texte: "Décision en attente", couleur: .or, icone: "circle.fill")
+                            }
                         }
+                        Text(dossier.client.isEmpty ? dossier.titre : dossier.client)
+                            .styleTitre(34, relativeTo: .largeTitle)
+                            .foregroundStyle(Color(hex: 0xF7F2E9))
+                        Text(dossier.titre)
+                            .styleTitre(22, relativeTo: .title3, graisse: .italique)
+                            .foregroundStyle(Color(hex: 0xE9DFCF))
                     }
-                    Text(dossier.client.isEmpty ? dossier.titre : dossier.client)
-                        .styleTitre(32, relativeTo: .largeTitle)
-                        .foregroundStyle(Color.encre)
-                    Text(dossier.titre)
-                        .styleTexte(16)
-                        .foregroundStyle(Color.encreDouce)
-                    if let lieu = dossier.lieu {
-                        Label(lieu, systemImage: "mappin.and.ellipse")
-                            .styleTexte(14, relativeTo: .subheadline, graisse: .medium)
-                            .foregroundStyle(Color.encrePale)
-                    }
+                    .padding(.horizontal, Espace.bord)
+                    .padding(.bottom, Espace.s)
                 }
+                .padding(.horizontal, -Espace.bord)
                 .apparitionEnCascade(index: 0, visible: visible)
 
                 // Avancement

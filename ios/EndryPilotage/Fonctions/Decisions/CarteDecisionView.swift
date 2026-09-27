@@ -7,8 +7,10 @@ struct CarteDecisionView: View {
     var actionsPossibles: Bool
     var enCours: Bool
     var enAvant: Bool
-    /// Incrémenté par la pile quand le patron balaie la carte vers la gauche : ouvre la confirmation « Non ».
+    /// Incrémenté quand le patron balaie la carte vers la gauche : ouvre la confirmation « Non ».
     var demandeNon = 0
+    /// Présentée en fiche plein écran : pas de cadre de carte, texte complet déplié, grand titre.
+    var enFiche = false
     var agir: @MainActor (ActionDecision, String?) async -> Bool
     var ouvrirPiece: (Piece) -> Void
 
@@ -22,7 +24,7 @@ struct CarteDecisionView: View {
             enTete
 
             Text(carte.titre)
-                .styleTitre(22, relativeTo: .title3)
+                .styleTitre(enFiche ? 30 : 22, relativeTo: enFiche ? .title : .title3)
                 .foregroundStyle(Color.encre)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -75,8 +77,9 @@ struct CarteDecisionView: View {
             actions
                 .padding(.top, Espace.xxs)
         }
-        .padding(Espace.l)
-        .surfaceCarte()
+        .padding(enFiche ? 0 : Espace.l)
+        .modifier(CadreCarte(actif: !enFiche))
+        .onAppear { if enFiche { texteDeplie = true } }
         .overlay {
             RoundedRectangle(cornerRadius: Espace.rayon, style: .continuous)
                 .strokeBorder(Color.or, lineWidth: surbrillance ? 2 : 0)
@@ -230,6 +233,19 @@ struct CarteDecisionView: View {
         }
         .buttonStyle(BoutonSecondaire(couleur: .rouille))
         .accessibilityIdentifier("non-\(carte.reference)")
+    }
+}
+
+/// Cadre de carte, retiré quand la décision est présentée en fiche.
+private struct CadreCarte: ViewModifier {
+    var actif: Bool
+
+    func body(content: Content) -> some View {
+        if actif {
+            content.surfaceCarte()
+        } else {
+            content
+        }
     }
 }
 

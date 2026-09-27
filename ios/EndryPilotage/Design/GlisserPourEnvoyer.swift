@@ -9,6 +9,8 @@ struct GlisserPourEnvoyer: View {
     var libelle = "Glisser pour envoyer"
     var enCours = false
     var actif = true
+    /// Posé sur une carte papier crème : piste claire, curseur brun, texte brun.
+    var surPapier = false
     var action: () -> Void
 
     @State private var decalage: CGFloat = 0
@@ -38,13 +40,13 @@ struct GlisserPourEnvoyer: View {
 
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Color.espresso)
-                    .overlay(Capsule().strokeBorder(Color.bordureOr, lineWidth: Espace.filet))
+                    .fill(surPapier ? Color.papierCreuse : Color.espresso)
+                    .overlay(Capsule().strokeBorder(surPapier ? Color.clear : Color.or.opacity(0.25), lineWidth: Espace.filet))
 
                 // Remplissage or : s'épaissit et s'éclaire avec le geste.
                 Capsule()
-                    .fill(LinearGradient(colors: [Color.orOmbre.opacity(0.25 + 0.35 * progression),
-                                                  Color.or.opacity(0.35 + 0.55 * progression)],
+                    .fill(LinearGradient(colors: [Color.orOmbre.opacity(0.25 + 0.45 * progression),
+                                                  (surPapier ? Color.orOmbre : Color.or).opacity(0.35 + 0.55 * progression)],
                                          startPoint: .leading, endPoint: .trailing))
                     .frame(width: decalage + diametre + marge * 2)
                     .shadow(color: Color.or.opacity(0.45 * progression), radius: 12 * progression)
@@ -62,20 +64,20 @@ struct GlisserPourEnvoyer: View {
                             } animation: { _ in .easeInOut(duration: 0.9) }
                     }
                 }
-                .foregroundStyle(Color.orClair.opacity(0.92 - progression * 0.8))
+                .foregroundStyle((surPapier ? Color.encrePapier : Color.orClair).opacity(0.92 - progression * 0.8))
                 .frame(maxWidth: .infinity)
                 .padding(.leading, diametre * 0.6)
 
                 Circle()
-                    .fill(.degradeOr)
+                    .fill(surPapier ? AnyShapeStyle(Color.espresso) : AnyShapeStyle(.degradeOr))
                     .frame(width: diametre, height: diametre)
                     .overlay {
                         if enCours {
-                            ProgressView().tint(Color.espresso)
+                            ProgressView().tint(surPapier ? Color.or : Color.espresso)
                         } else {
-                            Image(systemName: valide ? "checkmark" : "paperplane.fill")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundStyle(Color.espresso)
+                            Image(systemName: valide ? "checkmark" : "arrow.right")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(surPapier ? Color.or : Color.espresso)
                                 .contentTransition(.symbolEffect(.replace))
                         }
                     }

@@ -16,9 +16,9 @@ struct AuroreOr: View {
                 height: 3,
                 points: Self.points(t: t, amplitude: reduireAnimations ? 0 : 1),
                 colors: [
-                    Color(hex: 0x2A1F0F), Color(hex: 0x0D0D10), Color(hex: 0x070708),
-                    Color(hex: 0x3A2A10), Color(hex: 0x7A5A22).opacity(0.55 + 0.25 * intensite), Color(hex: 0x0E0E12),
-                    Color(hex: 0x060607), Color(hex: 0x1D160B), Color(hex: 0x09090B),
+                    Color(hex: 0x3A2D1E), Color(hex: 0x241C15), Color(hex: 0x1B150F),
+                    Color(hex: 0x46341C), Color(hex: 0x9F722A).opacity(0.35 + 0.2 * intensite), Color(hex: 0x241C15),
+                    Color(hex: 0x17120D), Color(hex: 0x2A2016), Color(hex: 0x1B150F),
                 ],
                 smoothsColors: true
             )
@@ -68,14 +68,14 @@ struct FondAmbiant: View {
     }
 
     private static let nuit: [Color] = [
-        Color(hex: 0x241A0C), Color(hex: 0x0E0C0A), Color(hex: 0x0B0A09),
-        Color(hex: 0x17110A), Color(hex: 0x2E2210), Color(hex: 0x0D0B09),
-        Color(hex: 0x0B0A09), Color(hex: 0x0B0A09), Color(hex: 0x0B0A09),
+        Color(hex: 0x33281C), Color(hex: 0x241C15), Color(hex: 0x211A13),
+        Color(hex: 0x2A2118), Color(hex: 0x3A2D1C), Color(hex: 0x221B14),
+        Color(hex: 0x211A13), Color(hex: 0x211A13), Color(hex: 0x211A13),
     ]
     private static let jour: [Color] = [
-        Color(hex: 0xEBDDBF), Color(hex: 0xF4EFE6), Color(hex: 0xF4EFE6),
-        Color(hex: 0xF1E6CF), Color(hex: 0xE9D8B3), Color(hex: 0xF4EFE6),
-        Color(hex: 0xF4EFE6), Color(hex: 0xF4EFE6), Color(hex: 0xF4EFE6),
+        Color(hex: 0xEFE7D8), Color(hex: 0xF6F5F2), Color(hex: 0xF6F5F2),
+        Color(hex: 0xF3EDE2), Color(hex: 0xEDE2CD), Color(hex: 0xF6F5F2),
+        Color(hex: 0xF6F5F2), Color(hex: 0xF6F5F2), Color(hex: 0xF6F5F2),
     ]
 }
 

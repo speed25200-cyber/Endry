@@ -143,10 +143,12 @@ struct EcranVerrou: View {
             MatiereEspresso(rayon: 0).ignoresSafeArea()
             VStack(spacing: Espace.l) {
                 Spacer()
-                LogoEndry(taille: 84)
-                Text("Endry Pilotage")
-                    .styleTitre(28, relativeTo: .title)
-                    .foregroundStyle(Color.orClair)
+                LogoMarque(largeur: 240)
+                Text("Pilotage")
+                    .font(Police.etiquette(12, relativeTo: .caption))
+                    .textCase(.uppercase)
+                    .tracking(4)
+                    .foregroundStyle(Color.or)
                 if let erreur = modele.verrou.erreur {
                     Text(erreur).styleTexte(14, relativeTo: .subheadline).foregroundStyle(Color.orClair.opacity(0.7))
                 }
@@ -166,17 +168,29 @@ struct EcranVerrou: View {
 
 /// Monogramme « E » or dans un cadre fin.
 struct LogoEndry: View {
+    /// Hauteur du monogramme EY.
     var taille: CGFloat = 64
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: taille * 0.28, style: .continuous)
-                .strokeBorder(Color.or.opacity(0.8), lineWidth: max(1, taille / 90))
-                .frame(width: taille, height: taille)
-            Text("E")
-                .font(Police.titre(taille * 0.56, relativeTo: .largeTitle))
-                .foregroundStyle(.degradeOr)
-        }
-        .accessibilityLabel(Text("Endry SA"))
+        Image("MonogrammeEndry")
+            .resizable()
+            .interpolation(.high)
+            .scaledToFit()
+            .frame(height: taille)
+            .accessibilityLabel(Text("Endry SA"))
+    }
+}
+
+/// Logo complet « EY ENDRY SA — Sanitaire Chauffage Ventilation », détouré, pour les fonds sombres.
+struct LogoMarque: View {
+    var largeur: CGFloat = 160
+
+    var body: some View {
+        Image("LogoEndry")
+            .resizable()
+            .interpolation(.high)
+            .scaledToFit()
+            .frame(width: largeur)
+            .accessibilityLabel(Text("Endry SA, sanitaire, chauffage, ventilation"))
     }
 }

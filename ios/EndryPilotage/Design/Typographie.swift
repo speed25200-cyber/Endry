@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// Échelle typographique fixe : 34 / 28 / 22 / 17 / 15 / 13 (plus 11 pour les surtitres et badges).
+/// Échelle typographique fixe : 34 / 28 / 22 / 17 / 15 / 13 (plus 11 pour les étiquettes).
 /// Toute taille demandée est ramenée au palier le plus proche : le rythme reste le même sur tous les écrans.
 enum Echelle {
     static let titre1: CGFloat = 34
@@ -25,25 +25,36 @@ enum Echelle {
     }
 }
 
-/// Inter Tight (titres) + Inter (texte), embarquées sous licence OFL ; chiffres en SF Mono tabulaire.
-/// Si une police manque, SwiftUI retombe sur SF Pro. Toutes les tailles suivent Dynamic Type.
+/// Typographie de la maison Endry :
+/// - titres en Cormorant Garamond, serif classique proche du « ENDRY SA » du logo ;
+/// - étiquettes en capitales Cinzel, comme la devise « SANITAIRE CHAUFFAGE VENTILATION » ;
+/// - texte courant et chiffres en SF Pro (police du site), chiffres tabulaires.
+/// Polices embarquées sous licence OFL ; toutes les tailles suivent Dynamic Type.
 enum Police {
+    /// Le serif a un petit œil : on l'agrandit d'un cran pour garder la même présence que le texte.
+    static let facteurSerif: CGFloat = 1.18
+
     static func titre(_ taille: CGFloat, relativeTo style: Font.TextStyle = .title, graisse: GraisseTitre = .semibold) -> Font {
-        .custom(graisse.nom, size: Echelle.palier(taille), relativeTo: style)
+        .custom(graisse.nom, size: Echelle.palier(taille) * facteurSerif, relativeTo: style)
     }
 
     static func texte(_ taille: CGFloat = 17, relativeTo style: Font.TextStyle = .body, graisse: GraisseTexte = .regular) -> Font {
-        .custom(graisse.nom, size: Echelle.palier(taille), relativeTo: style)
+        .system(size: UIFontMetrics(forTextStyle: style.uiKit).scaledValue(for: Echelle.palier(taille)), weight: graisse.poids)
     }
 
     /// Texte hors échelle (proportions internes d'un montant) : jamais utilisé pour du texte courant.
     static func texteLibre(_ taille: CGFloat, relativeTo style: Font.TextStyle = .body, graisse: GraisseTexte = .semibold) -> Font {
-        .custom(graisse.nom, size: taille, relativeTo: style)
+        .system(size: UIFontMetrics(forTextStyle: style.uiKit).scaledValue(for: taille), weight: graisse.poids)
     }
 
-    /// Chiffres : SF Mono tabulaire, mis à l'échelle avec Dynamic Type.
+    /// Étiquettes en capitales (Cinzel), à la manière de la devise du logo.
+    static func etiquette(_ taille: CGFloat = 11, relativeTo style: Font.TextStyle = .caption2) -> Font {
+        .custom("Cinzel-SemiBold", size: taille, relativeTo: style)
+    }
+
+    /// Chiffres : SF Pro, chiffres tabulaires, mis à l'échelle avec Dynamic Type.
     static func chiffres(_ taille: CGFloat, relativeTo style: Font.TextStyle = .body, graisse: Font.Weight = .semibold) -> Font {
-        .system(size: UIFontMetrics(forTextStyle: style.uiKit).scaledValue(for: taille), weight: graisse, design: .monospaced)
+        .system(size: UIFontMetrics(forTextStyle: style.uiKit).scaledValue(for: taille), weight: graisse).monospacedDigit()
     }
 
     /// Références (V-…, RE-…) : monospace système.
@@ -52,36 +63,42 @@ enum Police {
     }
 
     enum GraisseTitre {
-        case medium, semibold
-        var nom: String { self == .medium ? "InterTight-Medium" : "InterTight-SemiBold" }
+        case medium, semibold, italique
+        var nom: String {
+            switch self {
+            case .medium: "CormorantGaramond-Medium"
+            case .semibold: "CormorantGaramond-SemiBold"
+            case .italique: "CormorantGaramond-MediumItalic"
+            }
+        }
     }
 
     enum GraisseTexte {
         case regular, medium, semibold
-        var nom: String {
+        var poids: Font.Weight {
             switch self {
-            case .regular: "Inter-Regular"
-            case .medium: "Inter-Medium"
-            case .semibold: "Inter-SemiBold"
+            case .regular: .regular
+            case .medium: .medium
+            case .semibold: .semibold
             }
         }
     }
 }
 
 extension View {
-    /// Titre Inter Tight Semibold, interlettrage serré (−2.5 %), chiffres tabulaires.
+    /// Titre en Cormorant Garamond, chiffres tabulaires.
     func styleTitre(_ taille: CGFloat, relativeTo style: Font.TextStyle = .title, graisse: Police.GraisseTitre = .semibold) -> some View {
         font(Police.titre(taille, relativeTo: style, graisse: graisse))
-            .tracking(-0.025 * Echelle.palier(taille))
+            .tracking(-0.005 * Echelle.palier(taille))
             .monospacedDigit()
     }
 
-    /// Surtitre en petites capitales espacées.
+    /// Étiquette en capitales Cinzel, espacées comme la devise du logo.
     func styleSurtitre() -> some View {
-        font(Police.texte(Echelle.micro, relativeTo: .caption2, graisse: .semibold))
+        font(Police.etiquette(Echelle.micro))
             .textCase(.uppercase)
-            .tracking(1.2)
-            .foregroundStyle(Color.encrePale)
+            .tracking(2.2)
+            .foregroundStyle(Color.bronze)
     }
 
     func styleTexte(_ taille: CGFloat = 17, relativeTo style: Font.TextStyle = .body, graisse: Police.GraisseTexte = .regular) -> some View {

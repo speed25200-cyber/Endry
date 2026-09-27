@@ -123,7 +123,7 @@ def captures(build_id):
             bas = entree.lower()
             if bas.endswith(".txt"):
                 # Diagnostic d'un test en échec : hiérarchie de l'écran et description.
-                if "hierarchy" in suggere.lower() or "issue" in suggere.lower():
+                if any(m in suggere.lower() for m in ("hierarchy", "issue", "debug description")):
                     nom = "".join(c if c.isalnum() or c in "-_" else "_" for c in suggere)[:50]
                     with open(f"captures-out/{nom}.txt", "wb") as f:
                         f.write(archive.read(entree)[:80_000])

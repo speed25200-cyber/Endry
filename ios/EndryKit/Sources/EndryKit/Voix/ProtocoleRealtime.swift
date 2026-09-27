@@ -121,15 +121,6 @@ public enum CommandeRealtime {
     }
 }
 
-/// Vocabulaire métier injecté dans la reconnaissance (temps réel et locale).
-public enum VocabulaireMetier {
-    public static let termes: [String] = [
-        "SN 592000", "Mapress", "Sanipex", "Geberit", "Buderus", "Meier Tobler", "Debrunner Acifer", "Hoval", "Viessmann",
-        "boiler", "nourrice", "vase d’expansion", "chauffage au sol", "régie", "débouchage", "TVA", "Bexio", "Zoho",
-        "Bussy", "Estavayer", "Epalinges", "Neuchâtel", "Moudon", "Payerne", "Romont", "Le Mont-sur-Lausanne",
-    ]
-}
-
 /// Outils côté app pour dialoguer avec Claude, l'assistant du bureau sur le PC.
 public enum OutilsClaude {
     public static let descriptionBureau = "Ce que fait l’assistant du PC, par domaine (secrétariat, comptabilité…) : état, tâche en cours, horaires, journal, décisions à valider. Paramètre agent facultatif."

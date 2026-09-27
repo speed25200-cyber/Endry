@@ -53,7 +53,7 @@ final class MoteurTempsReel: MoteurVoix {
         socket.resume()
 
         do {
-            try await socket.send(.string(Self.texte(CommandeRealtime.configuration(session: session, vocabulaire: VocabulaireMetier.termes))))
+            try await socket.send(.string(Self.texte(CommandeRealtime.configuration(session: session, vocabulaire: VocabulaireVocal.partage.termes))))
             // Première réponse du serveur : la connexion est bien établie (sinon, repli sur le moteur local).
             let premier = try await socket.receive()
             traiter(Self.donnees(premier))

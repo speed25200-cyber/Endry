@@ -48,6 +48,9 @@ final class ModeleApp {
 
     /// Nouvelle conversation : moteur temps réel si le PC fournit une session éphémère, sinon moteur local.
     func nouvelAssistant() -> AssistantVocal {
+        // La reconnaissance vocale apprend les noms du moment : chantiers de la semaine, clients, fournisseurs.
+        VocabulaireVocal.partage.mettreAJour(noms: VocabulaireMetier.noms(
+            semaine: chantiers?.semaine ?? [], chantiers: chantiers?.tous ?? [], argent: argent?.argent))
         let assistant = AssistantVocal(
             fabrique: { await self.moteurPrefere() },
             repli: { self.moteurLocal() },

@@ -344,3 +344,33 @@ final class ContratPC270926Tests: XCTestCase {
         XCTAssertEqual(second.message, "Déjà transmis.")
     }
 }
+
+final class VocabulaireMetierTests: XCTestCase {
+    func testTermesDuMetierPuisNomsSansDoublons() {
+        let termes = VocabulaireMetier.pour(noms: ["Famille Rochat", "GEBERIT", "Fondation Les Tilleuls, Moudon", "  ", "12", "Rochat"])
+        XCTAssertEqual(Array(termes.prefix(VocabulaireMetier.termes.count)), VocabulaireMetier.termes)
+        XCTAssertTrue(termes.contains("Famille Rochat"))
+        XCTAssertTrue(termes.contains("Fondation Les Tilleuls"), "coupé à la virgule")
+        XCTAssertTrue(termes.contains("Rochat"))
+        XCTAssertFalse(termes.contains("GEBERIT"), "doublon de Geberit, sans égard à la casse")
+        XCTAssertFalse(termes.contains("12"))
+        XCTAssertFalse(termes.contains(""))
+    }
+
+    func testLimiteAppleEtExpressionsCourtes() {
+        let noms = (1...300).map { "Client \($0)" } + ["Une raison sociale beaucoup trop longue pour la dictée"]
+        let termes = VocabulaireMetier.pour(noms: noms)
+        XCTAssertEqual(termes.count, VocabulaireMetier.limite)
+        XCTAssertTrue(termes.allSatisfy { $0.split(separator: " ").count <= 4 && $0.count <= 40 })
+    }
+
+    func testNomsDesDonneesSansMontants() {
+        let noms = VocabulaireMetier.noms(semaine: [], chantiers: Fixtures.chantiers.chantiers, argent: Fixtures.argent)
+        XCTAssertFalse(noms.isEmpty)
+        XCTAssertTrue(noms.allSatisfy { !$0.contains("CHF") })
+        let vocabulaire = VocabulaireVocal()
+        vocabulaire.mettreAJour(noms: noms)
+        XCTAssertLessThanOrEqual(vocabulaire.termes.count, VocabulaireMetier.limite)
+        XCTAssertTrue(vocabulaire.termes.contains(Fixtures.chantiers.chantiers[0].client))
+    }
+}

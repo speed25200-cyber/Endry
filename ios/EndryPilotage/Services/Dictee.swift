@@ -112,7 +112,7 @@ nonisolated final class MoteurDictee: @unchecked Sendable {
         requete.addsPunctuation = true
         requete.taskHint = .dictation
         // Vocabulaire métier : marques, pièces, lieux romands.
-        requete.contextualStrings = VocabulaireMetier.termes
+        requete.contextualStrings = VocabulaireVocal.partage.termes
         if reconnaisseur.supportsOnDeviceRecognition {
             requete.requiresOnDeviceRecognition = true
         }

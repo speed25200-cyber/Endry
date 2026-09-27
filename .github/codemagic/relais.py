@@ -93,43 +93,42 @@ for b in cibles:
 
 
 def captures(build_id):
-    """Télécharge les captures d'écran du build, les réduit et les imprime en base64 (lisibles dans ce journal)."""
+    """Télécharge les artefacts zippés du build, extrait les captures d'écran, les réduit
+    et les range dans captures-out/ (publiées ensuite sur la branche « captures-ci »)."""
+    import zipfile
+    from PIL import Image
     detail = (appel(f"/builds/{build_id}") or {}).get("build") or {}
     artefacts = detail.get("artefacts") or []
     print(f"\n== Artefacts du build {build_id} :", [a.get("name") for a in artefacts])
-    try:
-        from PIL import Image
-    except ImportError:
-        import subprocess
-        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pillow"], check=False)
-        from PIL import Image
-    noms = {}
-    for a in artefacts:
-        if a.get("name", "").endswith("manifest.json"):
-            try:
-                manifeste = json.loads(appel(a["url"], brut=True) or "[]")
-                for test in manifeste:
-                    for piece in test.get("attachments", []):
-                        noms[piece.get("exportedFileName")] = piece.get("suggestedHumanReadableName")
-            except Exception as e:
-                print("manifeste illisible :", e)
+    os.makedirs("captures-out", exist_ok=True)
     for a in artefacts:
         nom = a.get("name", "")
-        if not nom.lower().endswith((".png", ".jpg", ".jpeg")):
+        if not nom.endswith(".zip") or "xcresult" in nom:
             continue
         req = urllib.request.Request(a["url"], headers={"x-auth-token": JETON})
-        try:
-            with urllib.request.urlopen(req, timeout=120) as r:
-                donnees = r.read()
-        except Exception as e:
-            print("téléchargement impossible", nom, e)
-            continue
-        img = Image.open(io.BytesIO(donnees)).convert("RGB")
-        img.thumbnail((420, 900))
-        tampon = io.BytesIO()
-        img.save(tampon, "JPEG", quality=72, optimize=True)
-        base = nom.split("/")[-1]
-        print(f"##CAPTURE## {noms.get(base, base)} {base64.b64encode(tampon.getvalue()).decode()}")
+        with urllib.request.urlopen(req, timeout=300) as r:
+            archive = zipfile.ZipFile(io.BytesIO(r.read()))
+        noms = {}
+        for entree in archive.namelist():
+            if entree.endswith("manifest.json"):
+                try:
+                    for test in json.loads(archive.read(entree)):
+                        for piece in test.get("attachments", []):
+                            noms[piece.get("exportedFileName")] = piece.get("suggestedHumanReadableName")
+                except Exception as e:
+                    print("manifeste illisible :", e)
+        for entree in archive.namelist():
+            if not entree.lower().endswith((".png", ".jpg", ".jpeg")):
+                continue
+            base = entree.split("/")[-1]
+            lisible = (noms.get(base) or base).rsplit(".", 1)[0]
+            lisible = "".join(c if c.isalnum() or c in "-_" else "_" for c in lisible)[:60]
+            img = Image.open(io.BytesIO(archive.read(entree))).convert("RGB")
+            img.thumbnail((440, 960))
+            img.save(f"captures-out/{lisible}.jpg", "JPEG", quality=80, optimize=True)
+            print("capture :", lisible)
+    with open("captures-out/BUILD.txt", "w") as f:
+        f.write(f"{build_id}\n")
 
 if demande.get("action") == "lancer_et_captures" and build_lance:
     captures(build_lance)

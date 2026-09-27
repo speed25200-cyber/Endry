@@ -43,9 +43,19 @@ struct EndryPilotageApp: App {
                     }
                 }
                 .onOpenURL { url in
-                    // Lien interne : endrypilotage://decisions
-                    if url.scheme == "endrypilotage", url.host == "decisions" {
-                        modele.onglet = .aujourdhui
+                    // Liens internes (widgets, Centre de contrôle) : endrypilotage://decisions, …/outil/regie, …/assistant.
+                    if url.scheme == "endrypilotage", let hote = url.host, ["decisions", "outil", "assistant", "briefing"].contains(hote) {
+                        let demandes = DemandesRaccourcis.partage
+                        switch hote {
+                        case "outil":
+                            demandes.outil = OutilTerrain(rawValue: url.lastPathComponent) ?? .regie
+                        case "assistant":
+                            demandes.assistantDemande = true
+                        case "briefing":
+                            demandes.briefingDemande = true
+                        default:
+                            modele.onglet = .aujourdhui
+                        }
                         return
                     }
                     // Lien d'accès (Mail, QR, endrypilotage://…) : jamais de connexion sans confirmation de l'hôte.

@@ -70,7 +70,7 @@ struct EspaceOuvrier: View {
             guard !ecoute, !dictee.transcription.isEmpty else { return }
             let texte = dictee.transcription
             Task {
-                let chantier = modele.enCours?.chantier.map { "Chantier \($0) : " } ?? ""
+                let chantier = modele.enCours.map { "Chantier \($0.chantier) : " } ?? ""
                 let r = await app.saisie?.transmettre(demande: "[Pour l’agent Chantiers] Remarque de \(modele.feuille.ouvrier). \(chantier)\(texte)")
                 app.toast = Toast(r == .transmise ? "Remarque transmise au bureau." : "Gardée : partira au retour du réseau.")
             }

@@ -1,0 +1,47 @@
+# Projet avec l'extension widgets (écran d'accueil, écran verrouillé, Centre de contrôle).
+#   xcodegen generate --spec project-widgets.yml
+# Compilé à chaque push (ios-tests, simulateur). Pour TestFlight, il faut d'abord l'identifiant
+# com.endrysa.endry.widgets et son profil App Store (voir ios/README.md, « Widgets »), puis
+# ENDRY_WIDGETS=1 dans le workflow ios-testflight.
+include:
+  - project.yml
+
+targets:
+  EndryPilotage:
+    dependencies:
+      - target: EndryWidgets
+    entitlements:
+      properties:
+        keychain-access-groups: ["$(AppIdentifierPrefix)com.endrysa.endry.partage"]
+    info:
+      properties:
+        EndryGroupeTrousseau: "$(AppIdentifierPrefix)com.endrysa.endry.partage"
+
+  EndryWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: EndryWidgets
+    dependencies:
+      - package: EndryKit
+    entitlements:
+      path: EndryWidgets/EndryWidgets.entitlements
+      properties:
+        keychain-access-groups: ["$(AppIdentifierPrefix)com.endrysa.endry.partage"]
+    info:
+      path: EndryWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Endry
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        EndryGroupeTrousseau: "$(AppIdentifierPrefix)com.endrysa.endry.partage"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.endrysa.endry.widgets
+        PRODUCT_NAME: EndryWidgets
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: EndryWidgets/Info.plist
+        SKIP_INSTALL: YES
+        LD_RUNPATH_SEARCH_PATHS: ["$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks"]

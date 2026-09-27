@@ -30,6 +30,24 @@ ios/
 
 Réglages (pastille « E » en haut de Décisions) : serveur actuel, nouveau lien, Face ID, notifications, déconnexion.
 
+## Terrain, suivi et équipe (v1.3)
+
+| Fonction | Où | Ce qui se passe |
+| --- | --- | --- |
+| **Bon de régie signé** | Saisie, fiche chantier, Siri « Bon de régie Endry », Centre de contrôle | Dictée remplie par Apple Intelligence (analyse locale en repli) : travaux, heures par personne, matériel, déplacement ; photos ; écran tourné vers le client, signature au doigt (PencilKit) ; PDF signé à partager. Transmis par `POST /terrain` : le bureau prépare la facture, qui attend votre Oui. Aucun prix sur le bon. |
+| **Bon de livraison** | Saisie, fiche chantier, Siri, Centre de contrôle, mode équipe | Scanner (bords détectés), lecture de la structure du document sur l’iPhone (tableaux, iOS 26), extraction Apple Intelligence ; chantier suggéré depuis la commission ; aucun montant lu. Le bureau ajoute le matériel à « à refacturer ». |
+| **Relevé 3D** | Saisie, fiche chantier, Siri | RoomPlan (LiDAR, iPhone Pro) : surfaces, périmètre, ouvertures, WC / baignoire / lavabos, plan coté et fichier USDZ ; relevé manuel sinon. Le bureau prépare l’offre. |
+| **Entretiens récurrents** | Entreprise › Entretiens | Chaudières, boilers, adoucisseurs repérés dans Bexio ; « Proposer » : le bureau prépare le rendez-vous, qui attend votre Oui. |
+| **Offres sans réponse** | Finances | Offres émises depuis 15 jours (réglable) ; « Préparer un suivi » : message préparé par le bureau, jamais envoyé sans votre Oui. Pas une relance de facture. |
+| **Mode équipe** | Entreprise › Inviter un ouvrier (lien + QR) | L’ouvrier voit ses chantiers du jour (consignes, itinéraire, contact), pointe en un geste, dicte ses remarques, envoie photos et journée. Jamais l’argent ni les décisions ; le PC limite son jeton. |
+| **Siri, Spotlight, bouton Action** | « Briefing Endry », « Décisions Endry », « Demander à Endry », « Ouvrir \<chantier\> dans Endry »… | Lecture seule ; rien n’est validé ni transmis depuis Siri. Montants dits par Siri seulement si vous l’activez. Chantiers dans Spotlight (effacés à la déconnexion). |
+| **Briefing du matin** | Aujourd’hui (carte « Écouter »), notification 7 h en semaine, Siri, CarPlay | Chantiers du jour, décisions, encaissements, échéances, offres et entretiens ; rafraîchi en arrière-plan ; aucun montant sur l’écran verrouillé. |
+| **Rappel d’arrivée** | Réglages › Suivi et rappels | 20 zones de 150 m autour des chantiers de la période ; en arrivant : ce qui attend, et « Bon de régie » / « Bon de livraison ». La position ne quitte pas l’iPhone. |
+| **Widgets** | Écran d’accueil, écran verrouillé, Centre de contrôle | Décisions, chantiers du jour, encaissements (montants au choix) ; boutons Bon de régie, Bon de livraison, Parler à Endry. Voir « Widgets » ci-dessous pour TestFlight. |
+
+Contrat du PC : `CONTRAT_API.md`, section v1.3. Tant que le PC ne connaît pas une route v1.3, l’app passe par la
+saisie (`POST /saisie`) : tout fonctionne déjà, en moins structuré.
+
 ## Design et performance
 
 **Identité : la maison Endry SA (style « Galerie »).** Couleurs du logo et du site : brun `#211A13`, crème dorée
@@ -241,6 +259,26 @@ git tag ios-v1.0.0 && git push origin ios-v1.0.0
 ou, dans Codemagic, **Start new build** › workflow `iOS · TestFlight`. Après traitement par Apple (10–30 min),
 l’app apparaît dans App Store Connect › TestFlight : ajoutez-vous comme testeur interne et installez-la avec l’app TestFlight.
 La question sur le chiffrement est déjà réglée (`ITSAppUsesNonExemptEncryption = NO`, HTTPS uniquement).
+
+### Widgets dans TestFlight (une fois)
+
+Les widgets sont compilés et testés à chaque push, mais pas encore envoyés dans TestFlight : il leur faut leur propre
+identifiant et profil.
+1. [Identifiers](https://developer.apple.com/account/resources/identifiers/list) › « + » › App IDs ›
+   `com.endrysa.endry.widgets` (aucune capacité à cocher).
+2. Profiles › « + » › App Store Connect › `com.endrysa.endry.widgets`, avec le **même** certificat de distribution que
+   l’app ; puis Codemagic › Code signing identities › iOS provisioning profiles › **Fetch profiles**.
+3. Dans `codemagic.yaml`, workflow `ios-testflight`, ajoutez `ENDRY_WIDGETS: "1"` sous `vars:` (ou demandez-le-moi).
+
+Le jeton est alors rangé dans un groupe de trousseau partagé avec le widget (`…com.endrysa.endry.partage`) ; l’app
+l’y déplace toute seule, sans nouvelle connexion.
+
+### Private Cloud Compute (facultatif)
+
+Le modèle d’Apple sur ses serveurs privés (iOS 27) rendrait l’assistant bien plus intelligent. Il demande une
+autorisation (entitlement) Private Cloud Compute pour Foundation Models, à demander à Apple depuis votre compte
+développeur pour `com.endrysa.endry`. Dites-moi quand elle est accordée : je le branche, avec repli automatique sur
+le modèle de l’iPhone.
 
 ## Notifications push : ce qu’il reste à brancher côté PC
 

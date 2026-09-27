@@ -80,13 +80,21 @@ public struct CoffreTrousseau: CoffreJeton {
     public let compte: String
     public let groupe: String?
 
-    public init(service: String = "com.endrysa.endry", compte: String = "session", groupe: String? = nil) {
+    /// Groupe de trousseau partagé avec le widget d'Endry. Présent seulement quand l'app est signée avec
+    /// l'extension (clé `EndryGroupeTrousseau` de l'Info.plist) ; sinon le trousseau propre à l'app.
+    public static var groupePartage: String? {
+        guard let g = Bundle.main.object(forInfoDictionaryKey: "EndryGroupeTrousseau") as? String,
+              !g.isEmpty, !g.contains("$(") else { return nil }
+        return g
+    }
+
+    public init(service: String = "com.endrysa.endry", compte: String = "session", groupe: String? = CoffreTrousseau.groupePartage) {
         self.service = service
         self.compte = compte
         self.groupe = groupe
     }
 
-    private func requeteDeBase() -> [String: Any] {
+    private func requeteDeBase(groupe: String?) -> [String: Any] {
         var q: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -96,19 +104,40 @@ public struct CoffreTrousseau: CoffreJeton {
         return q
     }
 
-    public func lire() -> Identifiants? {
-        var q = requeteDeBase()
+    private func lireElement(groupe: String?) -> (Identifiants, String?)? {
+        var q = requeteDeBase(groupe: groupe)
         q[kSecReturnData as String] = true
+        q[kSecReturnAttributes as String] = true
         q[kSecMatchLimit as String] = kSecMatchLimitOne
         var resultat: CFTypeRef?
         guard SecItemCopyMatching(q as CFDictionary, &resultat) == errSecSuccess,
-              let data = resultat as? Data else { return nil }
-        return try? JSONDecoder().decode(Identifiants.self, from: data)
+              let attributs = resultat as? [String: Any], let data = attributs[kSecValueData as String] as? Data,
+              let identifiants = try? JSONDecoder().decode(Identifiants.self, from: data) else { return nil }
+        return (identifiants, attributs[kSecAttrAccessGroup as String] as? String)
+    }
+
+    public func lire() -> Identifiants? {
+        if let element = lireElement(groupe: groupe) { return element.0 }
+        // Jeton rangé avant le widget : relu, puis déplacé dans le groupe partagé (une fois).
+        guard let groupe, let ancien = lireElement(groupe: nil), ancien.1 != groupe else { return nil }
+        if (try? ajouter(ancien.0, groupe: groupe)) != nil, let groupeAncien = ancien.1 {
+            SecItemDelete(requeteDeBase(groupe: groupeAncien) as CFDictionary)
+        }
+        return ancien.0
     }
 
     public func enregistrer(_ identifiants: Identifiants) throws {
+        do {
+            try ajouter(identifiants, groupe: groupe)
+        } catch ErreurTrousseau.statut(let statut) where statut == errSecMissingEntitlement && groupe != nil {
+            // Build sans l'extension (groupe non signé) : trousseau propre à l'app.
+            try ajouter(identifiants, groupe: nil)
+        }
+    }
+
+    private func ajouter(_ identifiants: Identifiants, groupe: String?) throws {
         let data = try JSONEncoder().encode(identifiants)
-        let q = requeteDeBase()
+        let q = requeteDeBase(groupe: groupe)
         let attributs: [String: Any] = [
             kSecValueData as String: data,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
@@ -122,8 +151,10 @@ public struct CoffreTrousseau: CoffreJeton {
         guard statut == errSecSuccess else { throw ErreurTrousseau.statut(statut) }
     }
 
+    /// Efface le jeton partout (groupe partagé et ancien emplacement).
     public func effacer() {
-        SecItemDelete(requeteDeBase() as CFDictionary)
+        SecItemDelete(requeteDeBase(groupe: nil) as CFDictionary)
+        if let groupe { SecItemDelete(requeteDeBase(groupe: groupe) as CFDictionary) }
     }
 }
 #endif

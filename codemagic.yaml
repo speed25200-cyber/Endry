@@ -31,7 +31,14 @@ definitions:
   projet: &projet
     name: Générer le projet Xcode
     working_directory: ios
-    script: xcodegen generate
+    script: |
+      set -e
+      # ENDRY_WIDGETS=1 : avec l'extension widgets (écran d'accueil, écran verrouillé, Centre de contrôle).
+      if [ "${ENDRY_WIDGETS:-0}" = "1" ]; then
+        xcodegen generate --spec project-widgets.yml
+      else
+        xcodegen generate
+      fi
   tests_kit: &tests_kit
     name: Tests du paquet EndryKit
     working_directory: ios/EndryKit
@@ -64,6 +71,7 @@ definitions:
         -derivedDataPath build/dd \
         -resultBundlePath build/Tests.xcresult \
         CODE_SIGNING_ALLOWED=NO \
+        OTHER_SWIFT_FLAGS='$(inherited) -continue-building-after-errors' \
         | xcpretty --report junit --output build/junit.xml
       STATUT=$?
       # Captures exportées même si un test échoue (relecture visuelle du lot).
@@ -81,6 +89,9 @@ workflows:
     max_build_duration: 60
     environment:
       xcode: latest
+      vars:
+        # Les widgets sont compilés et testés ici ; TestFlight les embarquera une fois leur profil créé.
+        ENDRY_WIDGETS: "1"
     triggering:
       events:
         - push

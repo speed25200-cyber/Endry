@@ -20,4 +20,10 @@ final class Documents {
             erreur = error.message
         }
     }
+
+    /// Efface les PDF téléchargés (lancement et déconnexion) : rien ne traîne sur l'iPhone.
+    static func purger() {
+        let dossier = FileManager.default.temporaryDirectory.appendingPathComponent("documents", isDirectory: true)
+        try? FileManager.default.removeItem(at: dossier)
+    }
 }

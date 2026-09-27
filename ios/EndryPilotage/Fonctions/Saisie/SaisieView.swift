@@ -33,9 +33,15 @@ struct SaisieView: View {
                     if case .transmis(let message) = modele.etat {
                         confirmation(message)
                             .transition(.scale(scale: 0.9).combined(with: .opacity))
+                    } else if modele.etat == .enAttente {
+                        confirmation("Pas de réseau : la saisie est gardée sur l’iPhone et partira toute seule dès le retour de la connexion.",
+                                     titre: "Gardé", icone: "tray.and.arrow.up", couleur: .ambre)
+                            .transition(.scale(scale: 0.9).combined(with: .opacity))
                     } else {
                         editeur
                     }
+
+                    HistoriqueSaisies(modele: modele)
                 }
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, 130)
@@ -72,6 +78,7 @@ struct SaisieView: View {
             .ignoresSafeArea()
         }
         .onDisappear { dictee.arreter() }
+        .task { await modele.chargerHistorique() }
         .sensoryFeedback(.success, trigger: modele.etat) { _, nouveau in
             if case .transmis = nouveau { return true }
             return false
@@ -179,16 +186,16 @@ struct SaisieView: View {
         }
     }
 
-    private func confirmation(_ message: String) -> some View {
+    private func confirmation(_ message: String, titre: String = "Transmis", icone: String = "checkmark", couleur: Color = .vertControle) -> some View {
         VStack(spacing: Espace.l) {
             ZStack {
-                Circle().fill(Color.vertControle.opacity(0.12)).frame(width: 120, height: 120)
-                Image(systemName: "checkmark")
+                Circle().fill(couleur.opacity(0.12)).frame(width: 120, height: 120)
+                Image(systemName: icone)
                     .font(.system(size: 46, weight: .semibold))
-                    .foregroundStyle(Color.vertControle)
+                    .foregroundStyle(couleur)
                     .symbolEffect(.bounce, value: message)
             }
-            Text("Transmis").styleTitre(32, relativeTo: .largeTitle).foregroundStyle(Color.encre)
+            Text(titre).styleTitre(32, relativeTo: .largeTitle).foregroundStyle(Color.encre)
             Text(message).styleTexte(16).foregroundStyle(Color.encreDouce).multilineTextAlignment(.center)
             Button("Nouvelle saisie") {
                 withAnimation(.spring) { modele.recommencer() }
@@ -383,4 +390,111 @@ struct CameraPhoto: UIViewControllerRepresentable {
     app.activerDemo()
     return SaisieView(modele: app.saisie!)
         .environment(app)
+}
+
+/// Historique des saisies : gardées sur l'iPhone, puis Transmis → En cours → Traité → Décision prête.
+struct HistoriqueSaisies: View {
+    var modele: ModeleSaisie
+    @Environment(ModeleApp.self) private var app
+
+    var body: some View {
+        if !modele.enAttente.isEmpty || !modele.historique.isEmpty {
+            VStack(alignment: .leading, spacing: Espace.s) {
+                EnTeteSection(titre: "Mes saisies", detail: modele.enAttente.isEmpty ? nil : "\(modele.enAttente.count) en attente")
+                VStack(spacing: 0) {
+                    ForEach(modele.enAttente) { s in
+                        ligne(texte: s.texte, date: s.cree, photos: s.fichiers.count, statut: .attente, resume: nil, reference: nil)
+                        Rectangle().fill(Color.filet).frame(height: 0.5)
+                    }
+                    ForEach(Array(modele.historique.prefix(8).enumerated()), id: \.element.id) { index, s in
+                        ligne(texte: s.texte, date: s.cree.flatMap(DateEndry.lire), photos: s.photos, statut: s.statut,
+                              resume: s.resume, reference: s.decisionReference)
+                        if index < min(modele.historique.count, 8) - 1 {
+                            Rectangle().fill(Color.filet).frame(height: 0.5)
+                        }
+                    }
+                }
+                .padding(.horizontal, Espace.m)
+                .surfaceCarte(rayon: 22)
+            }
+            .animation(.spring(response: 0.42, dampingFraction: 0.86), value: modele.historique.map(\.id))
+        }
+    }
+
+    private func ligne(texte: String, date: Date?, photos: Int, statut: StatutSaisie, resume: String?, reference: String?) -> some View {
+        VStack(alignment: .leading, spacing: Espace.xs) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(texte.isEmpty ? "Photos" : texte)
+                    .styleTexte(14, relativeTo: .subheadline, graisse: .medium)
+                    .foregroundStyle(Color.encre)
+                    .lineLimit(2)
+                Spacer(minLength: Espace.xs)
+                if let date {
+                    Text(DateEndry.ilYa(date)).styleTexte(11, relativeTo: .caption2).foregroundStyle(Color.encrePale)
+                }
+            }
+            FriseStatut(statut: statut, decisionPrete: reference != nil && statut == .traite)
+            HStack(spacing: Espace.s) {
+                if photos > 0 {
+                    Label("\(photos)", systemImage: "photo").styleTexte(11, relativeTo: .caption2).foregroundStyle(Color.encrePale)
+                }
+                if let resume {
+                    Text(resume).styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encreDouce).lineLimit(2)
+                }
+                Spacer(minLength: 0)
+                if let reference, statut == .traite {
+                    Button {
+                        app.ouvrir(reference: reference)
+                    } label: {
+                        Label("Voir la décision", systemImage: "arrow.right.circle.fill")
+                            .styleTexte(12, relativeTo: .caption, graisse: .semibold)
+                            .foregroundStyle(Color.bronze)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(.vertical, Espace.s)
+        .accessibilityElement(children: .combine)
+        .accessibilityValue(Text(statut.libelle))
+    }
+}
+
+/// Frise Transmis → En cours → Traité → Décision prête.
+struct FriseStatut: View {
+    var statut: StatutSaisie
+    var decisionPrete: Bool
+
+    private let etapes = ["Transmis", "En cours", "Traité", "Décision prête"]
+
+    var body: some View {
+        let atteinte = statut == .attente ? -1 : decisionPrete ? 3 : min(statut.etape, 2) + (statut == .traite ? 0 : -1)
+        HStack(spacing: 4) {
+            if statut == .attente {
+                Label("Gardé sur l’iPhone", systemImage: "tray.and.arrow.up")
+                    .styleTexte(11, relativeTo: .caption2, graisse: .semibold)
+                    .foregroundStyle(Color.ambre)
+            } else if statut == .erreur {
+                Label("Erreur de traitement", systemImage: "exclamationmark.triangle")
+                    .styleTexte(11, relativeTo: .caption2, graisse: .semibold)
+                    .foregroundStyle(Color.rouille)
+            } else {
+                ForEach(etapes.indices, id: \.self) { i in
+                    let fait = i <= atteinte
+                    Capsule()
+                        .fill(fait ? AnyShapeStyle(.degradeOr) : AnyShapeStyle(Color.surfaceCreuse))
+                        .frame(height: 4)
+                        .overlay(alignment: .bottomLeading) {
+                            Text(etapes[i])
+                                .styleTexte(9, relativeTo: .caption2, graisse: i == atteinte ? .semibold : .regular)
+                                .foregroundStyle(fait ? Color.encreDouce : Color.encrePale)
+                                .fixedSize()
+                                .offset(y: 12)
+                        }
+                }
+            }
+        }
+        .padding(.bottom, statut == .attente || statut == .erreur ? 0 : 12)
+        .accessibilityHidden(true)
+    }
 }

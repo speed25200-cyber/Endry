@@ -39,10 +39,9 @@ struct EndryPilotageApp: App {
                         modele.onglet = .aujourdhui
                         return
                     }
-                    // Lien d'accès ouvert depuis Mail (lien universel ou schéma personnalisé).
-                    if url.absoluteString.contains(LienAcces.marqueur) {
-                        modele.connexionPresentee = true
-                        Task { try? await modele.connecter(texte: url.absoluteString) }
+                    // Lien d'accès (Mail, QR, endrypilotage://…) : jamais de connexion sans confirmation de l'hôte.
+                    if url.absoluteString.contains(LienAcces.marqueur), let lien = try? LienAcces.analyser(url.absoluteString) {
+                        modele.lienEnAttente = lien
                     }
                 }
         }
@@ -83,6 +82,24 @@ struct RacineView: View {
         .animation(.smooth(duration: 0.25), value: modele.verrou.doitAfficherEcran)
         .animation(.easeOut(duration: 0.15), value: phase)
         .tint(Color.bronze)
+        .confirmationDialog(
+            "Connecter l’app à \(modele.lienEnAttente?.hoteAffiche ?? "ce serveur") ?",
+            isPresented: Binding(get: { modele.lienEnAttente != nil }, set: { if !$0 { modele.lienEnAttente = nil } }),
+            titleVisibility: .visible,
+            presenting: modele.lienEnAttente
+        ) { lien in
+            let confiance = lien.estDeConfiance(hoteEnregistre: modele.session.baseEnregistree)
+            Button(confiance ? "Connecter" : "Connecter quand même", role: confiance ? nil : .destructive) {
+                Task { await modele.connecterLienConfirme(lien) }
+            }
+            Button("Annuler", role: .cancel) { modele.lienEnAttente = nil }
+        } message: { lien in
+            if lien.estDeConfiance(hoteEnregistre: modele.session.baseEnregistree) {
+                Text("Serveur privé de l’entreprise. Le jeton restera dans le trousseau de cet iPhone.")
+            } else {
+                Text("Attention : cet hôte n’est ni sur votre réseau Tailscale (*.ts.net) ni votre serveur actuel. Ne continuez que si le lien vient du bureau.")
+            }
+        }
         .sheet(isPresented: $modele.connexionPresentee) {
             ConnexionView(enFeuille: true)
                 .presentationDragIndicator(.visible)

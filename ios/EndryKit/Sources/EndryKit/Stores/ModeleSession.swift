@@ -62,6 +62,17 @@ public final class ModeleSession {
         }
     }
 
+    /// Serveur actuellement enregistré (pour juger un lien profond).
+    public var baseEnregistree: URL? {
+        if case .connecte(let i) = etat { return i.base }
+        return nil
+    }
+
+    public var appareilId: String? {
+        if case .connecte(let i) = etat { return i.appareilId }
+        return nil
+    }
+
     public var entreprise: String {
         if case .connecte(let i) = etat, let e = i.entreprise { return e }
         return "Endry SA"
@@ -105,6 +116,15 @@ public final class ModeleSession {
 
     public func reinitialiserDemo() async {
         await apiDemo?.reinitialiser()
+    }
+
+    /// Révoque le jeton de cet iPhone côté PC (v1.1), puis efface tout localement.
+    /// Même si le PC est injoignable, l'iPhone est déconnecté.
+    public func deconnecterCetAppareil() async {
+        if let api, let id = appareilId {
+            try? await api.supprimerAppareil(id)
+        }
+        await deconnecter()
     }
 
     public func deconnecter() async {

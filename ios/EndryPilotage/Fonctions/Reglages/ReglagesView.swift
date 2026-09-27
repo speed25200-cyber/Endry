@@ -6,6 +6,8 @@ struct ReglagesView: View {
     @Environment(ModeleApp.self) private var app
     @Environment(\.dismiss) private var fermer
     @State private var confirmationDeconnexion = false
+    @State private var appareils: [Appareil] = []
+    @State private var appareilsDisponibles = false
     @State private var notificationsActives = false
 
     var body: some View {
@@ -37,6 +39,39 @@ struct ReglagesView: View {
                     Text("Serveur")
                 } footer: {
                     Text("L’adresse du serveur vient du lien d’accès. Si elle change (tunnel provisoire, puis réseau privé), collez simplement le nouveau lien.")
+                }
+
+                if appareilsDisponibles {
+                    Section {
+                        ForEach(appareils) { appareil in
+                            HStack(spacing: Espace.s) {
+                                Image(systemName: appareil.modele?.lowercased().contains("ipad") == true ? "ipad" : "iphone")
+                                    .foregroundStyle(Color.or)
+                                    .frame(width: 24)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(appareil.nom).styleTexte(15, relativeTo: .body, graisse: .medium)
+                                    Text([appareil.modele, appareil.dernierPassage.map { "vu \(DateEndry.ilYa($0))" }].compactMap { $0 }.joined(separator: " · "))
+                                        .styleTexte(12, relativeTo: .caption)
+                                        .foregroundStyle(Color.encrePale)
+                                }
+                                Spacer()
+                                if appareil.actuel {
+                                    Pastille(texte: "Cet iPhone", couleur: .vertControle)
+                                }
+                            }
+                            .swipeActions {
+                                if !appareil.actuel {
+                                    Button("Déconnecter", role: .destructive) {
+                                        Task { await retirer(appareil) }
+                                    }
+                                }
+                            }
+                        }
+                    } header: {
+                        Text("Appareils connectés")
+                    } footer: {
+                        Text("Chaque appareil a son propre jeton. Balayez pour déconnecter un appareil perdu.")
+                    }
                 }
 
                 Section("Sécurité") {
@@ -89,7 +124,7 @@ struct ReglagesView: View {
                     Button(role: .destructive) {
                         confirmationDeconnexion = true
                     } label: {
-                        Label(app.session.estDemo ? "Quitter la démo" : "Se déconnecter", systemImage: "rectangle.portrait.and.arrow.right")
+                        Label(app.session.estDemo ? "Quitter la démo" : "Déconnecter cet appareil", systemImage: "rectangle.portrait.and.arrow.right")
                     }
                     .accessibilityIdentifier("se-deconnecter")
                 }
@@ -112,14 +147,18 @@ struct ReglagesView: View {
                 }
             }
             .confirmationDialog(
-                app.session.estDemo ? "Quitter la démo ?" : "Se déconnecter ?",
+                app.session.estDemo ? "Quitter la démo ?" : "Déconnecter cet appareil ?",
                 isPresented: $confirmationDeconnexion,
                 titleVisibility: .visible
             ) {
-                Button(app.session.estDemo ? "Quitter" : "Se déconnecter", role: .destructive) {
+                Button(app.session.estDemo ? "Quitter" : "Déconnecter", role: .destructive) {
                     Task {
                         fermer()
-                        await app.deconnecter()
+                        if app.session.estDemo {
+                            await app.deconnecter()
+                        } else {
+                            await app.deconnecterCetAppareil()
+                        }
                     }
                 }
             } message: {
@@ -127,9 +166,28 @@ struct ReglagesView: View {
             }
             .task {
                 notificationsActives = await DelegueApp.autorisationDejaAccordee()
+                await chargerAppareils()
             }
         }
         .presentationCornerRadius(Espace.rayon)
+    }
+
+    private func chargerAppareils() async {
+        guard let api = app.session.api, let liste = try? await api.appareils() else { return }
+        withAnimation(.snappy) {
+            appareils = liste
+            appareilsDisponibles = true
+        }
+    }
+
+    private func retirer(_ appareil: Appareil) async {
+        guard let api = app.session.api else { return }
+        do {
+            try await api.supprimerAppareil(appareil.id)
+            withAnimation(.snappy) { appareils.removeAll { $0.id == appareil.id } }
+        } catch {
+            app.toast = Toast(error.message, style: .erreur)
+        }
     }
 
     private var version: String {

@@ -191,3 +191,51 @@ final class ModelesTests: XCTestCase {
         XCTAssertEqual(modele.toast?.message, "L’assistant est en pause : reprenez-le pour agir.")
     }
 }
+
+/// Transport qui échoue tant que `enPanne` est vrai, puis délègue à la démo.
+final class TransportIntermittent: @unchecked Sendable, EndryAPI {
+    var enPanne = true
+    let demo = APIDemo(latence: .zero)
+    nonisolated func urlAbsolue(_ chemin: String) -> URL? { demo.urlAbsolue(chemin) }
+    func envoyer(_ requete: Requete) async throws(ErreurAPI) -> Data {
+        if enPanne { throw .horsLigne }
+        return try await demo.envoyer(requete)
+    }
+}
+
+@MainActor
+final class FileSaisiesTests: XCTestCase {
+    func testSaisieHorsLigneGardeePuisTransmise() async throws {
+        let dossier = FileManager.default.temporaryDirectory.appendingPathComponent("file-\(UUID().uuidString)")
+        let api = TransportIntermittent()
+        let modele = ModeleSaisie(api: api, file: FileSaisies(dossier: dossier))
+        modele.texte = "Villa Morel : citerne dégazée."
+        XCTAssertTrue(modele.ajouter(PieceSaisie(nom: "bon.jpg", typeMIME: "image/jpeg", donnees: Data([1, 2, 3]), origine: .photo)))
+        await modele.envoyer()
+        XCTAssertEqual(modele.etat, .enAttente)
+        XCTAssertEqual(modele.enAttente.count, 1)
+
+        // Redémarrage de l'app : la file est relue depuis le disque.
+        let relue = FileSaisies(dossier: dossier)
+        let nombre = await relue.nombre
+        XCTAssertEqual(nombre, 1)
+
+        api.enPanne = false
+        let apres = ModeleSaisie(api: api, file: relue)
+        await apres.viderFile()
+        XCTAssertEqual(apres.enAttente.count, 0)
+        XCTAssertEqual(apres.historique.first?.texte, "Villa Morel : citerne dégazée.")
+        XCTAssertEqual(apres.historique.first?.photos, 1)
+        XCTAssertEqual(apres.historique.first?.statut, .transmis)
+        let journal = await api.demo.journal
+        XCTAssertEqual(journal.filter { $0 == "POST /app/api/v1/saisie" }.count, 1)
+    }
+
+    func testHistoriqueStatuts() async {
+        let modele = ModeleSaisie(api: APIDemo(latence: .zero))
+        await modele.chargerHistorique()
+        XCTAssertEqual(modele.historique.count, 3)
+        XCTAssertEqual(modele.historique[1].decisionReference, "V-2M8R4T")
+        XCTAssertEqual(StatutSaisie.enCours.libelle, "En cours")
+    }
+}

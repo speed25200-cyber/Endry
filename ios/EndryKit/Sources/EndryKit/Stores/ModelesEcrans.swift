@@ -306,18 +306,26 @@ public final class ModeleSaisie {
         case edition
         case envoi
         case transmis(String)
+        /// Pas de réseau : la saisie est gardée et partira toute seule.
+        case enAttente
         case erreur(String)
     }
 
     public var texte = ""
     public private(set) var pieces: [PieceSaisie] = []
     public private(set) var etat: Etat = .edition
+    /// Saisies gardées sur l'iPhone faute de réseau.
+    public private(set) var enAttente: [SaisieEnAttente] = []
+    /// Historique côté PC (v1.1 `GET /saisies`) ; vide avec un serveur v1.0.
+    public private(set) var historique: [SaisieHistorique] = []
 
     @ObservationIgnored private let api: any EndryAPI
+    @ObservationIgnored private let file: FileSaisies
     @ObservationIgnored private let rapport: RapportErreur?
 
-    public init(api: any EndryAPI, rapport: RapportErreur? = nil) {
+    public init(api: any EndryAPI, file: FileSaisies = FileSaisies(dossier: nil), rapport: RapportErreur? = nil) {
         self.api = api
+        self.file = file
         self.rapport = rapport
     }
 
@@ -325,7 +333,7 @@ public final class ModeleSaisie {
         etat != .envoi && (!texte.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !pieces.isEmpty)
     }
 
-    /// Pré-remplit la saisie depuis un chantier (« Chantier Rochat — Épalinges : »).
+    /// Pré-remplit la saisie depuis un chantier (« Chantier Morel — Epalinges : »).
     public func preparer(prefixe: String) {
         if texte.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             texte = prefixe
@@ -353,15 +361,38 @@ public final class ModeleSaisie {
     public func envoyer() async {
         guard peutEnvoyer else { return }
         etat = .envoi
+        let texteEnvoye = texte.trimmingCharacters(in: .whitespacesAndNewlines)
         let fichiers = pieces.map {
             FormulaireMultipart.Fichier(champ: "photos", nomFichier: $0.nom, typeMIME: $0.typeMIME, donnees: $0.donnees)
         }
         do {
-            let reponse = try await api.saisie(texte: texte.trimmingCharacters(in: .whitespacesAndNewlines), fichiers: fichiers)
+            let reponse = try await api.saisie(texte: texteEnvoye, fichiers: fichiers)
             etat = .transmis(reponse.message ?? "Transmis")
+            await chargerHistorique()
         } catch {
-            rapport?(error)
-            etat = .erreur(error.message)
+            if error.estProblemeReseau {
+                // Rien n'est perdu : la saisie attend le réseau sur l'iPhone.
+                await file.ajouter(texte: texteEnvoye, fichiers: fichiers)
+                enAttente = await file.saisies
+                etat = .enAttente
+            } else {
+                rapport?(error)
+                etat = .erreur(error.message)
+            }
+        }
+    }
+
+    /// Transmet les saisies en attente (retour du réseau, premier plan, actualisation).
+    public func viderFile() async {
+        let transmises = await file.vider(avec: api)
+        enAttente = await file.saisies
+        if transmises > 0 { await chargerHistorique() }
+    }
+
+    public func chargerHistorique() async {
+        enAttente = await file.saisies
+        if let liste = try? await api.saisies() {
+            historique = liste
         }
     }
 

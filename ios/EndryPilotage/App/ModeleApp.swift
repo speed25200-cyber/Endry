@@ -18,6 +18,8 @@ final class ModeleApp {
     var referenceCiblee: String?
     /// Présente l'écran de connexion par-dessus l'app (nouveau lien).
     var connexionPresentee = false
+    /// Lien d'accès reçu par lien profond, en attente de confirmation de l'hôte.
+    var lienEnAttente: LienAcces?
     var reglagesPresentes = false
     var toast: Toast?
 
@@ -27,6 +29,9 @@ final class ModeleApp {
     private(set) var saisie: ModeleSaisie?
 
     @ObservationIgnored private var jetonAPNsEnAttente: String?
+    /// File persistante des saisies faites sans réseau.
+    @ObservationIgnored let fileSaisies = FileSaisies.parDefaut()
+    @ObservationIgnored let reseau = SurveillanceReseau()
     @ObservationIgnored private var dernierJetonEnvoye: String?
 
     init(session: ModeleSession? = nil) {
@@ -41,11 +46,16 @@ final class ModeleApp {
             self.session = ModeleSession(coffre: coffre, cache: .parDefaut())
         }
         self.session.appareil = (UIDevice.current.name, Self.modeleMachine())
+        Documents.purger()
         if Configuration.lancementDemo {
             self.session.activerDemo(latence: Configuration.testsUI ? .milliseconds(80) : .milliseconds(450))
             verrou.marquerDeverrouille()
         }
         reconstruire()
+        // Retour du réseau : les saisies gardées sur l'iPhone partent seules.
+        reseau.surRetour = { [weak self] in
+            Task { await self?.saisie?.viderFile() }
+        }
     }
 
     /// Recrée les modèles d'écran quand le client API change (connexion, démo, déconnexion).
@@ -64,7 +74,7 @@ final class ModeleApp {
         decisions = d
         chantiers = ModeleChantiers(api: api, cache: cache, rapport: rapport)
         argent = ModeleArgent(api: api, cache: cache, rapport: rapport)
-        saisie = ModeleSaisie(api: api, rapport: rapport)
+        saisie = ModeleSaisie(api: api, file: session.estDemo ? FileSaisies(dossier: nil) : fileSaisies, rapport: rapport)
         dernierJetonEnvoye = nil
         if let jeton = jetonAPNsEnAttente { enregistrerAppareil(jeton) }
     }
@@ -85,8 +95,31 @@ final class ModeleApp {
         onglet = .aujourdhui
     }
 
+    /// Connexion confirmée par le patron depuis un lien profond.
+    func connecterLienConfirme(_ lien: LienAcces) async {
+        lienEnAttente = nil
+        do {
+            try await connecter(texte: lien.base.absoluteString + LienAcces.marqueur + lien.secret)
+        } catch {
+            connexionPresentee = true
+            toast = Toast(error.message, style: .erreur)
+        }
+    }
+
+    /// Révoque le jeton de cet iPhone côté PC (v1.1), puis efface tout.
+    func deconnecterCetAppareil() async {
+        await session.deconnecterCetAppareil()
+        await apresDeconnexion()
+    }
+
     func deconnecter() async {
         await session.deconnecter()
+        await apresDeconnexion()
+    }
+
+    private func apresDeconnexion() async {
+        await fileSaisies.effacer()
+        Documents.purger()
         reconstruire()
         DelegueApp.mettreAJourBadge(0)
     }
@@ -116,11 +149,12 @@ final class ModeleApp {
     /// Recharge les écrans : retour au premier plan, notification reçue, événement serveur.
     func rafraichirTout() async {
         guard session.estConnecte else { return }
-        let d = decisions, c = chantiers, a = argent
+        let d = decisions, c = chantiers, a = argent, s = saisie
         await withDiscardingTaskGroup { groupe in
             groupe.addTask { await d?.charger() }
             groupe.addTask { await c?.charger() }
             groupe.addTask { await a?.charger() }
+            groupe.addTask { await s?.viderFile() }
         }
     }
 

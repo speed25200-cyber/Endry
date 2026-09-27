@@ -50,6 +50,10 @@ public struct LienAcces: Equatable, Sendable {
             .trimmingCharacters(in: CharacterSet(charactersIn: ".,;:!"))
         guard !secret.isEmpty else { throw .secretManquant }
 
+        // Lien profond de l'app : endrypilotage://<hôte>/app/acces/<secret> → https://<hôte>
+        if hote.lowercased().hasPrefix("endrypilotage://") {
+            hote = "https://" + hote.dropFirst("endrypilotage://".count)
+        }
         if hote.lowercased().hasPrefix("webcal://") {
             hote = "https://" + hote.dropFirst("webcal://".count)
         }
@@ -70,6 +74,15 @@ public struct LienAcces: Equatable, Sendable {
         let partieHote = sansPort.split(separator: ":").first.map(String.init) ?? sansPort
         let octets = partieHote.split(separator: ".")
         return octets.count == 4 && octets.allSatisfy { Int($0).map { (0...255).contains($0) } ?? false }
+    }
+
+    /// Hôte de confiance : réseau privé Tailscale (`*.ts.net`) ou serveur déjà enregistré sur cet iPhone.
+    /// Tout autre hôte exige une confirmation explicite, avec un avertissement.
+    public func estDeConfiance(hoteEnregistre: URL?) -> Bool {
+        let hote = (base.host ?? "").lowercased()
+        if hote.hasSuffix(".ts.net") { return true }
+        guard let hoteEnregistre else { return false }
+        return hote == hoteEnregistre.host?.lowercased() && base.port == hoteEnregistre.port
     }
 
     /// Nom d'hôte lisible pour l'interface (« abc.trycloudflare.com »).

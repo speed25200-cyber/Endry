@@ -51,3 +51,24 @@ final class LienAccesTests: XCTestCase {
         XCTAssertThrowsError(try LienAcces.analyser("/app/acces/abc")) { XCTAssertEqual($0 as? ErreurLien, .pasUnLienEndry) }
     }
 }
+
+final class ConfianceHoteTests: XCTestCase {
+    func testTailscaleEtHoteEnregistre() throws {
+        let ts = try LienAcces.analyser("https://desktop-bureau.tail1234.ts.net/app/acces/abc123")
+        XCTAssertTrue(ts.estDeConfiance(hoteEnregistre: nil))
+        let autre = try LienAcces.analyser("https://pilotage.exemple.ch/app/acces/abc123")
+        XCTAssertFalse(autre.estDeConfiance(hoteEnregistre: nil))
+        XCTAssertTrue(autre.estDeConfiance(hoteEnregistre: URL(string: "https://pilotage.exemple.ch")))
+        XCTAssertFalse(autre.estDeConfiance(hoteEnregistre: URL(string: "https://pilotage.exemple.ch:8443")))
+        let piege = try LienAcces.analyser("https://ts.net.pirate.exemple/app/acces/abc123")
+        XCTAssertFalse(piege.estDeConfiance(hoteEnregistre: nil))
+    }
+}
+
+final class LienProfondTests: XCTestCase {
+    func testSchemaApp() throws {
+        let l = try LienAcces.analyser("endrypilotage://desktop-bureau.tail1234.ts.net/app/acces/Zx9")
+        XCTAssertEqual(l.base.absoluteString, "https://desktop-bureau.tail1234.ts.net")
+        XCTAssertEqual(l.secret, "Zx9")
+    }
+}

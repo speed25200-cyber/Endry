@@ -635,7 +635,7 @@ struct CarteClaude: View {
             HStack(spacing: 6) {
                 Image(systemName: icone)
                     .font(.system(size: 12, weight: .semibold))
-                    .symbolEffect(.pulse, isActive: reponse == nil)
+                    .symbolEffect(.pulse, isActive: reponse == nil && !Configuration.testsUI)
                 Text(agent.map { "Assistant · \($0)" } ?? "Assistant du bureau")
                     .font(PoliceAssistant.texte(11, .semibold, relativeTo: .caption2))
                     .textCase(.uppercase)
@@ -754,7 +754,8 @@ struct OrbeEndry: View {
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
     var body: some View {
-        TimelineView(.animation) { contexte in
+        // Figé pendant les tests d'interface : une horloge à 120 Hz empêche XCTest de lire l'écran.
+        TimelineView(.animation(minimumInterval: nil, paused: Configuration.testsUI)) { contexte in
             let v = lisseur.avancer(contexte.date, assistant: assistant, lent: reduireAnimations)
             Rectangle()
                 .fill(Color.white)
@@ -780,7 +781,8 @@ struct LueurBord: View {
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
     var body: some View {
-        TimelineView(.animation) { contexte in
+        // Figé pendant les tests d'interface : une horloge à 120 Hz empêche XCTest de lire l'écran.
+        TimelineView(.animation(minimumInterval: nil, paused: Configuration.testsUI)) { contexte in
             let v = lisseur.avancer(contexte.date, assistant: assistant, lent: reduireAnimations)
             Rectangle()
                 .fill(Color.white)

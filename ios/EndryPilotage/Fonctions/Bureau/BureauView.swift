@@ -22,7 +22,7 @@ struct PointEtat: View {
         Image(systemName: "circle.fill")
             .font(.system(size: taille))
             .foregroundStyle(etat?.couleur ?? Color.encrePale)
-            .symbolEffect(.pulse, isActive: etat == .occupe)
+            .symbolEffect(.pulse, isActive: etat == .occupe && !Configuration.testsUI)
             .accessibilityHidden(true)
     }
 }

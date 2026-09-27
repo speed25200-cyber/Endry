@@ -13,12 +13,28 @@ public enum AnalyseurRegie {
         public struct Paire: Sendable, Equatable {
             public var intervenant: String
             public var heures: Double
+            public init(intervenant: String, heures: Double) {
+                self.intervenant = intervenant
+                self.heures = heures
+            }
         }
 
         public struct Article: Sendable, Equatable {
             public var designation: String
             public var quantite: Double
             public var unite: String
+            public init(designation: String, quantite: Double, unite: String) {
+                self.designation = designation
+                self.quantite = quantite
+                self.unite = unite
+            }
+        }
+
+        public init(travaux: String, heures: [Paire], materiel: [Article], deplacement: Bool?) {
+            self.travaux = travaux
+            self.heures = heures
+            self.materiel = materiel
+            self.deplacement = deplacement
         }
 
         public var lignesHeures: [LigneHeures] { heures.map { LigneHeures(intervenant: $0.intervenant, heures: $0.heures) } }

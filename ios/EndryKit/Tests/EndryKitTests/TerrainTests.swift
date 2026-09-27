@@ -120,6 +120,11 @@ final class BonLivraisonTests: XCTestCase {
         XCTAssertFalse(bon.articles.contains { $0.designation.contains("Total") || $0.designation.contains("TVA") })
     }
 
+    func testLigneLueDeuxFoisComptéeUneFois() {
+        let bon = LecteurBonLivraison.analyser(lignes: lignes + ["35012 Raccord Mapress 22 mm 12 pce 4.80"])
+        XCTAssertEqual(bon.articles.count, 3)
+    }
+
     func testChantierSuggereDepuisLaCommission() {
         let bon = LecteurBonLivraison.analyser(lignes: lignes)
         let propositions = SuggestionChantier.classer(texte: bon.texteLu, chantiers: Fixtures.chantiers.chantiers)

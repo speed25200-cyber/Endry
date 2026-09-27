@@ -59,6 +59,13 @@ struct ContenuPrincipal: View {
         .fullScreenCover(isPresented: $app.assistantPresente) {
             VueAssistantVocal()
         }
+        .fullScreenCover(item: $app.outilTerrain) { demande in
+            switch demande.outil {
+            case .regie: RegieView(chantier: app.dossier(demande.chantierId))
+            case .bonLivraison: BonLivraisonView(chantier: app.dossier(demande.chantierId))
+            case .releve: Releve3DView(chantier: app.dossier(demande.chantierId))
+            }
+        }
         // « Dis Siri, parler à Endry » : l'assistant s'ouvre une fois l'app déverrouillée.
         .onChange(of: DemandesRaccourcis.partage.assistantDemande, initial: true) { ouvrirAssistantDemande() }
         .onChange(of: app.verrou.doitAfficherEcran) { ouvrirAssistantDemande() }

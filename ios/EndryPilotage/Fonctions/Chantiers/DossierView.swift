@@ -76,6 +76,10 @@ struct DossierView: View {
                 .accessibilityIdentifier("dicter-chantier")
                 .apparitionEnCascade(index: 2, visible: visible)
 
+                // Sur place : régie à faire signer, bon du fournisseur, relevé pour l'offre.
+                RangeeOutilsTerrain(chantierId: dossier.id)
+                    .apparitionEnCascade(index: 3, visible: visible)
+
                 if modele.horsLigne {
                     BandeauHorsLigne(majLe: nil)
                 }

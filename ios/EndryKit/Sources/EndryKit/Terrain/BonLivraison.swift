@@ -169,11 +169,15 @@ public enum LecteurBonLivraison {
     /// Lignes d'articles : « 12 pce Raccord Mapress 22 mm 35012 » ou « 35012 Raccord Mapress 22 mm 12 pce ».
     static func articles(dans lignes: [String]) -> [ArticleLivre] {
         var resultat: [ArticleLivre] = []
+        var vus = Set<String>()
         for ligne in lignes {
             let bas = ligne.lowercased()
             guard !lignesExclues.contains(where: { bas.contains($0) }) else { continue }
             guard ligne.contains(where: \.isLetter), ligne.count >= 6 else { continue }
-            if let a = quantiteDevant(ligne) ?? quantiteDerriere(ligne) { resultat.append(a) }
+            guard let a = quantiteDevant(ligne) ?? quantiteDerriere(ligne) else { continue }
+            // Une ligne lue deux fois (texte et tableau du document) ne compte qu'une fois.
+            let cle = "\(a.designation.lowercased())|\(a.quantite ?? 0)|\(a.reference ?? "")"
+            if vus.insert(cle).inserted { resultat.append(a) }
         }
         return resultat
     }
@@ -202,7 +206,7 @@ public enum LecteurBonLivraison {
         return ArticleLivre(reference: reference.isEmpty ? nil : reference, designation: d, quantite: q, unite: u)
     }
 
-    static func normaliserUnite(_ u: String) -> String {
+    public static func normaliserUnite(_ u: String) -> String {
         switch u.lowercased() {
         case "m", "ml": "m"
         case "kg": "kg"

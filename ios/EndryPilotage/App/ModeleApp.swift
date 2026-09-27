@@ -23,6 +23,8 @@ final class ModeleApp {
     var reglagesPresentes = false
     /// Assistant vocal plein écran (toucher long du micro central).
     var assistantPresente = false
+    /// Outil de terrain ouvert (bon de régie, bon de livraison, relevé 3D).
+    var outilTerrain: DemandeOutil?
     var toast: Toast?
 
     private(set) var decisions: ModeleDecisions?

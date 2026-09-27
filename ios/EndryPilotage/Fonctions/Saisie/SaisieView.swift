@@ -30,6 +30,8 @@ struct SaisieView: View {
                     }
                     .padding(.top, Espace.m)
 
+                    RangeeOutilsTerrain()
+
                     if case .transmis(let message) = modele.etat {
                         confirmation(message)
                             .transition(.scale(scale: 0.9).combined(with: .opacity))
@@ -391,7 +393,7 @@ struct HistoriqueSaisies: View {
                 EnTeteSection(titre: "Mes saisies", detail: modele.enAttente.isEmpty ? nil : "\(modele.enAttente.count) en attente")
                 VStack(spacing: 0) {
                     ForEach(modele.enAttente) { s in
-                        ligne(texte: s.texte, date: s.cree, photos: s.fichiers.count, statut: .attente, resume: nil, reference: nil)
+                        ligne(texte: s.libelle, date: s.cree, photos: s.fichiers.count, statut: .attente, resume: nil, reference: nil)
                         Rectangle().fill(Color.filet).frame(height: 0.5)
                     }
                     ForEach(Array(modele.historique.prefix(8).enumerated()), id: \.element.id) { index, s in

@@ -13,7 +13,7 @@ struct DossierView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Espace.l) {
                 ZStack(alignment: .bottomLeading) {
-                    PhotoVivante(nom: PhotosMarque.pour(id: dossier.id), graine: PhotosMarque.graine(dossier.id))
+                    PhotoVivante(nom: PhotosMarque.pour(id: dossier.id))
                         .frame(height: 300)
                         .overlay(VoilePhoto(haut: 0.55, bas: 1))
                     VStack(alignment: .leading, spacing: Espace.xs) {

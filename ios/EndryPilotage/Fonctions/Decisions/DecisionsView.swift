@@ -1,7 +1,7 @@
 import EndryKit
 import SwiftUI
 
-/// Écran « Aujourd'hui », style Galerie : composition aux couleurs de la maison en plein écran, logo, salutation,
+/// Écran « Aujourd'hui », style Galerie : photo de réalisation Endry en plein écran, logo, salutation,
 /// puis une feuille brune qui monte avec le carrousel des décisions (cartes papier), l'argent de la semaine
 /// et les chantiers. Toucher une carte ouvre sa fiche complète.
 struct DecisionsView: View {
@@ -267,7 +267,7 @@ final class SuiviDefilement {
     var y: CGFloat = 0
 }
 
-/// Ambiance de l'accueil (composition générée) : s'étire quand on tire, glisse en parallaxe quand on défile.
+/// Photo de l'accueil : s'étire quand on tire, glisse en parallaxe quand on défile.
 private struct PhotoAccueil: View {
     var suivi: SuiviDefilement
     var hauteur: CGFloat
@@ -368,7 +368,7 @@ struct ResumeArgent: View {
     }
 }
 
-/// Chantiers de la semaine : cartes avec leur motif ; ouvre le Planning.
+/// Chantiers de la semaine : cartes avec la photo de la réalisation ; ouvre le Planning.
 struct ChantiersSemaine: View {
     var semaine: [Semaine]
     var ouvrir: () -> Void
@@ -388,7 +388,9 @@ struct ChantiersSemaine: View {
                     ForEach(semaine) { item in
                         Button(action: ouvrir) {
                             HStack(spacing: Espace.s) {
-                                CompositionMaison(motif: PhotosMarque.pour(id: item.id), graine: PhotosMarque.graine(item.id))
+                                Image(PhotosMarque.pour(id: item.id))
+                                    .resizable()
+                                    .scaledToFill()
                                     .frame(width: 64, height: 64)
                                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                                     .accessibilityHidden(true)

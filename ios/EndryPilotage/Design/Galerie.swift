@@ -1,60 +1,53 @@
 import EndryKit
 import SwiftUI
 
-// MARK: - Compositions de la maison
+// MARK: - Photographies de la maison
 
-/// Motifs graphiques (shader Metal) qui remplacent les photos : aucune image dont les droits ne sont pas
-/// documentés, et rien qui puisse passer pour une réalisation d'Endry SA (voir `ios/CREDITS.md`).
-enum MotifMaison: Int, CaseIterable {
-    case laiton, chaleur, reseaux, eau, ondes, marbre
-}
-
+/// Photos de réalisations Endry SA (propriété de l’entreprise, voir `ios/CREDITS.md`), attribuées de façon stable
+/// aux écrans et aux chantiers.
 enum PhotosMarque {
-    static let accueil = MotifMaison.laiton
+    static let accueil = "PhotoRobinetterie"
+    static let toutes = ["PhotoChauffageSol", "PhotoReseaux", "PhotoSalleDeBain", "PhotoHydraulique", "PhotoSanitaire", "PhotoRobinetterie"]
 
-    /// Même chantier, même motif, à chaque ouverture.
-    static func pour(id: String) -> MotifMaison {
+    /// Même chantier, même photo, à chaque ouverture.
+    static func pour(id: String) -> String {
         let somme = id.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0x7FFF_FFFF }
-        return MotifMaison.allCases[somme % MotifMaison.allCases.count]
+        return toutes[somme % toutes.count]
     }
 
-    /// Motif selon le genre de la décision.
-    static func pour(genre: String) -> MotifMaison {
+    /// Photo d'ambiance selon le genre de la décision.
+    static func pour(genre: String) -> String {
         let g = genre.lowercased()
-        if g.contains("facture") || g.contains("paiement") { return .ondes }
-        if g.contains("offre") { return .marbre }
-        if g.contains("question") { return .reseaux }
-        if g.contains("planning") || g.contains("rendez") { return .chaleur }
-        return .eau
-    }
-
-    /// Graine stable pour varier un même motif d'un chantier à l'autre.
-    static func graine(_ id: String) -> Float {
-        Float(id.unicodeScalars.reduce(7) { ($0 &* 131 &+ Int($1.value)) % 997 }) / 997
+        if g.contains("facture") || g.contains("paiement") { return "PhotoHydraulique" }
+        if g.contains("offre") { return "PhotoSanitaire" }
+        if g.contains("question") { return "PhotoReseaux" }
+        if g.contains("planning") || g.contains("rendez") { return "PhotoChauffageSol" }
+        return "PhotoSalleDeBain"
     }
 }
 
-/// Composition graphique aux couleurs de la maison. Rendue une fois : aucune animation perpétuelle.
-struct CompositionMaison: View {
-    var motif: MotifMaison
-    var graine: Float = 0
-
-    var body: some View {
-        Rectangle()
-            .fill(Color.espresso)
-            .colorEffect(ShaderLibrary.compositionMaison(.boundingRect, .float(Float(motif.rawValue)), .float(graine)))
-            .accessibilityHidden(true)
-    }
-}
-
-/// Ancien nom (photo « vivante ») : désormais une composition statique.
+/// Photo qui avance très lentement vers le spectateur (Ken Burns, une seule fois : aucune horloge ne tourne
+/// ensuite) ; figée si « Réduire les animations ».
 struct PhotoVivante: View {
-    var nom: MotifMaison
+    var nom: String
     var ancre: UnitPoint = .center
-    var graine: Float = 0
+    @State private var zoom = false
+    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
     var body: some View {
-        CompositionMaison(motif: nom, graine: graine)
+        GeometryReader { geo in
+            Image(nom)
+                .resizable()
+                .scaledToFill()
+                .frame(width: geo.size.width, height: geo.size.height)
+                .scaleEffect(zoom ? 1.16 : 1.05, anchor: ancre)
+                .clipped()
+        }
+        .onAppear {
+            guard !reduireAnimations, !Configuration.testsUI else { return }
+            withAnimation(.easeOut(duration: 16)) { zoom = true }
+        }
+        .accessibilityHidden(true)
     }
 }
 

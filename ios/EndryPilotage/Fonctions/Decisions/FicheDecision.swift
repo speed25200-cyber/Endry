@@ -58,7 +58,9 @@ struct FicheDecision: View {
                         app.onglet = .chantiers
                     } label: {
                         HStack(spacing: Espace.s) {
-                            CompositionMaison(motif: PhotosMarque.pour(id: dossier.id), graine: PhotosMarque.graine(dossier.id))
+                            Image(PhotosMarque.pour(id: dossier.id))
+                                .resizable()
+                                .scaledToFill()
                                 .frame(width: 56, height: 56)
                                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                                 .accessibilityHidden(true)

@@ -14,6 +14,15 @@ nonisolated protocol Transcripteur: AnyObject, Sendable {
     func arreter()
 }
 
+/// Oreille : transcrit en direct un micro tenu par un autre moteur (temps réel), pour afficher les mots
+/// pendant que le patron parle — le moteur temps réel ne livre sa transcription qu'en fin de phrase.
+nonisolated protocol Oreille: AnyObject, Sendable {
+    func nourrir(_ tampon: AVAudioPCMBuffer)
+    /// Nouveau tour de parole : on repart d'une page blanche.
+    func reinitialiser()
+    func arreter()
+}
+
 enum FabriqueTranscripteur {
     static func meilleur() async -> any Transcripteur {
         if #available(iOS 26.0, *), await TranscripteurAnalyseur.disponible() {
@@ -37,8 +46,11 @@ nonisolated final class TranscripteurClassique: Transcripteur, @unchecked Sendab
 }
 
 @available(iOS 26.0, *)
-nonisolated final class TranscripteurAnalyseur: Transcripteur, @unchecked Sendable {
+nonisolated final class TranscripteurAnalyseur: Transcripteur, Oreille, @unchecked Sendable {
     private let verrou = NSLock()
+    /// Texte confirmé du tour en cours (les segments définitifs, séparés par une espace).
+    private var definitif = ""
+    private var formatAnalyse: AVAudioFormat?
     private let moteurAudio = AVAudioEngine()
     private var analyseur: SpeechAnalyzer?
     private var continuation: AsyncStream<AnalyzerInput>.Continuation?
@@ -50,7 +62,9 @@ nonisolated final class TranscripteurAnalyseur: Transcripteur, @unchecked Sendab
         return await SpeechTranscriber.supportedLocale(equivalentTo: Locale(identifier: "fr-CH")) != nil
     }
 
-    func demarrer(surTexte: @escaping @Sendable (String, String) -> Void, surNiveau: @escaping @Sendable (Float) -> Void) async throws {
+    /// Prépare l'analyse (modèle fr-CH installé si besoin) et lance la lecture des résultats.
+    private func preparer(surTexte: @escaping @Sendable (String, String) -> Void)
+        async throws -> (SpeechAnalyzer, AVAudioFormat, AsyncStream<AnalyzerInput>, AsyncStream<AnalyzerInput>.Continuation) {
         let locale = await SpeechTranscriber.supportedLocale(equivalentTo: Locale(identifier: "fr-CH")) ?? Locale(identifier: "fr-FR")
         let transcripteur = SpeechTranscriber(locale: locale, transcriptionOptions: [], reportingOptions: [.volatileResults], attributeOptions: [])
         if let installation = try await AssetInventory.assetInstallationRequest(supporting: [transcripteur]) {
@@ -61,6 +75,57 @@ nonisolated final class TranscripteurAnalyseur: Transcripteur, @unchecked Sendab
             throw ErreurVoix.indisponible
         }
         let (flux, continuation) = AsyncStream<AnalyzerInput>.makeStream()
+        verrou.withLock { definitif = "" }
+        lecture = Task { [weak self] in
+            do {
+                for try await resultat in transcripteur.results {
+                    guard let self else { return }
+                    let texte = String(resultat.text.characters).trimmingCharacters(in: .whitespaces)
+                    if resultat.isFinal {
+                        let confirme = self.verrou.withLock {
+                            self.definitif = [self.definitif, texte].filter { !$0.isEmpty }.joined(separator: " ")
+                            return self.definitif
+                        }
+                        surTexte(confirme, "")
+                    } else {
+                        surTexte(self.verrou.withLock { self.definitif }, texte)
+                    }
+                }
+            } catch {
+                // Fin de l'analyse : rien à signaler, le moteur conclut le tour.
+            }
+        }
+        return (analyseur, format, flux, continuation)
+    }
+
+    /// Mode oreille : l'audio vient d'un autre moteur (`nourrir`) ; la session audio n'est pas touchée.
+    func demarrerSansMicro(surTexte: @escaping @Sendable (String, String) -> Void) async throws {
+        let (analyseur, format, flux, continuation) = try await preparer(surTexte: surTexte)
+        verrou.withLock {
+            self.analyseur = analyseur
+            self.continuation = continuation
+            self.formatAnalyse = format
+        }
+        try await analyseur.start(inputSequence: flux)
+    }
+
+    func nourrir(_ tampon: AVAudioPCMBuffer) {
+        let (continuation, pret) = verrou.withLock { () -> (AsyncStream<AnalyzerInput>.Continuation?, Bool) in
+            if convertisseur == nil, let formatAnalyse {
+                convertisseur = AVAudioConverter(from: tampon.format, to: formatAnalyse)
+            }
+            return (self.continuation, convertisseur != nil)
+        }
+        guard pret, let continuation, let converti = convertir(tampon) else { return }
+        continuation.yield(AnalyzerInput(buffer: converti))
+    }
+
+    func reinitialiser() {
+        verrou.withLock { definitif = "" }
+    }
+
+    func demarrer(surTexte: @escaping @Sendable (String, String) -> Void, surNiveau: @escaping @Sendable (Float) -> Void) async throws {
+        let (analyseur, format, flux, continuation) = try await preparer(surTexte: surTexte)
 
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP, .allowBluetoothA2DP])
@@ -86,23 +151,6 @@ nonisolated final class TranscripteurAnalyseur: Transcripteur, @unchecked Sendab
         moteurAudio.prepare()
         try moteurAudio.start()
         try await analyseur.start(inputSequence: flux)
-
-        lecture = Task {
-            var definitif = ""
-            do {
-                for try await resultat in transcripteur.results {
-                    let texte = String(resultat.text.characters)
-                    if resultat.isFinal {
-                        definitif += texte
-                        surTexte(definitif, "")
-                    } else {
-                        surTexte(definitif, texte)
-                    }
-                }
-            } catch {
-                // Fin de l'analyse : rien à signaler, le moteur local conclut le tour.
-            }
-        }
     }
 
     func arreter() {

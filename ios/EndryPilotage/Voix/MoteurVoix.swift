@@ -42,7 +42,7 @@ protocol MoteurVoix: AnyObject {
     /// L'assistant se tait et rend la parole au patron.
     func interrompre()
     /// Réponse arrivée plus tard (Claude, sur le PC) : dite dès que la conversation le permet.
-    func annoncer(question: String, reponse: String) async
+    func annoncer(question: String, reponse: String, agent: String?) async
 }
 
 enum ErreurVoix: Error {
@@ -170,7 +170,9 @@ final class AssistantVocal {
             cartes.removeAll { $0 == effet }
             cartes.insert(effet, at: 0)
             if cartes.count > 3 { cartes.removeLast() }
-            if case .questionClaude(let id, let texte, let question) = effet { suivre(saisieId: id, texte: texte, question: question) }
+            if case .questionClaude(let id, let texte, let question, let agent) = effet {
+                suivre(saisieId: id, texte: texte, question: question, agent: agent)
+            }
         case .nouveauTour:
             definitif = ""
             provisoire = ""
@@ -182,13 +184,13 @@ final class AssistantVocal {
     // MARK: - Claude, sur le PC
 
     /// Attend la réponse de Claude ; dès qu'elle arrive, la carte « Claude cherche » devient la réponse, et Endry la dit.
-    private func suivre(saisieId: String?, texte: String, question: String) {
+    private func suivre(saisieId: String?, texte: String, question: String, agent: String?) {
         guard let bureau, suivis[texte] == nil else { return }
         suivis[texte] = Task { [weak self] in
             let saisie = await bureau.attendre(saisieId: saisieId, texte: texte)
             guard !Task.isCancelled, let self else { return }
             self.suivis[texte] = nil
-            let attente = ExecuteurOutils.Effet.questionClaude(saisieId: saisieId, texte: texte, question: question)
+            let attente = ExecuteurOutils.Effet.questionClaude(saisieId: saisieId, texte: texte, question: question, agent: agent)
             let reponse: String
             if let saisie, saisie.statut == .traite, let resume = saisie.resume, !resume.isEmpty {
                 reponse = resume
@@ -197,14 +199,14 @@ final class AssistantVocal {
             } else {
                 reponse = "Claude n’a pas encore répondu. Sa réponse apparaîtra dans l’historique de Dicter."
             }
-            let finale = ExecuteurOutils.Effet.reponseClaude(question: question, reponse: reponse)
+            let finale = ExecuteurOutils.Effet.reponseClaude(question: question, reponse: reponse, agent: agent)
             if let index = self.cartes.firstIndex(of: attente) {
                 self.cartes[index] = finale
             } else {
                 self.cartes.insert(finale, at: 0)
                 if self.cartes.count > 3 { self.cartes.removeLast() }
             }
-            await self.moteur?.annoncer(question: question, reponse: reponse)
+            await self.moteur?.annoncer(question: question, reponse: reponse, agent: agent)
             self.etatBureau = await bureau.etat() ?? self.etatBureau
         }
     }

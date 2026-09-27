@@ -144,8 +144,11 @@ final class BureauClaudeTests: XCTestCase {
         let bureau = await executeur.executer(nom: "bureau", arguments: "{}")
         XCTAssertTrue(bureau.sortie.contains("resume"))
         let question = await executeur.executer(nom: "demander_claude", arguments: #"{"question":"Des e-mails urgents ?"}"#)
-        guard case .questionClaude(_, _, let q) = question.effet else { return XCTFail("\(question.effet)") }
+        guard case .questionClaude(_, let texte, let q, let agent) = question.effet else { return XCTFail("\(question.effet)") }
         XCTAssertEqual(q, "Des e-mails urgents ?")
+        XCTAssertEqual(agent, "Secrétariat", "Les e-mails vont au secrétariat")
+        XCTAssertEqual(BureauClaude.agent(texte), .secretariat)
+        XCTAssertEqual(BureauClaude.libelle(texte), "Question à Claude · Secrétariat : Des e-mails urgents ?")
     }
 
     func testOutilsDansLaSessionTempsReel() throws {
@@ -154,5 +157,33 @@ final class BureauClaudeTests: XCTestCase {
         let texte = String(decoding: data, as: UTF8.self)
         XCTAssertTrue(texte.contains("demander_claude"))
         XCTAssertTrue(texte.contains("\"bureau\""))
+    }
+}
+
+final class AgentsBureauTests: XCTestCase {
+    func testDetection() {
+        XCTAssertEqual(AgentBureau.detecter("Demande au secrétariat si Mme Gander a rappelé"), .secretariat)
+        XCTAssertEqual(AgentBureau.detecter("Est-ce que la compta a payé le fournisseur ?"), .comptabilite)
+        XCTAssertEqual(AgentBureau.detecter("Quels mails sont arrivés ce matin ?"), .secretariat)
+        XCTAssertEqual(AgentBureau.detecter("La facture Dubois est-elle payée ?"), .comptabilite)
+        XCTAssertEqual(AgentBureau.detecter("Le devis Rochat est parti ?"), .offres)
+        XCTAssertNil(AgentBureau.detecter("Raconte-moi une blague"))
+        XCTAssertEqual(AgentBureau(nom: "secretariat"), .secretariat)
+        XCTAssertEqual(AgentBureau(nom: "Comptabilité"), .comptabilite)
+    }
+
+    func testQuestionAdresseeALAgent() {
+        let texte = BureauClaude.texteQuestion("Des e-mails urgents ?", agent: .secretariat)
+        XCTAssertTrue(texte.contains("[Pour l’agent Secrétariat]"))
+        XCTAssertEqual(BureauClaude.questionSeule(texte), "Des e-mails urgents ?")
+        XCTAssertEqual(BureauClaude.agent(texte), .secretariat)
+        XCTAssertNil(BureauClaude.agent(BureauClaude.texteQuestion("Quoi de neuf ?")))
+    }
+
+    func testRepondeurAgents() {
+        let donnees = RepondeurLocal.Donnees(accueil: nil, argent: nil, chantiers: [])
+        XCTAssertEqual(RepondeurLocal.repondre("Demande au secrétariat si Mme Gander a rappelé", avec: donnees),
+                       .demanderClaude("Demande au secrétariat si Mme Gander a rappelé"))
+        XCTAssertEqual(RepondeurLocal.repondre("Que fait la compta ?", avec: donnees), .etatBureau)
     }
 }

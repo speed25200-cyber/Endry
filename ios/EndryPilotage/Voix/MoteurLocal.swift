@@ -18,7 +18,7 @@ final class MoteurLocal: MoteurVoix {
     /// Outils (Claude sur le PC, données) ; `nil` tant que l'app n'est pas connectée.
     private let executeur: ExecuteurOutils?
     /// Réponses de Claude arrivées pendant un tour : dites juste après.
-    private var annoncesEnAttente: [(question: String, reponse: String)] = []
+    private var annoncesEnAttente: [(question: String, reponse: String, agent: String?)] = []
     private let synthese = AVSpeechSynthesizer()
     private let delegue = DelegueSynthese()
     private var transcripteur: (any Transcripteur)?
@@ -131,9 +131,9 @@ final class MoteurLocal: MoteurVoix {
     }
 
     /// Réponse de Claude arrivée du PC : dite tout de suite si Endry est libre, sinon juste après le tour en cours.
-    func annoncer(question: String, reponse: String) async {
+    func annoncer(question: String, reponse: String, agent: String?) async {
         guard actif else { return }
-        annoncesEnAttente.append((question, reponse))
+        annoncesEnAttente.append((question, reponse, agent))
         guard !enReflexion else { return }
         enReflexion = true
         silence?.cancel()
@@ -203,9 +203,10 @@ final class MoteurLocal: MoteurVoix {
         let r = await executeur.executer(nom: "demander_claude", arguments: Self.json(["question": question]))
         surEvenement?(.effet(r.effet))
         switch r.effet {
-        case .questionClaude:
-            await dire("Je pose la question à Claude, sur le PC. Je vous lis sa réponse dès qu’elle arrive.")
-        case .reponseClaude(_, let reponse):
+        case .questionClaude(_, _, _, let agent):
+            let destinataire = agent.map { "à l’agent \($0) de Claude" } ?? "à Claude"
+            await dire("Je pose la question \(destinataire), sur le PC. Je vous lis sa réponse dès qu’elle arrive.")
+        case .reponseClaude(_, let reponse, _):
             await dire(reponse)
         default:
             await dire("Je n’ai pas pu joindre Claude sur le PC.")
@@ -224,7 +225,8 @@ final class MoteurLocal: MoteurVoix {
             enReflexion = true
             surEvenement?(.nouveauTour)
             surEvenement?(.patron(definitif: annonce.question, provisoire: ""))
-            await dire("Claude répond : " + annonce.reponse)
+            let qui = annonce.agent.map { "L’agent \($0) répond : " } ?? "Claude répond : "
+            await dire(qui + annonce.reponse)
             await terminerTour()
             return
         }

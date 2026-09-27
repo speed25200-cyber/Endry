@@ -1,4 +1,5 @@
 import EndryKit
+import UIKit
 import SwiftUI
 
 /// Assistant vocal plein écran (toucher long du micro central, bouton « Parler à Endry », raccourci Siri).
@@ -40,7 +41,7 @@ struct VueAssistantVocal: View {
                     .opacity(apparu ? 1 : 0)
                 if let nom = assistant?.nomMoteur, !nom.isEmpty {
                     Label(nom, systemImage: nom.contains("Apple Intelligence") ? "sparkles" : "waveform")
-                        .styleTexte(11, relativeTo: .caption2, graisse: .medium)
+                        .font(PoliceAssistant.texte(11, .medium, relativeTo: .caption2))
                         .foregroundStyle(Color.orClair.opacity(0.4))
                         .padding(.top, 6)
                         .accessibilityLabel(Text("Moteur vocal : \(nom)"))
@@ -157,7 +158,7 @@ struct VueAssistantVocal: View {
                         Task { await assistant?.poser(texte) }
                     } label: {
                         Text(texte)
-                            .styleTexte(14, relativeTo: .subheadline, graisse: .medium)
+                            .font(PoliceAssistant.texte(14, .medium, relativeTo: .subheadline))
                             .foregroundStyle(Color.orClair.opacity(0.9))
                             .padding(.horizontal, Espace.m)
                             .frame(minHeight: 40)
@@ -179,7 +180,7 @@ struct VueAssistantVocal: View {
         let vide = question.trimmingCharacters(in: .whitespaces).isEmpty
         return HStack(spacing: Espace.xs) {
             TextField("", text: $question, prompt: Text("Écrire à Endry…").foregroundStyle(Color.orClair.opacity(0.4)))
-                .styleTexte(16, relativeTo: .body)
+                .font(PoliceAssistant.texte(16))
                 .foregroundStyle(Color.orClair)
                 .tint(Color.or)
                 .focused($clavier)
@@ -227,9 +228,18 @@ struct VueAssistantVocal: View {
     }
 }
 
+// MARK: - Typographie de l'assistant
+
+/// L'assistant parle en SF Pro : net, lisible de loin, taillé pour le texte qui s'écrit en direct.
+enum PoliceAssistant {
+    static func texte(_ taille: CGFloat, _ poids: Font.Weight = .regular, relativeTo style: Font.TextStyle = .body) -> Font {
+        .system(size: UIFontMetrics(forTextStyle: style.uiKit).scaledValue(for: taille), weight: poids, design: .default)
+    }
+}
+
 // MARK: - État, transcription
 
-/// Libellé de la phase, en capitales Cinzel, qui se fond d'un état à l'autre.
+/// Phase de la conversation, en petites capitales espacées, qui se fond d'un état à l'autre.
 private struct EtatAssistant: View {
     var phase: PhaseVoix
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
@@ -249,14 +259,14 @@ private struct EtatAssistant: View {
         Group {
             if case .erreur = phase {
                 Text(texte)
-                    .styleTexte(14, relativeTo: .footnote, graisse: .medium)
+                    .font(PoliceAssistant.texte(14, .medium, relativeTo: .footnote))
                     .foregroundStyle(Color.orClair.opacity(0.8))
                     .multilineTextAlignment(.center)
             } else {
                 Text(texte)
-                    .font(Police.etiquette(12, relativeTo: .footnote))
+                    .font(PoliceAssistant.texte(12, .semibold, relativeTo: .footnote))
                     .textCase(.uppercase)
-                    .tracking(3)
+                    .tracking(2.4)
                     .foregroundStyle(Color.or.opacity(0.85))
             }
         }
@@ -267,38 +277,42 @@ private struct EtatAssistant: View {
     }
 }
 
-/// Ce que dit le patron (discret, en italique), puis la réponse en grand, qui s'allume mot à mot à mesure qu'elle est dite.
-/// Vue séparée : seule elle se redessine à chaque mot.
+/// Vos mots s'écrivent pendant que vous parlez, en grand ; quand Endry répond, ils se retirent en petit au-dessus
+/// de la réponse, qui s'allume mot à mot au rythme de la voix. Vue séparée : seule elle se redessine.
 private struct TranscriptionAssistant: View {
     var assistant: AssistantVocal?
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
     var body: some View {
-        VStack(spacing: Espace.s) {
+        let reponse = assistant?.reponse ?? ""
+        let enReponse = !reponse.isEmpty
+        VStack(spacing: Espace.m) {
             if let assistant, !(assistant.definitif.isEmpty && assistant.provisoire.isEmpty) {
-                Text("\(Text(assistant.definitif).foregroundStyle(Color.orClair.opacity(0.62))) \(Text(assistant.provisoire).foregroundStyle(Color.orClair.opacity(0.3)))")
-                    .styleTitre(20, relativeTo: .title3, graisse: .italique)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(3)
+                MotsEnDirect(definitif: assistant.definitif, provisoire: assistant.provisoire,
+                             taille: enReponse ? 16 : 30, poids: enReponse ? .medium : .semibold,
+                             opacite: enReponse ? 0.5 : 1)
                     .transition(.opacity)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text("\(assistant.definitif) \(assistant.provisoire)"))
                     .accessibilityIdentifier("transcription-patron")
             }
-            if let assistant, !assistant.reponse.isEmpty {
-                let (dit, reste) = Self.decouper(assistant.reponse, lu: assistant.reponseLue)
+            if let assistant, enReponse {
+                let (dit, reste) = Self.decouper(reponse, lu: assistant.reponseLue)
                 Text("\(Text(dit).foregroundStyle(Color(hex: 0xFBEBD0)))\(Text(reste).foregroundStyle(Color.orClair.opacity(0.28)))")
-                    .styleTitre(26, relativeTo: .title2, graisse: .medium)
+                    .font(PoliceAssistant.texte(23, .medium, relativeTo: .title3))
+                    .tracking(-0.3)
                     .multilineTextAlignment(.center)
-                    .lineSpacing(2)
+                    .lineSpacing(3)
                     .minimumScaleFactor(0.75)
-                    .lineLimit(7)
+                    .lineLimit(8)
                     .transition(.opacity.combined(with: .offset(y: 10)))
                     .animation(.easeOut(duration: 0.18), value: assistant.reponseLue)
-                    .accessibilityLabel(Text(assistant.reponse))
+                    .accessibilityLabel(Text(reponse))
                     .accessibilityIdentifier("reponse-assistant")
             }
         }
         .frame(maxWidth: .infinity)
-        .animation(.endry(reduire: reduireAnimations), value: assistant?.reponse)
+        .animation(.endry(reduire: reduireAnimations), value: enReponse)
     }
 
     /// Partie déjà dite / partie à venir (décalage UTF-16 donné par la synthèse vocale).
@@ -309,6 +323,104 @@ private struct TranscriptionAssistant: View {
         let index = utf.index(utf.startIndex, offsetBy: borne)
         guard let dit = String(utf[..<index]), let reste = String(utf[index...]) else { return (texte, "") }
         return (dit, reste)
+    }
+}
+
+/// Chaque mot reconnu apparaît en fondu, en remontant légèrement et en se précisant (flou → net) ;
+/// les mots encore provisoires restent plus pâles jusqu'à ce que la reconnaissance les confirme.
+private struct MotsEnDirect: View {
+    var definitif: String
+    var provisoire: String
+    var taille: CGFloat
+    var poids: Font.Weight
+    var opacite: Double
+    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
+
+    var body: some View {
+        let confirmes = Self.mots(definitif)
+        let enCours = Self.mots(provisoire)
+        let tous = confirmes.map { ($0, true) } + enCours.map { ($0, false) }
+        LigneCentree(espacement: taille * 0.28, interligne: taille * 0.18) {
+            ForEach(Array(tous.enumerated()), id: \.offset) { index, element in
+                Text(element.0)
+                    .font(PoliceAssistant.texte(taille, poids, relativeTo: .title))
+                    .tracking(-0.4)
+                    .foregroundStyle(Color(hex: 0xFBEBD0).opacity((element.1 ? 1 : 0.55) * opacite))
+                    .transition(reduireAnimations ? .opacity : .asymmetric(
+                        insertion: .modifier(active: MotQuiApparait(etat: 0), identity: MotQuiApparait(etat: 1)),
+                        removal: .opacity))
+            }
+        }
+        .animation(.spring(response: 0.32, dampingFraction: 0.9), value: tous.count)
+        .animation(.endry(reduire: reduireAnimations), value: taille)
+    }
+
+    static func mots(_ texte: String) -> [String] {
+        texte.split(whereSeparator: \.isWhitespace).map(String.init)
+    }
+}
+
+/// Apparition d'un mot : fondu, légère montée, flou qui se dissipe.
+private struct MotQuiApparait: ViewModifier {
+    var etat: Double
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(etat)
+            .offset(y: (1 - etat) * 8)
+            .blur(radius: (1 - etat) * 6)
+    }
+}
+
+/// Mots posés ligne à ligne, chaque ligne centrée (comme un sous-titre).
+private struct LigneCentree: Layout {
+    var espacement: CGFloat
+    var interligne: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let largeur = proposal.width ?? .infinity
+        let lignes = decouper(subviews, largeur: largeur)
+        let hauteur = lignes.reduce(0) { $0 + $1.hauteur } + interligne * CGFloat(max(lignes.count - 1, 0))
+        let plusLarge = lignes.map(\.largeur).max() ?? 0
+        return CGSize(width: proposal.width ?? plusLarge, height: hauteur)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for ligne in decouper(subviews, largeur: bounds.width) {
+            var x = bounds.midX - ligne.largeur / 2
+            for index in ligne.indices {
+                let taille = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(at: CGPoint(x: x, y: y + ligne.hauteur - taille.height), proposal: .unspecified)
+                x += taille.width + espacement
+            }
+            y += ligne.hauteur + interligne
+        }
+    }
+
+    private struct Ligne {
+        var indices: [Int] = []
+        var largeur: CGFloat = 0
+        var hauteur: CGFloat = 0
+    }
+
+    private func decouper(_ subviews: Subviews, largeur: CGFloat) -> [Ligne] {
+        var lignes: [Ligne] = []
+        var courante = Ligne()
+        for (index, vue) in subviews.enumerated() {
+            let taille = vue.sizeThatFits(.unspecified)
+            let ajout = courante.indices.isEmpty ? taille.width : courante.largeur + espacement + taille.width
+            if ajout > largeur, !courante.indices.isEmpty {
+                lignes.append(courante)
+                courante = Ligne()
+            }
+            courante.largeur = courante.indices.isEmpty ? taille.width : courante.largeur + espacement + taille.width
+            courante.hauteur = max(courante.hauteur, taille.height)
+            courante.indices.append(index)
+        }
+        if !courante.indices.isEmpty { lignes.append(courante) }
+        // Garde les dernières lignes : ce que vous venez de dire reste toujours visible.
+        return Array(lignes.suffix(4))
     }
 }
 
@@ -357,10 +469,10 @@ struct CarteContexte: View {
             } else {
                 resume(icone: "doc.text.fill", titre: "Facture \(numero)", detail: "Suivi seulement : aucune relance sans votre demande")
             }
-        case .questionClaude(_, _, let question):
-            CarteClaude(question: question, reponse: nil, retirer: retirer)
-        case .reponseClaude(let question, let reponse):
-            CarteClaude(question: question, reponse: reponse, retirer: retirer)
+        case .questionClaude(_, _, let question, let agent):
+            CarteClaude(question: question, reponse: nil, agent: agent, retirer: retirer)
+        case .reponseClaude(let question, let reponse, let agent):
+            CarteClaude(question: question, reponse: reponse, agent: agent, retirer: retirer)
         case .aucun:
             EmptyView()
         }
@@ -408,7 +520,7 @@ private struct PastilleClaude: View {
                     .frame(width: 7, height: 7)
                     .overlay(Circle().stroke(couleur.opacity(0.4), lineWidth: 3).scaleEffect(1.8))
                 Text(etat?.libelleCourt ?? "Claude · PC")
-                    .styleTexte(12, relativeTo: .caption, graisse: .medium)
+                    .font(PoliceAssistant.texte(12, .medium, relativeTo: .caption))
                     .foregroundStyle(Color.orClair.opacity(0.85))
                     .contentTransition(.opacity)
             }
@@ -431,22 +543,23 @@ private struct PastilleClaude: View {
     }
 }
 
-/// Carte « Claude » : la question posée au PC, puis sa réponse quand elle arrive.
+/// Carte « Claude » : la question posée au PC (et à quel agent), puis sa réponse quand elle arrive.
 struct CarteClaude: View {
     var question: String
     var reponse: String?
+    var agent: String?
     var retirer: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: Espace.xs) {
             HStack(spacing: 6) {
-                Image(systemName: "sparkles")
+                Image(systemName: icone)
                     .font(.system(size: 12, weight: .semibold))
                     .symbolEffect(.pulse, isActive: reponse == nil)
-                Text("Claude · PC")
-                    .font(Police.etiquette(11, relativeTo: .caption2))
+                Text(agent.map { "Claude · \($0)" } ?? "Claude · PC")
+                    .font(PoliceAssistant.texte(11, .semibold, relativeTo: .caption2))
                     .textCase(.uppercase)
-                    .tracking(2)
+                    .tracking(1.8)
                 Spacer()
                 Button(action: retirer) {
                     Image(systemName: "xmark").font(.system(size: 11, weight: .bold))
@@ -457,13 +570,13 @@ struct CarteClaude: View {
             }
             .foregroundStyle(Color.or)
             Text(question)
-                .styleTitre(17, relativeTo: .subheadline, graisse: .italique)
-                .foregroundStyle(Color.orClair.opacity(0.6))
+                .font(PoliceAssistant.texte(14, .medium, relativeTo: .subheadline))
+                .foregroundStyle(Color.orClair.opacity(0.55))
                 .lineLimit(2)
             if let reponse {
                 ScrollView {
                     Text(reponse)
-                        .styleTexte(15, relativeTo: .body)
+                        .font(PoliceAssistant.texte(16, .regular))
                         .foregroundStyle(Color(hex: 0xFBEBD0))
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .textSelection(.enabled)
@@ -474,8 +587,8 @@ struct CarteClaude: View {
             } else {
                 HStack(spacing: Espace.xs) {
                     ProgressView().controlSize(.small).tint(Color.or)
-                    Text("Claude cherche dans les dossiers, Bexio et les e-mails…")
-                        .styleTexte(13, relativeTo: .footnote)
+                    Text(agent.map { "L’agent \($0) cherche sur le PC…" } ?? "Claude cherche dans les dossiers, Bexio et les e-mails…")
+                        .font(PoliceAssistant.texte(13, relativeTo: .footnote))
                         .foregroundStyle(Color.orClair.opacity(0.55))
                 }
             }
@@ -486,6 +599,10 @@ struct CarteClaude: View {
         .animation(.endry, value: reponse)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("carte-claude")
+    }
+
+    private var icone: String {
+        agent.flatMap { AgentBureau(nom: $0)?.icone } ?? "sparkles"
     }
 }
 

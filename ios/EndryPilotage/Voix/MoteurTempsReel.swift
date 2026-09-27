@@ -28,6 +28,10 @@ final class MoteurTempsReel: MoteurVoix {
     private var itemEnCours: String?
     private var phase: PhaseVoix = .preparation
     private var reponseTerminee = true
+    /// Transcription en direct sur l'iPhone (iOS 26) : les mots s'affichent pendant que le patron parle.
+    private var oreille: (any Oreille)?
+    /// La transcription définitive du serveur est arrivée pour ce tour : elle fait foi.
+    private var transcriptionServeurRecue = false
 
     init(session: SessionVoix, executeur: ExecuteurOutils) {
         self.session = session
@@ -58,6 +62,25 @@ final class MoteurTempsReel: MoteurVoix {
             throw ErreurVoix.connexion
         }
 
+        if #available(iOS 26.0, *), await TranscripteurAnalyseur.disponible() {
+            let transcripteur = TranscripteurAnalyseur()
+            do {
+                try await transcripteur.demarrerSansMicro { [weak self] definitif, provisoire in
+                    Task { @MainActor in self?.entendu(definitif: definitif, provisoire: provisoire) }
+                }
+                oreille = transcripteur
+            } catch {
+                oreille = nil
+            }
+        }
+        let oreilleLocale = oreille
+        let alimenterOreille: (@Sendable (AVAudioPCMBuffer) -> Void)?
+        if let oreilleLocale {
+            alimenterOreille = { @Sendable tampon in oreilleLocale.nourrir(tampon) }
+        } else {
+            alimenterOreille = nil
+        }
+
         let canalReseau = socket
         let canal = CanalAudioTempsReel()
         canal.surVide = { [weak self] in
@@ -69,7 +92,8 @@ final class MoteurTempsReel: MoteurVoix {
             },
             surNiveau: { [weak self] niveau in
                 Task { @MainActor in self?.surEvenement?(.niveauMicro(niveau)) }
-            }
+            },
+            surTampon: alimenterOreille
         )
         audio = canal
 
@@ -86,7 +110,17 @@ final class MoteurTempsReel: MoteurVoix {
         socket = nil
         audio?.arreter()
         audio = nil
+        oreille?.arreter()
+        oreille = nil
         surEvenement = nil
+    }
+
+    /// Mots entendus sur l'iPhone pendant que le patron parle (avant la transcription du serveur).
+    private func entendu(definitif: String, provisoire: String) {
+        guard phase == .ecoute, !transcriptionServeurRecue else { return }
+        patronDefinitif = definitif
+        patronProvisoire = provisoire
+        surEvenement?(.patron(definitif: definitif, provisoire: provisoire))
     }
 
     // MARK: - Réception
@@ -111,6 +145,8 @@ final class MoteurTempsReel: MoteurVoix {
             break
         case .paroleDebut:
             interrompreAssistant()
+            oreille?.reinitialiser()
+            transcriptionServeurRecue = false
             patronDefinitif = ""
             patronProvisoire = ""
             texteAssistant = ""
@@ -120,10 +156,14 @@ final class MoteurTempsReel: MoteurVoix {
             changerPhase(.reflexion)
         case .transcriptionPatron(let texte, let finale):
             if finale {
+                transcriptionServeurRecue = true
                 patronDefinitif = texte
                 patronProvisoire = ""
-            } else {
+            } else if oreille == nil {
                 patronProvisoire += texte
+            } else {
+                // L'oreille de l'iPhone affiche déjà les mots en direct.
+                return
             }
             surEvenement?(.patron(definitif: patronDefinitif, provisoire: patronProvisoire))
         case .audio(let pcm, let itemId):
@@ -166,9 +206,10 @@ final class MoteurTempsReel: MoteurVoix {
         changerPhase(.reflexion)
     }
 
-    func annoncer(question: String, reponse: String) async {
+    func annoncer(question: String, reponse: String, agent: String?) async {
+        let qui = agent.map { "de l’agent \($0) de Claude" } ?? "de Claude"
         envoyer(CommandeRealtime.messageTexte(
-            "[Réponse de Claude, l’assistant du bureau sur le PC, à la question « \(question) »] \(reponse)\nTransmets-la fidèlement au patron, en commençant par « Claude répond »."))
+            "[Réponse \(qui), sur le PC, à la question « \(question) »] \(reponse)\nTransmets-la fidèlement au patron, en commençant par « Claude répond »."))
         envoyer(CommandeRealtime.creerReponse)
     }
 
@@ -237,7 +278,8 @@ nonisolated final class CanalAudioTempsReel: @unchecked Sendable {
         return enAttente > 0
     }
 
-    func demarrer(surMorceau: @escaping @Sendable (Data) -> Void, surNiveau: @escaping @Sendable (Float) -> Void) throws {
+    func demarrer(surMorceau: @escaping @Sendable (Data) -> Void, surNiveau: @escaping @Sendable (Float) -> Void,
+                  surTampon: (@Sendable (AVAudioPCMBuffer) -> Void)? = nil) throws {
         guard let formatReseau, let formatLecture else { throw ErreurVoix.indisponible }
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP, .allowBluetoothA2DP])
@@ -256,6 +298,7 @@ nonisolated final class CanalAudioTempsReel: @unchecked Sendable {
         entree.installTap(onBus: 0, bufferSize: 2_400, format: formatMicro) { [weak self] tampon, _ in
             guard let self else { return }
             surNiveau(Self.niveau(de: tampon))
+            surTampon?(tampon)
             if let pcm = self.convertir(tampon) { surMorceau(pcm) }
         }
         moteur.prepare()

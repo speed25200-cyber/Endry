@@ -135,15 +135,20 @@ public enum OutilsClaude {
     public static let descriptionBureau = "Ce que fait Claude sur le PC : pause, demandes en cours, derniers travaux et décisions à valider."
     public static let descriptionDemander = "Pose une question à Claude, l’assistant du bureau sur le PC, qui a les dossiers, Bexio et les e-mails. La réponse arrive à l’écran et est lue dès qu’elle est prête."
 
-    public static let consigne = "Claude est l’assistant du bureau, sur le PC : il a les dossiers, Bexio et les e-mails. Pour savoir ce qu’il fait, appelle bureau. Pour toute question dont les outils n’ont pas la réponse, ou si le patron dit « demande à Claude », appelle demander_claude avec la question complète, puis dis simplement que Claude cherche : n’invente jamais sa réponse."
+    public static var consigne: String { consigneBase + " " + AgentBureau.consigne }
+
+    static let consigneBase = "Claude est l’assistant du bureau, sur le PC, avec ses agents : il a les dossiers, Bexio et les e-mails. Pour savoir ce qu’il fait, appelle bureau. Pour toute question dont les outils n’ont pas la réponse, ou si le patron dit « demande à Claude », appelle demander_claude avec la question complète, puis dis simplement que Claude cherche : n’invente jamais sa réponse."
 
     public static var definitions: [[String: Any]] {
         [
         ["type": "function", "name": "bureau", "description": descriptionBureau,
          "parameters": ["type": "object", "properties": [String: Any]()]],
         ["type": "function", "name": "demander_claude", "description": descriptionDemander,
-         "parameters": ["type": "object", "properties": ["question": ["type": "string", "description": "La question du patron, complète."]],
-                        "required": ["question"]]],
+         "parameters": ["type": "object", "properties": [
+             "question": ["type": "string", "description": "La question du patron, complète."],
+             "agent": ["type": "string", "enum": AgentBureau.allCases.map(\.rawValue),
+                       "description": "Agent de Claude concerné, si évident (secrétariat : e-mails, courrier ; comptabilité : Bexio, factures…)."],
+         ], "required": ["question"]]],
         ]
     }
 }

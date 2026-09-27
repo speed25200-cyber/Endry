@@ -10,9 +10,9 @@ public struct ExecuteurOutils: Sendable {
         case afficherChantier(String)
         case afficherFacture(String)
         /// Question posée à Claude sur le PC : sa réponse arrivera dans le résumé de la saisie.
-        case questionClaude(saisieId: String?, texte: String, question: String)
-        /// Réponse de Claude, à afficher et à dire.
-        case reponseClaude(question: String, reponse: String)
+        case questionClaude(saisieId: String?, texte: String, question: String, agent: String?)
+        /// Réponse de Claude (et de l'agent qui a répondu), à afficher et à dire.
+        case reponseClaude(question: String, reponse: String, agent: String?)
     }
 
     public let api: any EndryAPI
@@ -72,13 +72,16 @@ public struct ExecuteurOutils: Sendable {
             case "demander_claude":
                 let question = (args["question"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !question.isEmpty else { return (json(["ok": false, "message": "Question vide."]), .aucun) }
-                switch try await BureauClaude(api: api).poser(question) {
+                let agent = (args["agent"] as? String).flatMap(AgentBureau.init(nom:)) ?? AgentBureau.detecter(question)
+                let destinataire = agent.map { "l’agent \($0.nom) de Claude" } ?? "Claude"
+                switch try await BureauClaude(api: api).poser(question, agent: agent) {
                 case .reponse(let reponse):
-                    return (json(["reponse_de_claude": reponse]), .reponseClaude(question: question, reponse: reponse))
+                    return (json(["reponse_de_claude": reponse, "agent": agent?.nom ?? ""]),
+                            .reponseClaude(question: question, reponse: reponse, agent: agent?.nom))
                 case .enAttente(let id, let texte):
-                    return (json(["transmise": true,
-                                  "message": "Question posée à Claude sur le PC. Sa réponse s’affichera et sera lue dès qu’elle arrive. Dis-le simplement au patron, sans inventer la réponse."]),
-                            .questionClaude(saisieId: id, texte: texte, question: question))
+                    return (json(["transmise": true, "agent": agent?.nom ?? "",
+                                  "message": "Question posée à \(destinataire), sur le PC. Sa réponse s’affichera et sera lue dès qu’elle arrive. Dis-le simplement au patron, sans inventer la réponse."]),
+                            .questionClaude(saisieId: id, texte: texte, question: question, agent: agent?.nom))
                 }
             case "proposer_decision":
                 let reference = args["reference"] as? String ?? ""

@@ -160,9 +160,11 @@ public actor APIDemo: EndryAPI {
             guard let index = saisies.firstIndex(where: { ($0["id"] as? String) == id }) else { continue }
             let ecoule = ContinuousClock.now - depot
             if ecoule >= delaiClaude {
-                let question = BureauClaude.questionSeule(saisies[index]["texte"] as? String ?? "")
+                let texte = saisies[index]["texte"] as? String ?? ""
+                let question = BureauClaude.questionSeule(texte)
+                let signature = BureauClaude.agent(texte).map { "\($0.nom) : " } ?? ""
                 saisies[index]["statut"] = "traite"
-                saisies[index]["resume"] = Self.reponseClaude(question)
+                saisies[index]["resume"] = signature + Self.reponseClaude(question)
                 questions[id] = nil
             } else if ecoule >= delaiClaude / 2 {
                 saisies[index]["statut"] = "en_cours"

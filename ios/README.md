@@ -86,8 +86,16 @@ Toucher court du micro central : dictée d'une saisie terrain. **Toucher long** 
     la question part comme une saisie marquée « Question du patron… ne prépare et n'envoie rien » (`POST /saisie`),
     une carte « Claude cherche » s'affiche, puis la réponse (le `resume` de la saisie, suivi par `GET /saisies`)
     s'affiche et est lue à voix haute dès qu'elle arrive ;
+  - **agents** (`EndryKit/Voix/AgentsBureau.swift`) : Secrétariat (e-mails, courrier, téléphone, rendez-vous),
+    Comptabilité (Bexio, factures, paiements), Chantiers, Offres, Achats. L'agent est détecté (« demande au
+    secrétariat… », « la compta a payé ? », « des e-mails ? ») et écrit dans la question (`[Pour l'agent
+    Secrétariat]`) : Claude, sur le PC, la confie à cet agent ; la carte et la réponse disent quel agent répond ;
   - facultatif : si le PC expose `POST /app/api/v1/assistant/question` (`{question}` → `{reponse}`), la réponse
     est immédiate ; sinon (404) l'app passe par la saisie.
+- **Vos mots en direct** : chaque mot reconnu s'écrit en grand pendant que vous parlez (fondu, flou qui se
+  dissipe ; mots encore incertains plus pâles), puis se retire au-dessus de la réponse, qui s'allume mot à mot
+  au rythme de la voix. Avec le moteur temps réel, une « oreille » SpeechAnalyzer sur l'iPhone (iOS 26) affiche
+  les mots pendant la phrase ; la transcription du serveur fait foi à la fin. Texte en SF Pro.
 - **Écrire plutôt que parler** : suggestions à toucher et champ « Écrire à Endry… » dans l'assistant
   (mêmes outils, mêmes règles). Toucher la sphère pendant qu'Endry parle l'interrompt.
 - **Entrées** : bouton « Parler à Endry » sur Aujourd'hui, toucher long du micro central, et Siri

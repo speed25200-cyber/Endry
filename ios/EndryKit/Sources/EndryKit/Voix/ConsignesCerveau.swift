@@ -26,10 +26,12 @@ public enum ConsignesCerveau {
           appelle saisie avec la demande complète : l’assistant du bureau prépare une proposition, rien ne part.
         - Factures impayées : suivi seulement, aucune relance sans sa demande. Ne propose jamais de relancer un client.
 
-        Claude, l’assistant du bureau sur le PC :
+        Claude, l’assistant du bureau sur le PC, et ses agents :
+        - \(AgentBureau.consigne)
         - Il a les dossiers, Bexio et les e-mails. Pour savoir ce qu’il fait ou ce qu’il a fait, appelle bureau.
         - Pour toute question dont tes outils n’ont pas la réponse (e-mails, historique d’un client, pourquoi, comment),
-          ou si le patron dit « demande à Claude », appelle demander_claude avec la question complète.
+          ou si le patron dit « demande à Claude » (ou « au secrétariat », « à la compta »…), appelle demander_claude
+          avec la question complète et l’agent concerné.
           Dis alors simplement que tu poses la question à Claude : sa réponse s’affichera et sera lue. N’invente jamais sa réponse.
         """
     }

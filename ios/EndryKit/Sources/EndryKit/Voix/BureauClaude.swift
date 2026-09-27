@@ -83,8 +83,17 @@ public struct BureauClaude: Sendable {
     /// Préfixe qui dit à Claude ce qu'on attend : une réponse, pas une action.
     public static let prefixeQuestion = "Question du patron (depuis l’assistant vocal de l’iPhone). Réponds-lui dans le résumé, en deux ou trois phrases à dire à voix haute ; ne prépare et n’envoie rien : "
 
-    public static func texteQuestion(_ question: String) -> String {
-        prefixeQuestion + "« \(question.trimmingCharacters(in: .whitespacesAndNewlines)) »"
+    public static func texteQuestion(_ question: String, agent: AgentBureau? = nil) -> String {
+        let pour = agent.map { "[Pour l’agent \($0.nom)] " } ?? ""
+        return prefixeQuestion + pour + "« \(question.trimmingCharacters(in: .whitespacesAndNewlines)) »"
+    }
+
+    /// Agent visé par une question déposée (lu dans son texte).
+    public static func agent(_ texte: String) -> AgentBureau? {
+        guard estQuestion(texte) else { return nil }
+        let reste = texte.dropFirst(prefixeQuestion.count)
+        guard reste.hasPrefix("[Pour l’agent "), let fin = reste.firstIndex(of: "]") else { return nil }
+        return AgentBureau(nom: String(reste[reste.index(reste.startIndex, offsetBy: 14)..<fin]))
     }
 
     public static func estQuestion(_ texte: String) -> Bool { texte.hasPrefix(prefixeQuestion) }
@@ -93,6 +102,9 @@ public struct BureauClaude: Sendable {
     public static func questionSeule(_ texte: String) -> String {
         guard estQuestion(texte) else { return texte }
         var q = String(texte.dropFirst(prefixeQuestion.count))
+        if q.hasPrefix("[Pour l’agent "), let fin = q.firstIndex(of: "]") {
+            q = String(q[q.index(after: fin)...]).trimmingCharacters(in: .whitespaces)
+        }
         if q.hasPrefix("« ") { q.removeFirst(2) }
         if q.hasSuffix(" »") { q.removeLast(2) }
         return q
@@ -100,7 +112,9 @@ public struct BureauClaude: Sendable {
 
     /// Libellé d'historique : « Question à Claude : … » plutôt que le texte technique envoyé au PC.
     public static func libelle(_ texte: String) -> String {
-        estQuestion(texte) ? "Question à Claude : " + questionSeule(texte) : texte
+        guard estQuestion(texte) else { return texte }
+        let destinataire = agent(texte).map { "Claude · \($0.nom)" } ?? "Claude"
+        return "Question à \(destinataire) : " + questionSeule(texte)
     }
 
     /// Pause, file, travaux en cours et derniers résultats. `nil` si le PC ne connaît pas ces routes (v1.0).
@@ -112,15 +126,15 @@ public struct BureauClaude: Sendable {
         return EtatBureau(etat: e, saisies: s ?? [])
     }
 
-    public func poser(_ question: String) async throws(ErreurAPI) -> QuestionPosee {
+    public func poser(_ question: String, agent: AgentBureau? = nil) async throws(ErreurAPI) -> QuestionPosee {
         let q = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { throw .refus("La question est vide.") }
         // Route directe, si le PC la propose ; sinon on passe par la saisie.
-        if let data = try? await api.envoyer(.questionClaude(q)),
+        if let data = try? await api.envoyer(.questionClaude(q, agent: agent)),
            let reponse = try? JSONDecoder().decode(ReponseQuestion.self, from: data), let texte = reponse.texte, !texte.isEmpty {
             return .reponse(texte)
         }
-        let texte = Self.texteQuestion(q)
+        let texte = Self.texteQuestion(q, agent: agent)
         let formulaire = FormulaireMultipart(champs: [Parametre("texte", texte)])
         let reponse = try await api.charger(ReponseSimple.self, .saisie(formulaire))
         guard reponse.ok else { throw .refus(reponse.message ?? "Le PC n’a pas accepté la question.") }
@@ -155,7 +169,9 @@ struct ReponseQuestion: Decodable {
 
 extension Requete {
     /// Facultatif (proposé au PC) : question directe à Claude, réponse synchrone.
-    public static func questionClaude(_ question: String) -> Requete {
-        .init(.post, "\(prefixe)/assistant/question", corps: .json(json(["question": question])), delai: 90)
+    public static func questionClaude(_ question: String, agent: AgentBureau? = nil) -> Requete {
+        var corps = ["question": question]
+        if let agent { corps["agent"] = agent.rawValue }
+        return .init(.post, "\(prefixe)/assistant/question", corps: .json(json(corps)), delai: 90)
     }
 }

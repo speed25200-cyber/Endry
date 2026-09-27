@@ -38,7 +38,9 @@ public enum RepondeurLocal {
         }
 
         // Claude, l'assistant du bureau : « que fait Claude ? », « demande à Claude… ».
+        let agentNomme = AgentBureau.allCases.contains { a in a.appellations.contains { (" " + q + " ").contains(" \($0) ") } }
         let parleDuBureau = mots.contains("claude") || q.contains("le pc") || q.contains("l ordinateur") || q.contains("assistant du bureau")
+            || mots.contains("agent") || mots.contains("agents") || agentNomme
         if parleDuBureau {
             let demande = ["demande", "demander", "pose", "poser", "question", "sait", "savoir", "verifie", "cherche", "regarde"]
             if demande.contains(where: { mots.contains($0) }) { return .demanderClaude(question) }

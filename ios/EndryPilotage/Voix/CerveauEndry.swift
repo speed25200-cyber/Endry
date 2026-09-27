@@ -201,10 +201,12 @@ struct OutilDemanderClaude: Tool {
     struct Arguments {
         @Guide(description: "La question du patron, complète, telle qu’il l’a posée")
         var question: String
+        @Guide(description: "Agent de Claude concerné : secretariat, comptabilite, chantiers, offres, achats ; vide si aucun n’est évident")
+        var agent: String
     }
 
     func call(arguments: Arguments) async throws -> String {
-        let r = await executeur.executer(nom: name, arguments: OutilChantier.json(["question": arguments.question]))
+        let r = await executeur.executer(nom: name, arguments: OutilChantier.json(["question": arguments.question, "agent": arguments.agent]))
         effets.ajouter(r.effet)
         return r.sortie
     }

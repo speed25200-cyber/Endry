@@ -30,6 +30,8 @@ final class MoteurLocal: MoteurVoix {
     private var actif = false
     private var enReflexion = false
     private var questionEnAttente: String?
+    /// Endry est en train de parler (suivi local : on n'interroge pas la synthèse, qui peut se bloquer).
+    private var enParole = false
 
     /// Fin de phrase : silence après la dernière parole reconnue.
     private static let delaiSilence: Duration = .milliseconds(1_300)
@@ -66,7 +68,7 @@ final class MoteurLocal: MoteurVoix {
         pulsation?.cancel()
         transcripteur?.arreter()
         transcripteur = nil
-        if synthese.isSpeaking { synthese.stopSpeaking(at: .immediate) }
+        if enParole { synthese.stopSpeaking(at: .immediate) }
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         surEvenement = nil
     }
@@ -115,7 +117,7 @@ final class MoteurLocal: MoteurVoix {
         guard actif else { return }
         silence?.cancel()
         transcripteur?.arreter()
-        if synthese.isSpeaking { synthese.stopSpeaking(at: .immediate) }
+        if enParole { synthese.stopSpeaking(at: .immediate) }
         guard !enReflexion else {
             // Un tour est encore en cours : la question passe juste après.
             questionEnAttente = question
@@ -149,7 +151,7 @@ final class MoteurLocal: MoteurVoix {
 
     /// Toucher la sphère pendant qu'Endry parle : il se tait et écoute.
     func interrompre() {
-        if synthese.isSpeaking { synthese.stopSpeaking(at: .word) }
+        if enParole { synthese.stopSpeaking(at: .word) }
     }
 
     /// Fin de phrase détectée : réponse d'Apple Intelligence, sinon réponse locale ou transmission au PC.
@@ -247,23 +249,37 @@ final class MoteurLocal: MoteurVoix {
         surEvenement?(.assistant(texte))
         surEvenement?(.progressionParole(0))
         surEvenement?(.phase(.parole))
+        // Durée maximale : si la synthèse vocale se bloque (service audio indisponible), Endry passe à la suite
+        // au lieu d'attendre indéfiniment la fin de sa phrase.
+        let dureeMax = 3 + Double(texte.count) * 0.1
+        guard !Configuration.testsUI else {
+            // Tests d'interface : pas de synthèse (le simulateur de la CI n'a pas de sortie audio fiable).
+            try? await Task.sleep(for: .milliseconds(300))
+            surEvenement?(.progressionParole(texte.utf16.count))
+            return
+        }
         let enonce = AVSpeechUtterance(string: texte)
         enonce.voice = Self.meilleureVoix()
         enonce.rate = AVSpeechUtteranceDefaultSpeechRate * 1.02
         enonce.pitchMultiplier = 0.98
         enonce.postUtteranceDelay = 0.1
+        delegue.termine = false
+        enParole = true
         synthese.speak(enonce)
         // La synthèse ne publie pas son niveau : la sphère suit une pulsation calée sur le débit de parole.
         let debut = Date()
-        while actif, synthese.isSpeaking || Date().timeIntervalSince(debut) < 0.3 {
+        while actif, !delegue.termine || Date().timeIntervalSince(debut) < 0.3, Date().timeIntervalSince(debut) < dureeMax {
             let t = Date().timeIntervalSince(debut)
             let niveau = Float(0.45 + 0.35 * abs(sin(t * 7.3)) * (0.7 + 0.3 * sin(t * 2.1)))
             surEvenement?(.niveauVoix(niveau))
             try? await Task.sleep(for: .milliseconds(50))
         }
+        if !delegue.termine { synthese.stopSpeaking(at: .immediate) }
+        enParole = false
         surEvenement?(.niveauVoix(0))
         surEvenement?(.progressionParole(texte.utf16.count))
     }
+
 
     /// Meilleure voix française installée : Premium, puis Enhanced ; fr-CH avant fr-FR.
     static func meilleureVoix() -> AVSpeechSynthesisVoice? {
@@ -286,6 +302,21 @@ final class MoteurLocal: MoteurVoix {
 final class DelegueSynthese: NSObject, AVSpeechSynthesizerDelegate, @unchecked Sendable {
     /// Posé une fois, sur l'acteur principal, avant la première phrase.
     var surMot: (@MainActor @Sendable (Int) -> Void)?
+    private let verrou = NSLock()
+    private var fini = false
+    /// Vrai quand la phrase en cours est dite jusqu'au bout (ou annulée).
+    var termine: Bool {
+        get { verrou.withLock { fini } }
+        set { verrou.withLock { fini = newValue } }
+    }
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        termine = true
+    }
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        termine = true
+    }
 
     func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, willSpeakRangeOfSpeechString characterRange: NSRange,
                            utterance: AVSpeechUtterance) {

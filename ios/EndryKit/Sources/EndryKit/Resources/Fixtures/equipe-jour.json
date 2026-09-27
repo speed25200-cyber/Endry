@@ -1,0 +1,13 @@
+{
+  "nom": "Marco",
+  "date": "2026-09-28",
+  "chantiers": [
+    {"id": 18, "titre": "Villa Morel — PAC air-eau 10 kW", "client": "Gérance Morel SA", "lieu": "Epalinges",
+     "adresse": "Chemin des Exemples 4, 1066 Epalinges", "consignes": "Citerne à dégazer avant démontage. Accès par le portail est.",
+     "contact": "M. Morel", "telephone": "+41 21 000 00 00", "debut": "07:30"},
+    {"id": 12, "titre": "PPE Les Cèdres — ventilation double flux", "client": "PPE Les Cèdres", "lieu": "Bussy",
+     "adresse": "Route Fictive 12, 1541 Bussy", "consignes": "Finir les bouches du 2e étage. Clé chez le concierge.",
+     "contact": "Concierge", "telephone": null, "debut": "13:30"}
+  ],
+  "message": null
+}

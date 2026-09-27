@@ -25,6 +25,12 @@ public enum Fixtures {
         case questionRepondu = "question-repondu"
         case erreurPdf = "erreur-pdf"
         case erreurDejaParAppareil = "erreur-deja-par-appareil"
+        // v1.3
+        case entretiens
+        case equipeJour = "equipe-jour"
+        case sessionOuvrier = "session-ouvrier"
+        case invitationEquipe = "invitation-equipe"
+        case terrainOk = "terrain-ok"
     }
 
     public static func donnees(_ nom: Nom) -> Data {

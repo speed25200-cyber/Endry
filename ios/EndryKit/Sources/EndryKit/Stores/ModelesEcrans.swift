@@ -413,6 +413,33 @@ public final class ModeleSaisie {
         }
     }
 
+    /// Envoi terrain (régie signée, bon de livraison, relevé, journée) : geste explicite du patron ou de l'ouvrier.
+    /// Sans réseau, il rejoint la file et partira tel quel (même clé : jamais traité deux fois).
+    public enum ResultatTerrain: Equatable, Sendable {
+        case transmis(ReponseTerrain)
+        case gardee
+        case refusee(String)
+    }
+
+    public func transmettre(terrain envoi: EnvoiTerrain) async -> ResultatTerrain {
+        if let trop = envoi.fichiers.first(where: { $0.donnees.count > FormulaireMultipart.tailleMaxFichier }) {
+            return .refusee("« \(trop.nomFichier) » dépasse 15 Mo.")
+        }
+        do {
+            let reponse = try await api.envoyerTerrain(envoi)
+            await chargerHistorique()
+            return .transmis(reponse)
+        } catch {
+            if error.estProblemeReseau {
+                await file.ajouter(envoi)
+                enAttente = await file.saisies
+                return .gardee
+            }
+            rapport?(error)
+            return .refusee(error.message)
+        }
+    }
+
     /// Transmet les saisies en attente (retour du réseau, premier plan, actualisation).
     public func viderFile() async {
         let transmises = await file.vider(avec: api)

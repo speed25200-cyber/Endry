@@ -15,6 +15,9 @@ public actor APIDemo: EndryAPI {
     private var agentsDemo: [[String: Any]]
     private var journalDemo: [[String: Any]]
     private var questionsAgents: [String: (agent: String, question: String, depot: ContinuousClock.Instant)] = [:]
+    /// v1.3 : entretiens récurrents et envois terrain reçus.
+    private var entretiensDemo: [[String: Any]]
+    public private(set) var terrainRecu: [String] = []
     private let delaiClaude: Duration
     private let latence: Duration
     /// Tests : fait échouer `POST /actualiser` comme un Bexio indisponible.
@@ -30,6 +33,7 @@ public actor APIDemo: EndryAPI {
         appareils = Self.liste(.appareils)
         agentsDemo = Self.objet(.agents)?["agents"] as? [[String: Any]] ?? []
         journalDemo = Self.objet(.journal)?["entrees"] as? [[String: Any]] ?? []
+        entretiensDemo = Self.objet(.entretiens)?["entretiens"] as? [[String: Any]] ?? []
     }
 
     public nonisolated func urlAbsolue(_ chemin: String) -> URL? {
@@ -107,6 +111,13 @@ public actor APIDemo: EndryAPI {
             return deposerQuestion(agent: agent, corps: requete.corps)
         }
         if let c = route(.get, "app/api/v1/questions/*") { return suivreQuestion(c[0]) }
+        // v1.3 : terrain, entretiens, suivi des offres, équipe
+        if route(.post, "app/api/v1/terrain") != nil { return recevoirTerrain(requete.corps) }
+        if route(.get, "app/api/v1/entretiens") != nil { return json(["entretiens": entretiensDemo]) }
+        if let c = route(.post, "app/api/v1/entretiens/*/proposer") { return try proposerEntretien(c[0]) }
+        if let c = route(.post, "app/api/v1/offres/*/suivi") { return preparerSuivi(c[0]) }
+        if route(.get, "app/api/v1/equipe/jour") != nil { return Fixtures.donnees(.equipeJour) }
+        if route(.post, "app/api/v1/equipe/invitations") != nil { return Fixtures.donnees(.invitationEquipe) }
         if let c = route(.get, "app/doc/*/*") {
             return PDFDemo.document(
                 titre: "\(c[0].capitalized) \(c[1])",
@@ -126,6 +137,8 @@ public actor APIDemo: EndryAPI {
         questionsAgents.removeAll()
         agentsDemo = Self.objet(.agents)?["agents"] as? [[String: Any]] ?? []
         journalDemo = Self.objet(.journal)?["entrees"] as? [[String: Any]] ?? []
+        entretiensDemo = Self.objet(.entretiens)?["entretiens"] as? [[String: Any]] ?? []
+        terrainRecu.removeAll()
         journal.removeAll()
     }
 
@@ -203,6 +216,81 @@ public actor APIDemo: EndryAPI {
                 saisies[index]["statut"] = "en_cours"
             }
         }
+    }
+
+    // MARK: v1.3
+
+    /// Comme le PC : une même clé ne crée jamais deux envois ; une régie devient une facture à valider.
+    private func recevoirTerrain(_ corps: Requete.Corps?) -> Data {
+        guard case .multipart(let formulaire) = corps else { return json(["ok": false, "message": "Formulaire attendu."]) }
+        func champ(_ nom: String) -> String { formulaire.champs.first { $0.nom == nom }?.valeur ?? "" }
+        let type = champ("type"), cle = champ("cle"), resume = champ("resume")
+        if terrainRecu.contains(cle) {
+            return json(["ok": true, "message": "Déjà reçu.", "id": "T-\(cle.prefix(6))"])
+        }
+        terrainRecu.append(cle)
+        let id = "T-\(500 + terrainRecu.count)"
+        var reponse: [String: Any] = ["ok": true, "id": id]
+        switch TypeTerrain(rawValue: type) {
+        case .regie:
+            let reference = "V-RG\(400 + terrainRecu.count)"
+            restantes.insert([
+                "type": "validation", "reference": reference, "genre": "Facture",
+                "titre": "Facture de régie \(cle)", "motif": "Préparée depuis le bon de régie signé sur place. " + resume,
+                "cree": "2026-09-27T16:10:00+02:00", "outil": "envoyer_facture", "modifiable": true, "envoi_tiers": true,
+                "chantier_id": champ("chantier_id").isEmpty ? NSNull() : champ("chantier_id") as Any,
+                "controle": ["ok": true, "resume": "Heures et matériel repris du bon signé.", "points_a_verifier": []],
+            ], at: 0)
+            reponse["message"] = "Reçu au bureau : la facture de régie est prête et attend votre Oui."
+            reponse["decision_reference"] = reference
+        case .bonLivraison:
+            reponse["message"] = "Bon rattaché au chantier : le matériel passe dans « à refacturer »."
+        case .releve:
+            reponse["message"] = "Relevé reçu : l’assistant prépare l’offre à partir des mesures."
+        case .journee:
+            reponse["message"] = "Journée reçue. Merci !"
+        case nil:
+            reponse["message"] = "Reçu au bureau."
+        }
+        journalDemo.insert(["id": "J-\(3000 + journalDemo.count)", "horodatage": "2026-09-27T16:10:00",
+                            "agent": TypeTerrain(rawValue: type)?.agent.rawValue ?? "secretariat",
+                            "type": "action", "titre": TypeTerrain(rawValue: type)?.libelle ?? "Envoi terrain", "detail": resume], at: 0)
+        return json(reponse)
+    }
+
+    private func proposerEntretien(_ id: String) throws(ErreurAPI) -> Data {
+        guard let i = entretiensDemo.firstIndex(where: { ($0["id"] as? String) == id }) else {
+            throw .serveur(statut: 404, message: "Entretien inconnu.")
+        }
+        let reference = "V-EN\(id.filter(\.isNumber))"
+        let client = entretiensDemo[i]["client"] as? String ?? "Client"
+        let appareil = entretiensDemo[i]["appareil"] as? String ?? "installation"
+        entretiensDemo[i]["statut"] = "propose"
+        entretiensDemo[i]["decision_reference"] = reference
+        restantes.insert([
+            "type": "validation", "reference": reference, "genre": "E-mail",
+            "titre": "Entretien — \(client)", "motif": "Proposition de rendez-vous pour : \(appareil).",
+            "texte": "Bonjour,\n\nL’entretien annuel de votre installation (\(appareil)) arrive à échéance. Nous vous proposons de passer jeudi à 8 h, ou à une date qui vous convient.\n\nMeilleures salutations\n\nEndry SA",
+            "destinataires": ["client@exemple.ch"], "objet": "Entretien de votre installation",
+            "cree": "2026-09-27T16:12:00+02:00", "outil": "mail_envoyer", "modifiable": true, "envoi_tiers": true,
+        ], at: 0)
+        return json(["ok": true, "message": "Proposition prête : elle attend votre Oui dans les décisions.", "decision_reference": reference])
+    }
+
+    private func preparerSuivi(_ id: String) -> Data {
+        let offres = (Self.objet(.argent)?["offres"] as? [String: Any])?["offres"] as? [[String: Any]] ?? []
+        let offre = offres.first { "\($0["offre_id"] ?? "")" == id }
+        let client = offre?["client"] as? String ?? "Client"
+        let numero = offre?["numero"] as? String ?? id
+        let reference = "V-SU\(id)"
+        restantes.insert([
+            "type": "validation", "reference": reference, "genre": "E-mail",
+            "titre": "Suivi de l’offre \(numero) — \(client)", "motif": "Offre sans réponse : message de suivi courtois.",
+            "texte": "Bonjour,\n\nNous revenons vers vous au sujet de notre offre \(numero). Avez-vous des questions ou souhaitez-vous une variante ? Nous restons volontiers à disposition.\n\nMeilleures salutations\n\nEndry SA",
+            "destinataires": ["client@exemple.ch"], "objet": "Votre offre \(numero)",
+            "cree": "2026-09-27T16:14:00+02:00", "outil": "mail_envoyer", "modifiable": true, "envoi_tiers": true,
+        ], at: 0)
+        return json(["ok": true, "message": "Message de suivi prêt : il attend votre Oui dans les décisions.", "decision_reference": reference])
     }
 
     // MARK: v1.2

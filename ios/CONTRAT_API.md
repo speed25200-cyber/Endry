@@ -223,3 +223,86 @@ Question déposée comme saisie (`POST /saisie`) avec le texte
 `Question du patron`, et confier la question à l’agent indiqué entre crochets.
 
 Fixtures fictives v1.2 : `agents.json`, `journal.json`, `question-*.json` ; l’`APIDemo` implémente tout v1.2.
+
+## v1.3 — terrain, suivi commercial, équipe (ajouts, tous optionnels ; à appliquer par le PC)
+
+But : ce qui se passe sur le chantier arrive au bureau structuré, et le bureau prépare la suite (facture de régie,
+matériel à refacturer, offre, entretien, suivi d’offre). **Rien ne part chez un tiers sans le « Oui » du patron** :
+chaque route ci-dessous **prépare** et crée au besoin une `Decision` (`envoi_tiers: true` pour tout e-mail ou
+facture) ; elle n’envoie jamais rien. Tant qu’une route répond 404/405, l’app passe par `POST /saisie` (repli
+décrit pour chaque route) : tout fonctionne déjà avec le PC actuel, en moins structuré.
+
+### Documents terrain — `POST /terrain` (multipart)
+
+| Champ | Contenu |
+| --- | --- |
+| `type` | `regie` \| `bon_livraison` \| `releve` \| `journee` |
+| `cle` | clé d’idempotence (ex. `RG-20260928-1432`) : **un renvoi de la même clé ne crée rien de plus** (file hors ligne) → `{ok:true, message:"Déjà reçu."}` |
+| `resume` | résumé en français, lisible tel quel |
+| `donnees` | JSON structuré (formes ci-dessous), clés en `snake_case`, dates `AAAA-MM-JJ`, horodatages `AAAA-MM-JJTHH:MM:SS` (heure suisse) |
+| `chantier_id` | facultatif |
+| `pieces[]` | fichiers : PDF, PNG/JPEG, USDZ (15 Mo max chacun) |
+
+Réponse : `{ok, message, id, decision_reference?}`. Ce que le PC fait de chaque type :
+
+- **`regie`** — bon de régie signé sur place par le client. Le PC prépare la **facture de régie** dans Bexio
+  (brouillon) et crée une `Decision` `envoyer_facture` (`envoi_tiers: true`), liée au chantier.
+  `donnees = {numero, chantier_id?, chantier, client, lieu?, date, travaux, heures: [{intervenant, heures}],
+  materiel: [{designation, quantite, unite}], deplacement: bool, remarques, signataire, signe_le}`.
+  Pièces : `<numero>.pdf` (bon signé), `<numero>-signature.png`, photos. **Aucun prix sur le bon** : les tarifs
+  sont ceux du bureau.
+- **`bon_livraison`** — bon fournisseur photographié. Le PC rattache le matériel au chantier (« à refacturer »)
+  et le rapproche de la facture fournisseur quand elle arrive. Aucune décision nécessaire.
+  `donnees = {fournisseur?, numero?, date?, commande?, commission?, chantier_id?, chantier?,
+  articles: [{reference?, designation, quantite?, unite?}], texte_lu}`. Pièces : pages en JPEG.
+- **`releve`** — relevé 3D (RoomPlan, LiDAR). Le PC prépare une **offre** (brouillon + `Decision` si elle
+  doit partir). `donnees = {piece, chantier_id?, chantier?, date, murs: [{largeur, hauteur}],
+  ouvertures: [{type: porte|fenetre|ouverture, largeur, hauteur}], contour_sol: [{x, y}],
+  objets: [{categorie, largeur, profondeur, hauteur}], remarques}` (mètres). Pièces : plan PNG, `.usdz`.
+- **`journee`** — heures d’un ouvrier (lien d’équipe). Le PC reporte les heures par chantier.
+  `donnees = {date, ouvrier, lignes: [{chantier_id, chantier, heures}], pointages: [{chantier_id, chantier, debut, fin}],
+  remarques}` (heures arrondies au quart d’heure).
+
+Repli (404) : `POST /saisie` avec `texte = "[Pour l’agent <Domaine>] <Type> depuis l’iPhone. <resume>"`
+(Comptabilité pour une régie, Achats pour un bon, Offres pour un relevé, Chantiers pour une journée) et les
+seules images en `photos[]`.
+
+### Entretiens récurrents
+
+| Route | Réponse |
+| --- | --- |
+| `GET /entretiens` | `{entretiens: [Entretien]}` — repérés par le PC dans Bexio (chaudières, boilers, adoucisseurs, PAC…) |
+| `POST /entretiens/{id}/proposer` | corps `{consignes?}` → `{ok, message, decision_reference}` : le PC **prépare** une proposition de rendez-vous (e-mail, `envoi_tiers: true`) |
+
+```
+Entretien = {id, client, lieu?, appareil, periodicite?, dernier?: AAAA-MM-JJ, echeance?: AAAA-MM-JJ,
+             statut: "a_planifier"|"propose"|"planifie", decision_reference?, chantier_id?}
+```
+Repli (404) : saisie `[Pour l’agent Secrétariat] Préparer une proposition de rendez-vous d’entretien pour …`.
+
+### Offres sans réponse
+
+L’app calcule elle-même les offres émises depuis 15 jours ou plus (réglable), à partir de `GET /argent`
+(`offres[].emise_le`, `valable_jusqu_au`, nouveau champ facultatif `dernier_suivi: AAAA-MM-JJ`).
+
+| Route | Réponse |
+| --- | --- |
+| `POST /offres/{offre_id}/suivi` | corps `{consignes?}` → `{ok, message, decision_reference}` : le PC **prépare** un message de suivi courtois (`mail_envoyer`, `envoi_tiers: true`) et note `dernier_suivi` |
+
+Ce n’est **pas** une relance de facture (celles-ci restent interdites sans demande). Repli (404) : saisie
+`[Pour l’agent Offres] Préparer un message de suivi pour l’offre …`.
+
+### Équipe (liens d’accès pour les ouvriers)
+
+- `POST /equipe/invitations {nom}` (jeton du patron) → `{ok, lien, expire_le, message}` : lien d’accès
+  `…/app/acces/<secret>` à usage unique, que le patron transmet à l’ouvrier (QR code ou message).
+- `POST /session` avec un secret d’équipe → `{jeton, appareil_id, valable_jours, entreprise, role: "ouvrier", nom}`.
+  Sans `role`, l’app considère `patron` (comportement actuel).
+- `GET /equipe/jour` (jeton d’ouvrier) → `{nom, date, chantiers: [{id, titre, client?, lieu?, adresse?, consignes?,
+  contact?, telephone?, debut?}], message?}`.
+- **Portée du jeton d’ouvrier, appliquée par le PC** : `GET /equipe/jour`, `POST /terrain` (types `journee`,
+  `bon_livraison`, `releve`), `POST /saisie`, `GET /evenements`. Tout le reste répond **403** : ni argent, ni
+  décisions, ni agents, ni documents. Révocation : `DELETE /appareils/{id}` comme pour le patron.
+
+Fixtures fictives v1.3 : `entretiens.json`, `equipe-jour.json`, `session-ouvrier.json`, `invitation-equipe.json`,
+`terrain-ok.json` ; l’`APIDemo` implémente tout v1.3 (une régie reçue devient une facture à valider).

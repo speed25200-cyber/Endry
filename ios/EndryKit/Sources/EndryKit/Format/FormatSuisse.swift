@@ -153,6 +153,64 @@ public enum DateEndry {
         calendrier.isDate(a, inSameDayAs: b)
     }
 
+    /// Date du contrat (`AAAA-MM-JJ`), en heure suisse.
+    public static func iso(_ date: Date) -> String {
+        let c = calendrier.dateComponents([.day, .month, .year], from: date)
+        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+    }
+
+    /// Horodatage du contrat (`AAAA-MM-JJTHH:MM:SS`), heure suisse sans fuseau, comme le PC.
+    public static func horodatage(_ date: Date) -> String {
+        let c = calendrier.dateComponents([.day, .month, .year, .hour, .minute, .second], from: date)
+        return String(format: "%04d-%02d-%02dT%02d:%02d:%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0,
+                      c.hour ?? 0, c.minute ?? 0, c.second ?? 0)
+    }
+
+    /// `14 h 32`
+    public static func heure(_ date: Date) -> String {
+        let c = calendrier.dateComponents([.hour, .minute], from: date)
+        return String(format: "%d h %02d", c.hour ?? 0, c.minute ?? 0)
+    }
+
+    /// `22.09.2026`
+    public static func courte(_ date: Date) -> String {
+        courte(iso(date))
+    }
+
+    /// Nombre de jours civils de `a` à `b` (négatif si `b` est avant `a`).
+    public static func jours(de a: Date, a b: Date) -> Int {
+        let debut = calendrier.startOfDay(for: a)
+        let fin = calendrier.startOfDay(for: b)
+        return calendrier.dateComponents([.day], from: debut, to: fin).day ?? 0
+    }
+
+    /// Jour de la semaine (1 = lundi … 7 = dimanche).
+    public static func jourSemaine(_ date: Date) -> Int {
+        let w = calendrier.component(.weekday, from: date)
+        return w == 1 ? 7 : w - 1
+    }
+
+    /// Même mois civil.
+    public static func memeMois(_ a: Date, _ b: Date) -> Bool {
+        calendrier.isDate(a, equalTo: b, toGranularity: .month)
+    }
+
+    /// Premier jour du mois suivant `date`.
+    public static func moisSuivant(_ date: Date) -> Date {
+        let debut = calendrier.dateInterval(of: .month, for: date)?.start ?? date
+        return calendrier.date(byAdding: .month, value: 1, to: debut) ?? date
+    }
+
+    /// Nom du mois (« octobre »).
+    public static func nomMois(_ date: Date) -> String {
+        mois[(calendrier.component(.month, from: date) - 1) % 12]
+    }
+
+    /// `date` à `heure`:`minute`, heure suisse.
+    public static func a(_ heure: Int, _ minute: Int = 0, le date: Date) -> Date {
+        calendrier.date(bySettingHour: heure, minute: minute, second: 0, of: date) ?? date
+    }
+
     /// « à l'instant », « il y a 5 min », « il y a 2 h », « il y a 3 jours ».
     public static func ilYa(_ date: Date, maintenant: Date = Date()) -> String {
         let secondes = max(0, maintenant.timeIntervalSince(date))

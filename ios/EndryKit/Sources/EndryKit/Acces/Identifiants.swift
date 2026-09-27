@@ -13,6 +13,13 @@ public struct Identifiants: Codable, Sendable, Equatable {
     public var appareilId: String?
     /// Migration vers un jeton propre à l'appareil déjà tentée (réussie, déjà faite, ou serveur trop ancien).
     public var migrationTentee: Bool?
+    /// v1.3 : rôle donné par le lien d'accès (`nil` : patron, comme avant).
+    public var role: RoleAcces?
+    /// v1.3 : nom de l'ouvrier (lien d'équipe).
+    public var nom: String?
+
+    /// L'app s'ouvre en mode équipe : chantiers du jour, heures, photos. Jamais l'argent ni les décisions.
+    public var estOuvrier: Bool { role == .ouvrier }
 
     public init(base: URL, jeton: String, entreprise: String? = nil, expireLe: Date? = nil, appareilId: String? = nil) {
         self.base = base

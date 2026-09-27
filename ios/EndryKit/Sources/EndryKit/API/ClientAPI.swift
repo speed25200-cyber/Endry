@@ -82,6 +82,8 @@ public final class CapacitesServeur: @unchecked Sendable {
         "/app/api/v1/agents", "/app/api/v1/journal", "/app/api/v1/questions", "/app/api/v1/assistant/",
         "/app/api/v1/saisies", "/app/api/v1/appareils", "/app/api/v1/voix/", "/app/api/v1/session/appareil",
         "/app/api/v1/evenements",
+        // v1.3 : terrain, entretiens, suivi des offres, équipe.
+        "/app/api/v1/terrain", "/app/api/v1/entretiens", "/app/api/v1/offres/", "/app/api/v1/equipe",
     ]
 
     public static func estFacultative(_ chemin: String) -> Bool {
@@ -274,8 +276,11 @@ public struct ClientAPI: EndryAPI {
         }
         let session = try client.decoder(SessionOuverte.self, depuis: data)
         let expiration = session.valableJours.map { Date().addingTimeInterval(TimeInterval($0) * 86_400) }
-        return Identifiants(base: lien.base, jeton: session.jeton, entreprise: session.entreprise, expireLe: expiration,
-                            appareilId: session.appareilId)
+        var identifiants = Identifiants(base: lien.base, jeton: session.jeton, entreprise: session.entreprise, expireLe: expiration,
+                                        appareilId: session.appareilId)
+        identifiants.role = session.role
+        identifiants.nom = session.nom
+        return identifiants
     }
 
     public func urlAbsolue(_ chemin: String) -> URL? {

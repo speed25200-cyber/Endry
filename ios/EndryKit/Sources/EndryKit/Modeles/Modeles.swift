@@ -9,12 +9,19 @@ public struct SessionOuverte: Decodable, Sendable, Equatable {
     public var entreprise: String?
     /// v1.1 : identifiant de cet appareil (jeton par appareil).
     public var appareilId: String?
+    /// v1.3 : `patron` (défaut) ou `ouvrier` (lien d'équipe).
+    public var role: RoleAcces?
+    /// v1.3 : nom de l'ouvrier.
+    public var nom: String?
 
-    public init(jeton: String, valableJours: Int? = nil, entreprise: String? = nil, appareilId: String? = nil) {
+    public init(jeton: String, valableJours: Int? = nil, entreprise: String? = nil, appareilId: String? = nil,
+                role: RoleAcces? = nil, nom: String? = nil) {
         self.jeton = jeton
         self.valableJours = valableJours
         self.entreprise = entreprise
         self.appareilId = appareilId
+        self.role = role
+        self.nom = nom
     }
 
     public init(from decoder: Decoder) throws {
@@ -26,6 +33,8 @@ public struct SessionOuverte: Decodable, Sendable, Equatable {
         valableJours = c.entier("valable_jours")
         entreprise = c.texte("entreprise")
         appareilId = c.texte("appareil_id")
+        role = c.texte("role").flatMap { RoleAcces(rawValue: $0.lowercased()) }
+        nom = c.texte("nom")
     }
 }
 
@@ -428,6 +437,8 @@ public struct Offre: Decodable, Sendable, Hashable, Identifiable {
     public var montant: Double
     public var emiseLe: String?
     public var valableJusquAu: String?
+    /// v1.3 : dernier suivi préparé (`AAAA-MM-JJ`), pour ne pas proposer deux fois le même suivi.
+    public var dernierSuivi: String?
 
     public var id: String { offreId }
 
@@ -440,6 +451,7 @@ public struct Offre: Decodable, Sendable, Hashable, Identifiable {
         montant = c.nombre("montant") ?? 0
         emiseLe = c.texte("emise_le")
         valableJusquAu = c.texte("valable_jusqu_au")
+        dernierSuivi = c.texte("dernier_suivi")
     }
 
     public var cheminPDF: String { "/app/doc/offre/\(offreId)" }

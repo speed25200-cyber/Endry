@@ -54,6 +54,27 @@ public final class ModeleSession {
     public var estConnecte: Bool { etat != .deconnecte }
     public var estDemo: Bool { etat == .demo }
 
+    /// Démo du mode équipe (tests, captures, présentation aux ouvriers).
+    public private(set) var demoOuvrier = false
+
+    /// Lien d'équipe (v1.3) : l'app n'affiche que les chantiers du jour, les heures et les photos.
+    public var estOuvrier: Bool {
+        switch etat {
+        case .connecte(let i): i.estOuvrier
+        case .demo: demoOuvrier
+        case .deconnecte: false
+        }
+    }
+
+    /// Nom de l'ouvrier connecté (lien d'équipe).
+    public var nomOuvrier: String? {
+        switch etat {
+        case .connecte(let i): i.nom
+        case .demo: demoOuvrier ? "Marco" : nil
+        case .deconnecte: nil
+        }
+    }
+
     public var hoteAffiche: String? {
         switch etat {
         case .connecte(let i): LienAcces(base: i.base, secret: "").hoteAffiche
@@ -106,10 +127,11 @@ public final class ModeleSession {
     }
 
     /// Mode démo : données fictives, aucune requête réseau.
-    public func activerDemo(latence: Duration = .milliseconds(450)) {
+    public func activerDemo(latence: Duration = .milliseconds(450), ouvrier: Bool = false) {
         let demo = APIDemo(latence: latence)
         apiDemo = demo
         api = demo
+        demoOuvrier = ouvrier
         etat = .demo
         connexionPerdue = false
     }
@@ -158,6 +180,8 @@ public final class ModeleSession {
                                         expireLe: session.valableJours.map { Date().addingTimeInterval(TimeInterval($0) * 86_400) } ?? i.expireLe,
                                         appareilId: session.appareilId)
             nouveaux.migrationTentee = true
+            nouveaux.role = session.role ?? i.role
+            nouveaux.nom = session.nom ?? i.nom
             try? coffre.enregistrer(nouveaux)
             etat = .connecte(nouveaux)
             api = ClientAPI(identifiants: nouveaux, transport: transport)
@@ -184,6 +208,7 @@ public final class ModeleSession {
         await cache.effacer()
         apiDemo = nil
         api = nil
+        demoOuvrier = false
         etat = .deconnecte
         connexionPerdue = false
     }

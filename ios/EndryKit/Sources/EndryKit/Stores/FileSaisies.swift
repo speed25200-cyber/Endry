@@ -14,6 +14,19 @@ public struct SaisieEnAttente: Codable, Sendable, Identifiable, Equatable {
     public var texte: String
     public var fichiers: [Fichier]
     public var tentatives: Int
+    /// v1.3 : envoi terrain (régie, bon de livraison…) ; `nil` pour une saisie ordinaire.
+    public var terrain: EnTeteTerrain?
+
+    /// Ce qu'il faut pour rejouer un envoi terrain ; les pièces sont les `fichiers` de la saisie.
+    public struct EnTeteTerrain: Codable, Sendable, Equatable {
+        public var type: TypeTerrain
+        public var chantierId: String?
+        public var donnees: String
+        public var cle: String
+    }
+
+    /// Libellé pour la liste « en attente de réseau ».
+    public var libelle: String { terrain?.type.libelle ?? texte }
 }
 
 /// File persistante des saisies : dictées et photos survivent à la perte de réseau et au redémarrage,
@@ -53,6 +66,17 @@ public actor FileSaisies {
         return saisie
     }
 
+    /// Ajoute un envoi terrain (régie signée, bon scanné…) : il partira tel quel, avec la même clé.
+    @discardableResult
+    public func ajouter(_ envoi: EnvoiTerrain, le date: Date = Date()) -> SaisieEnAttente {
+        var saisie = ajouter(texte: envoi.resume, fichiers: envoi.fichiers, le: date)
+        saisie.terrain = .init(type: envoi.type, chantierId: envoi.chantierId,
+                               donnees: String(decoding: envoi.donnees, as: UTF8.self), cle: envoi.cle)
+        if let i = enMemoire.firstIndex(where: { $0.id == saisie.id }) { enMemoire[i] = saisie }
+        sauverIndex()
+        return saisie
+    }
+
     /// Envoie les saisies en attente, dans l'ordre. S'arrête à la première panne réseau.
     /// Retourne le nombre de saisies transmises.
     @discardableResult
@@ -64,7 +88,12 @@ public actor FileSaisies {
                 return .init(champ: "photos", nomFichier: f.nom, typeMIME: f.typeMIME, donnees: data)
             }
             do {
-                _ = try await api.saisie(texte: saisie.texte, fichiers: fichiers)
+                if let t = saisie.terrain {
+                    _ = try await api.envoyerTerrain(EnvoiTerrain(type: t.type, chantierId: t.chantierId, resume: saisie.texte,
+                                                                  donnees: Data(t.donnees.utf8), fichiers: fichiers, cle: t.cle))
+                } else {
+                    _ = try await api.saisie(texte: saisie.texte, fichiers: fichiers)
+                }
                 retirer(saisie)
                 transmises += 1
             } catch {

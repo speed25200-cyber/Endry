@@ -1,6 +1,6 @@
 """Relais Codemagic : lit l'état des builds (et démarre un build sur demande) avec le jeton API
 stocké dans les secrets GitHub. N'affiche jamais le jeton."""
-import json, os, sys, urllib.request, urllib.error
+import base64, io, json, os, sys, time, urllib.request, urllib.error
 
 API = "https://api.codemagic.io"
 JETON = os.environ.get("CM_JETON", "").strip()
@@ -30,9 +30,18 @@ app = next((a for a in apps if "endry" in json.dumps(a.get("repository", {})).lo
 if not app:
     sys.exit("Aucune application trouvée.")
 
-if demande.get("action") == "lancer":
+build_lance = None
+if demande.get("action") in ("lancer", "lancer_et_captures"):
     r = appel("/builds", "POST", {"appId": app["_id"], "workflowId": demande["workflow"], "branch": demande["branche"]})
     print("== Build démarré :", r)
+    build_lance = (r or {}).get("buildId")
+    if build_lance:
+        for _ in range(110):
+            etat = ((appel(f"/builds/{build_lance}") or {}).get("build") or {}).get("status")
+            print("… build", build_lance, etat)
+            if etat in ("finished", "failed", "canceled", "timeout", "skipped", "warning"):
+                break
+            time.sleep(15)
 
 import time
 commit = demande.get("commit") or os.environ.get("GITHUB_SHA", "")
@@ -81,3 +90,51 @@ for b in cibles:
             print("  | " + l[:400])
     if b.get("message"):
         print("  message :", b.get("message"))
+
+
+def captures(build_id):
+    """Télécharge les captures d'écran du build, les réduit et les imprime en base64 (lisibles dans ce journal)."""
+    detail = (appel(f"/builds/{build_id}") or {}).get("build") or {}
+    artefacts = detail.get("artefacts") or []
+    print(f"\n== Artefacts du build {build_id} :", [a.get("name") for a in artefacts])
+    try:
+        from PIL import Image
+    except ImportError:
+        import subprocess
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "pillow"], check=False)
+        from PIL import Image
+    noms = {}
+    for a in artefacts:
+        if a.get("name", "").endswith("manifest.json"):
+            try:
+                manifeste = json.loads(appel(a["url"], brut=True) or "[]")
+                for test in manifeste:
+                    for piece in test.get("attachments", []):
+                        noms[piece.get("exportedFileName")] = piece.get("suggestedHumanReadableName")
+            except Exception as e:
+                print("manifeste illisible :", e)
+    for a in artefacts:
+        nom = a.get("name", "")
+        if not nom.lower().endswith((".png", ".jpg", ".jpeg")):
+            continue
+        req = urllib.request.Request(a["url"], headers={"x-auth-token": JETON})
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                donnees = r.read()
+        except Exception as e:
+            print("téléchargement impossible", nom, e)
+            continue
+        img = Image.open(io.BytesIO(donnees)).convert("RGB")
+        img.thumbnail((420, 900))
+        tampon = io.BytesIO()
+        img.save(tampon, "JPEG", quality=72, optimize=True)
+        base = nom.split("/")[-1]
+        print(f"##CAPTURE## {noms.get(base, base)} {base64.b64encode(tampon.getvalue()).decode()}")
+
+if demande.get("action") == "lancer_et_captures" and build_lance:
+    captures(build_lance)
+elif demande.get("action") == "captures":
+    cible = demande.get("build") or next((b["_id"] for b in builds if b.get("status") == "finished"
+                                          and (b.get("workflowId") or b.get("fileWorkflowId")) == "ios-tests"), None)
+    if cible:
+        captures(cible)

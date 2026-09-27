@@ -40,16 +40,10 @@ targets:
           - "**/*.md"
     dependencies:
       - package: EndryKit
-      - target: EndryWidget
-        embed: true
     entitlements:
       path: EndryPilotage/EndryPilotage.entitlements
       properties:
         aps-environment: development
-        keychain-access-groups:
-          - $(AppIdentifierPrefix)com.endrysa.endry
-        com.apple.security.application-groups:
-          - group.com.endrysa.endry
     info:
       path: EndryPilotage/Info.plist
       properties:
@@ -81,7 +75,6 @@ targets:
         NSCameraUsageDescription: "L’appareil photo sert à scanner des bons, des factures et des QR codes d’accès."
         NSPhotoLibraryUsageDescription: "Vos photos de chantier peuvent être jointes à une saisie."
         NSFaceIDUsageDescription: "Face ID protège l’accès aux données de l’entreprise."
-        EndryPrefixeEquipe: $(AppIdentifierPrefix)
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.endrysa.endry
@@ -92,52 +85,6 @@ targets:
         ENABLE_PREVIEWS: YES
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: EndryPilotage/Info.plist
-
-  EndryWidget:
-    type: app-extension
-    platform: iOS
-    sources:
-      - path: EndryWidget
-      - path: EndryPilotage/Design/Palette.swift
-      - path: EndryPilotage/Design/Typographie.swift
-      - path: EndryPilotage/Design/MontantView.swift
-      - path: EndryPilotage/Services/Configuration.swift
-      - path: EndryPilotage/Ressources/Polices
-        buildPhase: resources
-    dependencies:
-      - package: EndryKit
-      - sdk: WidgetKit.framework
-      - sdk: SwiftUI.framework
-    entitlements:
-      path: EndryWidget/EndryWidget.entitlements
-      properties:
-        keychain-access-groups:
-          - $(AppIdentifierPrefix)com.endrysa.endry
-        com.apple.security.application-groups:
-          - group.com.endrysa.endry
-    info:
-      path: EndryWidget/Info.plist
-      properties:
-        CFBundleDisplayName: Endry
-        CFBundleShortVersionString: $(MARKETING_VERSION)
-        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        NSExtension:
-          NSExtensionPointIdentifier: com.apple.widgetkit-extension
-        UIAppFonts:
-          - InterTight-Medium.ttf
-          - InterTight-SemiBold.ttf
-          - Inter-Regular.ttf
-          - Inter-Medium.ttf
-          - Inter-SemiBold.ttf
-        EndryPrefixeEquipe: $(AppIdentifierPrefix)
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.endrysa.endry.widget
-        PRODUCT_NAME: EndryWidget
-        GENERATE_INFOPLIST_FILE: NO
-        INFOPLIST_FILE: EndryWidget/Info.plist
-        SKIP_INSTALL: YES
-        APPLICATION_EXTENSION_API_ONLY: YES
 
   EndryPilotageTests:
     type: bundle.unit-test
@@ -172,7 +119,6 @@ schemes:
     build:
       targets:
         EndryPilotage: all
-        EndryWidget: all
     run:
       config: Debug
       commandLineArguments:

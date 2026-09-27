@@ -30,7 +30,7 @@ struct EndryPilotageApp: App {
                     }
                 }
                 .onOpenURL { url in
-                    // Widget : endrypilotage://decisions
+                    // Lien interne : endrypilotage://decisions
                     if url.scheme == "endrypilotage", url.host == "decisions" {
                         modele.onglet = .decisions
                         return

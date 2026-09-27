@@ -6,7 +6,7 @@ aucune donnée inventée, aucun paiement, **aucune relance de facture**.
 
 ```
 ios/
-├── project.yml            Projet Xcode (XcodeGen) : app, widget, tests, tests UI
+├── project.yml            Projet Xcode (XcodeGen) : app, tests, tests UI
 ├── EndryKit/              Paquet Swift : modèles, client API, lien d’accès, trousseau, cache hors ligne,
 │                          mode démo (fixtures JSON), modèles d’écran (@Observable) — testé avec `swift test`
 ├── EndryPilotage/         App SwiftUI
@@ -15,7 +15,6 @@ ios/
 │   ├── Fonctions/         Connexion, Décisions, Chantiers, Saisie, Argent, Planning, Réglages
 │   ├── Services/          Dictée fr-CH, Face ID, notifications, documents PDF
 │   └── Ressources/        Icône (clair / sombre / teintée), polices Inter + Inter Tight (OFL)
-├── EndryWidget/           Widget écran d’accueil + écran verrouillé
 └── Tests/                 Tests unitaires de l’app et tests UI (flux principaux + captures)
 ```
 
@@ -34,7 +33,7 @@ Réglages (pastille « E » en haut de Décisions) : serveur actuel, nouveau lie
 ## Sécurité
 
 - Le jeton est rangé **uniquement dans le trousseau iOS** (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`), dans un
-  groupe partagé avec le widget. Jamais en clair, jamais dans les journaux, jamais envoyé à un autre hôte que celui du lien.
+  Jamais en clair, jamais dans les journaux, jamais envoyé à un autre hôte que celui du lien.
 - Verrouillage Face ID à l’ouverture (réglable) ; contenu masqué dans le sélecteur d’apps.
 - Cache hors ligne chiffré par iOS, exclu des sauvegardes, effacé à la déconnexion. Hors ligne : lecture seule, actions désactivées.
 - Aucun SDK tiers : uniquement les frameworks Apple. Aucun secret dans le dépôt.
@@ -81,7 +80,7 @@ Le fichier [`codemagic.yaml`](../codemagic.yaml) à la racine du dépôt contien
 | Workflow | Déclenchement | Ce qu’il fait |
 | --- | --- | --- |
 | `ios-tests` | chaque push / pull request touchant `ios/` | `swift test` (EndryKit), build + tests unitaires + tests UI sur simulateur, rapport JUnit, **captures d’écran clair/sombre** en artefacts (`ios/build/captures`) |
-| `ios-testflight` | tag `ios-v*` ou lancement manuel | certificats et profils (app + widget) créés/récupérés via l’API App Store Connect, numéro de build, IPA signée, **envoi sur TestFlight** |
+| `ios-testflight` | tag `ios-v*` ou lancement manuel | signature automatique Codemagic (certificat + profil App Store), numéro de build, IPA signée, **envoi sur TestFlight** |
 
 Codemagic n’a pas besoin de fastlane : sa CLI (`app-store-connect`, `xcode-project`) gère signature et publication.
 
@@ -111,13 +110,12 @@ Codemagic crée avec elle un certificat « Apple Distribution » s’il n’en t
 Sous Windows : `ssh-keygen -t rsa -b 2048 -m PEM -f endry_cert_key -q -N '""'` dans PowerShell.
 
 **4. Identifiants dans le portail développeur** — [Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/identifiers/list) :
-- **App Groups** › « + » : `group.com.endrysa.endry`.
-- **App IDs** › « + » : `com.endrysa.endry` avec les capacités **Push Notifications** et **App Groups**
-  (cocher `group.com.endrysa.endry`).
-- **App IDs** › « + » : `com.endrysa.endry.widget` avec **App Groups** (même groupe).
-- Le partage de trousseau app ↔ widget ne demande aucune capacité supplémentaire.
+- **App IDs** › « + » : `com.endrysa.endry` avec la capacité **Push Notifications** (seule capacité requise).
+- **Profiles** › « + » › App Store Connect › `com.endrysa.endry`, avec le certificat de distribution **dont Codemagic
+  a la clé** (Codemagic › Code signing identities › iOS certificates), puis Codemagic › iOS provisioning profiles ›
+  **Fetch profiles** : le profil doit afficher « Certificate : Uploaded ».
 - Si vous préférez un autre identifiant que `com.endrysa.endry` : remplacez-le dans `ios/project.yml`,
-  `ios/EndryPilotage/Services/Configuration.swift` et `codemagic.yaml` (`BUNDLE_ID`, `BUNDLE_ID_WIDGET`).
+  `ios/EndryPilotage/Services/Configuration.swift` et `codemagic.yaml` (`BUNDLE_ID`).
 
 **5. Fiche de l’app** : App Store Connect › **Apps** › « + » › Nouvelle app › iOS, nom « Endry Pilotage »,
 langue principale Français, identifiant de lot `com.endrysa.endry`, SKU libre (ex. `endry-pilotage`).
@@ -186,4 +184,4 @@ Le développement a eu lieu sur une machine Linux, sans Xcode :
 - **À vérifier par la première build Codemagic** : compilation SwiftUI / Metal, tests unitaires et UI sur simulateur,
   captures d’écran clair/sombre (artefacts du workflow `ios-tests`).
 - **À vérifier sur un iPhone réel** : Face ID, dictée fr-CH sur l’appareil, scanner VisionKit, appareil photo, QR code,
-  widgets écran verrouillé, abonnement `webcal://`, notifications APNs (dépend de l’envoi côté PC), connexion via Tailscale.
+  abonnement `webcal://`, notifications APNs (dépend de l’envoi côté PC), connexion via Tailscale.

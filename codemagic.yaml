@@ -108,14 +108,13 @@ workflows:
     environment:
       xcode: latest
       # Signature automatique Codemagic (comme Picshop) : certificat de distribution de l'équipe
-      # (Code signing identities) + profils App Store de l'app et de son widget.
+      # (Code signing identities) + profil App Store de l'app.
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.endrysa.endry
       vars:
         XCODE_PROJECT: ios/EndryPilotage.xcodeproj
         BUNDLE_ID: com.endrysa.endry
-        BUNDLE_ID_WIDGET: com.endrysa.endry.widget
         # Facultatif : APP_STORE_APPLE_ID (identifiant numérique de l'app) en variable Codemagic.
     triggering:
       events:

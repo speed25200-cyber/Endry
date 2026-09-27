@@ -2,7 +2,6 @@ import EndryKit
 import Foundation
 import Observation
 import UIKit
-import WidgetKit
 
 /// État global : session, écrans, navigation, notifications. Toutes les données viennent de l'API.
 @MainActor
@@ -33,11 +32,11 @@ final class ModeleApp {
             self.session = session
         } else {
             #if canImport(Security)
-            let coffre = CoffreTrousseau(groupe: Configuration.groupeTrousseau)
+            let coffre = CoffreTrousseau()
             #else
             let coffre = CoffreMemoire()
             #endif
-            self.session = ModeleSession(coffre: coffre, cache: .parDefaut(), groupeWidget: Configuration.groupeApps)
+            self.session = ModeleSession(coffre: coffre, cache: .parDefaut())
         }
         if Configuration.lancementDemo {
             self.session.activerDemo(latence: Configuration.testsUI ? .milliseconds(80) : .milliseconds(450))
@@ -87,7 +86,6 @@ final class ModeleApp {
         await session.deconnecter()
         reconstruire()
         DelegueApp.mettreAJourBadge(0)
-        WidgetCenter.shared.reloadAllTimelines()
     }
 
     /// Dictée depuis un chantier : ouvre la Saisie pré-remplie.
@@ -101,11 +99,9 @@ final class ModeleApp {
         onglet = .decisions
     }
 
-    // MARK: - Widget & badge
+    // MARK: - Badge
 
     private func publier(_ accueil: Accueil) {
-        session.publierResume(accueil)
-        WidgetCenter.shared.reloadAllTimelines()
         DelegueApp.mettreAJourBadge(accueil.decisions.count)
     }
 

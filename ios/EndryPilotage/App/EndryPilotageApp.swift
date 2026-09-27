@@ -19,6 +19,8 @@ struct EndryPilotageApp: App {
                     delegue.surNotificationRecue = { [modele] in Task { await modele.rafraichirTout() } }
                     delegue.surOui = { [modele] reference in Task { await modele.accepterDepuisNotification(reference) } }
                     delegue.surSaisieTraitee = { [modele] in modele.onglet = .saisie }
+                    delegue.surLocale = { [modele] locale, action in modele.traiter(locale, action: action) }
+                    if let enAttente = delegue.consommerLocaleEnAttente() { modele.traiter(enAttente.0, action: enAttente.1) }
                     // Le jeton APNs peut changer : on le réenregistre à chaque lancement.
                     if modele.session.estConnecte { Task { await modele.proposerNotifications() } }
                     if let reference = delegue.consommerReferenceEnAttente() { modele.ouvrir(reference: reference) }
@@ -28,6 +30,8 @@ struct EndryPilotageApp: App {
                     case .background:
                         modele.verrou.verrouiller()
                         modele.suspendreFlux()
+                        modele.lecteur.arreter()
+                        Task { await modele.apresChargement() }
                     case .active:
                         if modele.session.estConnecte {
                             Task { await modele.verrou.deverrouiller() }

@@ -11,6 +11,12 @@ struct ChantiersView: View {
     @State private var chemin: [Dossier] = []
     @State private var visible = false
 
+    private func ouvrirCible() {
+        guard let id = app.dossierCible, let dossier = modele.tous.first(where: { $0.id == id }) else { return }
+        chemin = [dossier]
+        app.dossierCible = nil
+    }
+
     var body: some View {
         NavigationStack(path: $chemin) {
             ScrollView {
@@ -43,6 +49,9 @@ struct ChantiersView: View {
             .tirerPourActualiser { await modele.actualiser() }
             .background(FondAmbiant())
             .toolbar(.hidden, for: .navigationBar)
+            .onChange(of: app.dossierCible, initial: true) { _, _ in ouvrirCible() }
+            // Lancement à froid : le chantier demandé arrive avec la liste.
+            .onChange(of: modele.tous.count) { _, _ in ouvrirCible() }
             .navigationDestination(for: Dossier.self) { dossier in
                 Group {
                     // Jamais de repli sur la démo en mode réel : sans client API, on l'explique.

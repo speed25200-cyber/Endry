@@ -59,6 +59,9 @@ struct ContenuPrincipal: View {
         .fullScreenCover(isPresented: $app.assistantPresente) {
             VueAssistantVocal()
         }
+        .sheet(isPresented: $app.briefingPresente) {
+            BriefingView()
+        }
         .fullScreenCover(item: $app.outilTerrain) { demande in
             switch demande.outil {
             case .regie: RegieView(chantier: app.dossier(demande.chantierId))

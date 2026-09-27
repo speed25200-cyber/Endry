@@ -76,6 +76,11 @@ targets:
         NSCameraUsageDescription: "L’appareil photo sert à scanner des bons, des factures et des QR codes d’accès."
         NSPhotoLibraryUsageDescription: "Vos photos de chantier peuvent être jointes à une saisie."
         NSFaceIDUsageDescription: "Face ID protège l’accès aux données de l’entreprise."
+        NSLocationWhenInUseUsageDescription: "La position sert à vous rappeler, en arrivant sur un chantier, ce qui vous y attend. Elle ne quitte jamais l’iPhone."
+        NSLocationAlwaysAndWhenInUseUsageDescription: "Pour le rappel à l’arrivée sur un chantier, même quand l’app est fermée. La position ne quitte jamais l’iPhone ; désactivable dans Réglages."
+        # Briefing du matin : rafraîchi en arrière-plan juste avant la notification.
+        BGTaskSchedulerPermittedIdentifiers: [com.endrysa.endry.briefing]
+        UIBackgroundModes: [fetch]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.endrysa.endry

@@ -155,7 +155,7 @@ struct Releve3DView: View {
 
         if !r.equipements.isEmpty {
             SectionTerrain(titre: "Équipements", icone: "shower") {
-                ForEach(r.equipements, id: \.nom) { e in
+                ForEach(Array(r.equipements.enumerated()), id: \.offset) { _, e in
                     LabeledContent(e.nom.capitalized, value: "\(e.nombre)")
                 }
             }
@@ -282,27 +282,29 @@ struct VueCaptureRoomPlan: UIViewRepresentable {
         }
     }
 
-    static func dismantleUIView(_ vue: RoomCaptureView, coordinator: Coordinateur) {
+    static func dismantleUIView(_ vue: RoomCaptureView, coordinator: CoordinateurRoomPlan) {
         vue.captureSession.stop()
     }
 
-    func makeCoordinator() -> Coordinateur { Coordinateur(terminer: terminer) }
-
-    @MainActor
-    final class Coordinateur: NSObject {
-        let terminer: (CapturedRoom?) -> Void
-        var arrete = false
-
-        init(terminer: @escaping (CapturedRoom?) -> Void) {
-            self.terminer = terminer
-        }
-
-        nonisolated required init?(coder: NSCoder) { nil }
-        nonisolated func encode(with coder: NSCoder) {}
-    }
+    func makeCoordinator() -> CoordinateurRoomPlan { CoordinateurRoomPlan(terminer: terminer) }
 }
 
-extension VueCaptureRoomPlan.Coordinateur: @preconcurrency RoomCaptureViewDelegate {
+/// Délégué RoomPlan (le protocole exige NSCoding : nom Objective-C stable, classe de premier niveau).
+@MainActor
+@objc(EndryCoordinateurRoomPlan)
+final class CoordinateurRoomPlan: NSObject {
+    let terminer: (CapturedRoom?) -> Void
+    var arrete = false
+
+    init(terminer: @escaping (CapturedRoom?) -> Void) {
+        self.terminer = terminer
+    }
+
+    nonisolated required init?(coder: NSCoder) { nil }
+    nonisolated func encode(with coder: NSCoder) {}
+}
+
+extension CoordinateurRoomPlan: @preconcurrency RoomCaptureViewDelegate {
     func captureView(shouldPresent roomDataForProcessing: CapturedRoomData, error: (any Error)?) -> Bool { true }
 
     func captureView(didPresent processedResult: CapturedRoom, error: (any Error)?) {

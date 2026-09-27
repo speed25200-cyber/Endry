@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.endrysa.endry.briefing</string>
+	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
@@ -50,6 +54,10 @@
 	<string>L’appareil photo sert à scanner des bons, des factures et des QR codes d’accès.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Face ID protège l’accès aux données de l’entreprise.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Pour le rappel à l’arrivée sur un chantier, même quand l’app est fermée. La position ne quitte jamais l’iPhone ; désactivable dans Réglages.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>La position sert à vous rappeler, en arrivant sur un chantier, ce qui vous y attend. Elle ne quitte jamais l’iPhone.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Le micro sert à dicter vos consignes et vos saisies de chantier, et à parler à l’assistant vocal.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -62,6 +70,10 @@
 		<string>CormorantGaramond-SemiBold.ttf</string>
 		<string>CormorantGaramond-MediumItalic.ttf</string>
 		<string>Cinzel-SemiBold.ttf</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
 	</array>
 	<key>UILaunchScreen</key>
 	<dict>

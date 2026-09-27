@@ -170,6 +170,9 @@ struct DecisionsView: View {
                 VueErreur(erreur: erreur) { Task { await modele.charger() } }
             default:
                 decisions
+                CarteBriefing()
+                    .padding(.horizontal, Espace.bord)
+                    .transitionDefilement()
                 if let agents = app.agents {
                     BandeauBureau(modele: agents) { app.onglet = .entreprise }
                         .padding(.horizontal, Espace.bord)

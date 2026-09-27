@@ -18,6 +18,9 @@ final class DelegueApp: NSObject, UIApplicationDelegate, UNUserNotificationCente
     var surOui: (@MainActor (String) -> Void)?
     /// Saisie traitée sans décision liée : ouvrir l'historique des saisies.
     var surSaisieTraitee: (@MainActor () -> Void)?
+    /// Notification locale touchée (briefing du matin, arrivée sur un chantier), avec l'action choisie.
+    var surLocale: (@MainActor (NotificationLocale, String) -> Void)?
+    private var localeEnAttente: (NotificationLocale, String)?
     private var referenceEnAttente: String?
 
     static let actionVoir = "VOIR"
@@ -26,6 +29,9 @@ final class DelegueApp: NSObject, UIApplicationDelegate, UNUserNotificationCente
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
         Self.enregistrerCategories()
+        // Tâche de fond du briefing (avant la fin du lancement) ; surveillance des chantiers relancée.
+        BriefingMatin.enregistrerTache()
+        ArriveeChantier.partage.reprendre()
         return true
     }
 
@@ -34,12 +40,12 @@ final class DelegueApp: NSObject, UIApplicationDelegate, UNUserNotificationCente
         let voir = UNNotificationAction(identifier: actionVoir, title: "Voir", options: [.foreground])
         // « Oui » exige un iPhone déverrouillé ; jamais proposé pour un envoi à un tiers.
         let oui = UNNotificationAction(identifier: actionOui, title: "Oui", options: [.authenticationRequired])
-        let categories: Set<UNNotificationCategory> = [
+        let categories = Set<UNNotificationCategory>([
             UNNotificationCategory(identifier: CategorieNotification.decision.rawValue, actions: [voir, oui], intentIdentifiers: []),
             UNNotificationCategory(identifier: CategorieNotification.decisionEnvoi.rawValue, actions: [voir], intentIdentifiers: []),
             UNNotificationCategory(identifier: CategorieNotification.saisieTraitee.rawValue, actions: [voir], intentIdentifiers: []),
             UNNotificationCategory(identifier: CategorieNotification.info.rawValue, actions: [], intentIdentifiers: []),
-        ]
+        ]).union(NotificationLocale.categories)
         UNUserNotificationCenter.current().setNotificationCategories(categories)
     }
 
@@ -63,8 +69,15 @@ final class DelegueApp: NSObject, UIApplicationDelegate, UNUserNotificationCente
     /// Toucher la notification (ou « Voir ») : ouvrir la carte. « Oui » : accepter sans ouvrir l'app,
     /// seulement pour une décision DECISION (rien ne part chez un tiers).
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
-        let charge = ChargeNotification(userInfo: response.notification.request.content.userInfo)
+        let infos = response.notification.request.content.userInfo
         let action = response.actionIdentifier
+        if let locale = NotificationLocale(userInfo: infos) {
+            await MainActor.run {
+                if let surLocale { surLocale(locale, action) } else { localeEnAttente = (locale, action) }
+            }
+            return
+        }
+        let charge = ChargeNotification(userInfo: infos)
         await MainActor.run {
             if action == Self.actionOui, charge.ouiAutorise, let reference = charge.reference, let surOui {
                 surOui(reference)
@@ -76,6 +89,11 @@ final class DelegueApp: NSObject, UIApplicationDelegate, UNUserNotificationCente
             }
             if let surReference { surReference(reference) } else { referenceEnAttente = reference }
         }
+    }
+
+    func consommerLocaleEnAttente() -> (NotificationLocale, String)? {
+        defer { localeEnAttente = nil }
+        return localeEnAttente
     }
 
     func consommerReferenceEnAttente() -> String? {

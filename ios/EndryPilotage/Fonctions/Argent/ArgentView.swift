@@ -40,6 +40,7 @@ struct ArgentView: View {
                                 payer(argent.payer).apparitionEnCascade(index: 1, visible: visible)
                             }
                             offres(argent.offres).apparitionEnCascade(index: 2, visible: visible)
+                            CarteOffresASuivre(offres: argent.offres.offres).apparitionEnCascade(index: 2, visible: visible)
                             if !devantClient {
                                 refacturer(argent.aRefacturer).apparitionEnCascade(index: 3, visible: visible)
                             }

@@ -66,6 +66,10 @@ struct ReglagesView: View {
 
                 ReglageVoixEndry()
 
+                if !app.session.estOuvrier {
+                    ReglagesSuiviRappels()
+                }
+
                 Section {
                     BasculeModeClient()
                         .listRowInsets(EdgeInsets())

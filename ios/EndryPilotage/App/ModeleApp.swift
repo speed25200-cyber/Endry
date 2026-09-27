@@ -25,6 +25,12 @@ final class ModeleApp {
     var assistantPresente = false
     /// Outil de terrain ouvert (bon de régie, bon de livraison, relevé 3D).
     var outilTerrain: DemandeOutil?
+    /// Briefing du jour affiché (carte d'Aujourd'hui, notification du matin, Siri).
+    var briefingPresente = false
+    /// Chantier à ouvrir dans l'espace Chantiers (notification d'arrivée, Siri, Spotlight).
+    var dossierCible: String?
+    /// Lecture à voix haute du briefing.
+    let lecteur = LecteurVocal()
     var toast: Toast?
 
     private(set) var decisions: ModeleDecisions?
@@ -35,6 +41,8 @@ final class ModeleApp {
     private(set) var pilotage: ModelePilotage?
     /// Claude et ses agents sur le PC (Secrétariat, Comptabilité…), v1.2.
     private(set) var agents: ModeleAgents?
+    /// Entretiens récurrents repérés par le bureau (v1.3).
+    private(set) var entretiens: ModeleEntretiens?
 
     @ObservationIgnored private var jetonAPNsEnAttente: String?
     /// File persistante des saisies faites sans réseau.
@@ -121,6 +129,7 @@ final class ModeleApp {
             saisie = nil
             pilotage = nil
             agents = nil
+            entretiens = nil
             return
         }
         let cache = session.estDemo ? nil : session.cache
@@ -138,6 +147,7 @@ final class ModeleApp {
             guard let saisie = self?.saisie else { return .refusee("Connectez d’abord l’app au bureau.") }
             return await saisie.transmettre(demande: demande)
         }
+        entretiens = ModeleEntretiens(api: api)
         dernierJetonEnvoye = nil
         reprendreFlux()
         if let jeton = jetonAPNsEnAttente { enregistrerAppareil(jeton) }
@@ -209,6 +219,33 @@ final class ModeleApp {
         onglet = .saisie
     }
 
+    /// Ouvre la fiche d'un chantier.
+    func ouvrirChantier(_ id: String) {
+        vueChantiers = .pipeline
+        onglet = .chantiers
+        dossierCible = id
+    }
+
+    /// Notification locale touchée (briefing, arrivée sur un chantier).
+    func traiter(_ locale: NotificationLocale, action: String) {
+        switch locale {
+        case .briefing:
+            briefingPresente = true
+            if action == NotificationLocale.actionEcouter {
+                Task {
+                    await rafraichirTout()
+                    lecteur.lire(BriefingMatin.composer(app: self).texteParle)
+                }
+            }
+        case .arrivee(let id):
+            switch action {
+            case NotificationLocale.actionRegie: ouvrirOutil(.regie, chantier: id)
+            case NotificationLocale.actionBon: ouvrirOutil(.bonLivraison, chantier: id)
+            default: ouvrirChantier(id)
+            }
+        }
+    }
+
     func ouvrir(reference: String) {
         referenceCiblee = reference
         onglet = .aujourdhui
@@ -236,6 +273,16 @@ final class ModeleApp {
             groupe.addTask { await s?.viderFile() }
             groupe.addTask { await g?.charger() }
         }
+        await apresChargement()
+    }
+
+    /// Données fraîches : briefing du prochain matin et zones de chantier à jour.
+    func apresChargement() async {
+        guard !session.estDemo, !session.estOuvrier else { return }
+        if BriefingMatin.actif {
+            await BriefingMatin.programmer(BriefingMatin.composer(app: self, masquerMontants: true))
+        }
+        await ArriveeChantier.partage.mettreAJour(app: self)
     }
 
     /// Recharge seulement ce que le PC signale comme modifié.
@@ -255,6 +302,7 @@ final class ModeleApp {
                 groupe.addTask { await g?.verifierEnAttente() }
             }
         }
+        if sujets.contains(.chantiers) || sujets.contains(.decisions) { await apresChargement() }
     }
 
     /// Flux d'événements : seulement avec un vrai serveur, au premier plan.

@@ -375,3 +375,26 @@ final class RappelsEtReleveTests: XCTestCase {
         XCTAssertTrue(envoi.texteSaisie.hasPrefix("[Pour l’agent Offres] Relevé 3D"))
     }
 }
+
+@MainActor
+final class ModeleEntretiensTests: XCTestCase {
+    func testChargerEtProposer() async {
+        let modele = ModeleEntretiens(api: APIDemo(latence: .zero))
+        await modele.charger()
+        XCTAssertEqual(modele.entretiens.count, 5)
+        XCTAssertTrue(modele.disponible)
+        let e = modele.entretiens[0]
+        guard case .success(let r) = await modele.proposer(e, consignes: "") else { return XCTFail("proposition refusée") }
+        XCTAssertNotNil(r.decisionReference)
+        XCTAssertEqual(modele.entretiens[0].statut, .propose)
+    }
+
+    func testPCSansEntretiens() async {
+        let transport = TransportRoutes([:])
+        let modele = ModeleEntretiens(api: ClientAPI(base: URL(string: "https://pc.exemple.ts.net")!, jeton: "J", transport: transport,
+                                                     capacites: CapacitesServeur()))
+        await modele.charger()
+        XCTAssertFalse(modele.disponible)
+        XCTAssertEqual(modele.etat, .pret)
+    }
+}

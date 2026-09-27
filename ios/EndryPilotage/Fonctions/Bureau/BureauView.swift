@@ -260,8 +260,13 @@ struct FicheAgentView: View {
                     case .enCours:
                         HStack(spacing: 6) {
                             ProgressView().controlSize(.small)
-                            Text("\(agent.nom) cherche sur le PC…").styleTexte(13, relativeTo: .footnote).foregroundStyle(Color.encrePale)
+                            Text("Question transmise à l’assistant…").styleTexte(13, relativeTo: .footnote).foregroundStyle(Color.encrePale)
                         }
+                    case .enAttente:
+                        Label(echange.reponse ?? "L’assistant répondra à son prochain passage.", systemImage: "clock")
+                            .styleTexte(13, relativeTo: .footnote)
+                            .foregroundStyle(Color.encreDouce)
+                            .fixedSize(horizontal: false, vertical: true)
                     case .repondu, .erreur:
                         Text(echange.reponse ?? "")
                             .styleTexte(15, relativeTo: .body)

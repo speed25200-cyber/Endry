@@ -36,13 +36,12 @@ extension CerveauVocal {
 enum FabriqueCerveau {
     /// Modèle de langage d'Apple, sur l'iPhone (iOS 26, Apple Intelligence activé) ; sinon rien.
     @MainActor
-    static func creer(executeur: ExecuteurOutils?,
-                      transmettre: @escaping @MainActor @Sendable (String) async -> ModeleSaisie.ResultatDemande) -> (any CerveauVocal)? {
+    static func creer(executeur: ExecuteurOutils?) -> (any CerveauVocal)? {
         // Tests d'interface : réponses locales, déterministes.
         guard !Configuration.testsUI else { return nil }
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *), let executeur, SystemLanguageModel.default.isAvailable {
-            return CerveauAppleIntelligence(executeur: executeur, transmettre: transmettre)
+            return CerveauAppleIntelligence(executeur: executeur)
         }
         #endif
         return nil
@@ -57,14 +56,12 @@ enum FabriqueCerveau {
 @MainActor
 final class CerveauAppleIntelligence: CerveauVocal {
     private let executeur: ExecuteurOutils
-    private let transmettre: @MainActor @Sendable (String) async -> ModeleSaisie.ResultatDemande
     private let effets = CollecteurEffets()
     private var session: LanguageModelSession
 
-    init(executeur: ExecuteurOutils, transmettre: @escaping @MainActor @Sendable (String) async -> ModeleSaisie.ResultatDemande) {
+    init(executeur: ExecuteurOutils) {
         self.executeur = executeur
-        self.transmettre = transmettre
-        session = Self.nouvelleSession(executeur: executeur, transmettre: transmettre, effets: effets)
+        session = Self.nouvelleSession(executeur: executeur, effets: effets)
         session.prewarm()
     }
 
@@ -74,7 +71,7 @@ final class CerveauAppleIntelligence: CerveauVocal {
             return try await tour(question)
         } catch LanguageModelSession.GenerationError.exceededContextWindowSize {
             // Conversation trop longue : on repart d'une page blanche et on repose la question.
-            session = Self.nouvelleSession(executeur: executeur, transmettre: transmettre, effets: effets)
+            session = Self.nouvelleSession(executeur: executeur, effets: effets)
             effets.vider()
             return try? await tour(question)
         } catch {
@@ -89,9 +86,7 @@ final class CerveauAppleIntelligence: CerveauVocal {
         return ReponseCerveau(texte: texte, effets: effets.tous())
     }
 
-    private static func nouvelleSession(executeur: ExecuteurOutils,
-                                        transmettre: @escaping @MainActor @Sendable (String) async -> ModeleSaisie.ResultatDemande,
-                                        effets: CollecteurEffets) -> LanguageModelSession {
+    private static func nouvelleSession(executeur: ExecuteurOutils, effets: CollecteurEffets) -> LanguageModelSession {
         let outils: [any Tool] = [
             OutilLecture(name: "accueil", description: ConsignesCerveau.accueil, executeur: executeur, effets: effets),
             OutilLecture(name: "decisions", description: ConsignesCerveau.decisions, executeur: executeur, effets: effets),
@@ -101,7 +96,7 @@ final class CerveauAppleIntelligence: CerveauVocal {
             OutilDemanderClaude(executeur: executeur, effets: effets),
             OutilChantier(executeur: executeur, effets: effets),
             OutilProposerDecision(executeur: executeur, effets: effets),
-            OutilSaisie(transmettre: transmettre),
+            OutilSaisie(executeur: executeur, effets: effets),
         ]
         return LanguageModelSession(tools: outils, instructions: ConsignesCerveau.texte())
     }
@@ -212,12 +207,14 @@ struct OutilDemanderClaude: Tool {
     }
 }
 
-/// Demande de travail pour l'assistant du bureau : passe par la file de saisie (gardée hors ligne).
+/// Demande de travail pour l'assistant du bureau : seulement préparée. Elle s'affiche à l'écran,
+/// le patron la relit et touche « Transmettre » ; l'outil ne transmet jamais rien lui-même.
 @available(iOS 26.0, *)
 struct OutilSaisie: Tool {
     let name = "saisie"
     let description = ConsignesCerveau.saisie
-    let transmettre: @MainActor @Sendable (String) async -> ModeleSaisie.ResultatDemande
+    let executeur: ExecuteurOutils
+    let effets: CollecteurEffets
 
     @Generable
     struct Arguments {
@@ -226,11 +223,9 @@ struct OutilSaisie: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        switch await transmettre(arguments.texte) {
-        case .transmise: "Transmis à l’assistant du bureau : la proposition arrivera dans les décisions. Rien n’est parti chez un tiers."
-        case .gardee: "Pas de réseau : la demande est gardée sur l’iPhone et partira toute seule."
-        case .refusee(let raison): "Demande non transmise : \(raison)"
-        }
+        let r = await executeur.executer(nom: name, arguments: OutilChantier.json(["texte": arguments.texte]))
+        effets.ajouter(r.effet)
+        return r.sortie
     }
 }
 

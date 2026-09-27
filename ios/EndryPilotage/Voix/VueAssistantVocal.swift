@@ -220,7 +220,8 @@ struct VueAssistantVocal: View {
     private var cartes: some View {
         VStack(spacing: Espace.s) {
             ForEach(assistant?.cartes ?? [], id: \.self) { effet in
-                CarteContexte(effet: effet) { assistant?.retirer(effet) }
+                CarteContexte(effet: effet, retirer: { assistant?.retirer(effet) },
+                              confirmer: { texte in await assistant?.confirmer(effet, texte: texte) })
                     .transition(reduireAnimations ? .opacity : .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.94)))
             }
         }
@@ -429,6 +430,8 @@ struct CarteContexte: View {
     @Environment(ModeleApp.self) private var app
     var effet: ExecuteurOutils.Effet
     var retirer: () -> Void
+    /// « Envoyer » / « Transmettre » d'une question ou d'une demande préparée par la voix.
+    var confirmer: (String) async -> Void = { _ in }
 
     var body: some View {
         switch effet {
@@ -469,8 +472,17 @@ struct CarteContexte: View {
             } else {
                 resume(icone: "doc.text.fill", titre: "Facture \(numero)", detail: "Suivi seulement : aucune relance sans votre demande")
             }
-        case .questionClaude(_, let question, let agent):
-            CarteClaude(question: question, reponse: nil, agent: agent, retirer: retirer)
+        case .questionClaude(_, let question, let agent, let message):
+            CarteClaude(question: question, reponse: nil, agent: agent, attente: message, retirer: retirer)
+        case .questionAConfirmer(let question, let agent, _):
+            CarteConfirmation(titre: agent.map { "Question pour l’assistant · \($0)" } ?? "Question pour l’assistant du bureau",
+                              texte: question, bouton: "Envoyer",
+                              note: "Lecture seule : l’assistant répond à son prochain passage.",
+                              confirmer: confirmer, annuler: retirer)
+        case .saisieAConfirmer(let texte):
+            CarteConfirmation(titre: "Demande pour le bureau", texte: texte, bouton: "Transmettre",
+                              note: "L’assistant prépare ; rien ne part chez un tiers sans votre geste.",
+                              confirmer: confirmer, annuler: retirer)
         case .reponseClaude(let question, let reponse, let agent):
             CarteClaude(question: question, reponse: reponse, agent: agent, retirer: retirer)
         case .aucun:
@@ -543,11 +555,79 @@ private struct PastilleClaude: View {
     }
 }
 
-/// Carte « Claude » : la question posée au PC (et à quel agent), puis sa réponse quand elle arrive.
+/// Question ou demande préparée par la voix : le patron la relit, la corrige s'il faut, puis confirme.
+/// Rien ne part au PC avant ce geste.
+struct CarteConfirmation: View {
+    var titre: String
+    var texte: String
+    var bouton: String
+    var note: String
+    var confirmer: (String) async -> Void
+    var annuler: () -> Void
+    @State private var brouillon = ""
+    @State private var enCours = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Espace.s) {
+            Text(titre)
+                .font(PoliceAssistant.texte(11, .semibold, relativeTo: .caption2))
+                .textCase(.uppercase)
+                .tracking(1.8)
+                .foregroundStyle(Color.or)
+            TextField("", text: $brouillon, axis: .vertical)
+                .font(PoliceAssistant.texte(17, .medium))
+                .foregroundStyle(Color(hex: 0xFBEBD0))
+                .tint(Color.or)
+                .lineLimit(1...5)
+                .padding(Espace.s)
+                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .accessibilityIdentifier("texte-a-confirmer")
+            Text(note)
+                .font(PoliceAssistant.texte(12, relativeTo: .caption))
+                .foregroundStyle(Color.orClair.opacity(0.55))
+            HStack(spacing: Espace.s) {
+                Button("Annuler", action: annuler)
+                    .font(PoliceAssistant.texte(15, .medium))
+                    .foregroundStyle(Color.orClair.opacity(0.8))
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .background(Color.white.opacity(0.06), in: Capsule())
+                    .accessibilityIdentifier("annuler-confirmation")
+                Button {
+                    enCours = true
+                    Task {
+                        await confirmer(brouillon)
+                        enCours = false
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        if enCours { ProgressView().tint(Color.espresso) }
+                        Text(bouton)
+                    }
+                    .font(PoliceAssistant.texte(15, .semibold))
+                    .foregroundStyle(Color.espresso)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .background(Color.or, in: Capsule())
+                }
+                .disabled(enCours || brouillon.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityIdentifier("confirmer-envoi")
+            }
+        }
+        .padding(Espace.m)
+        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Color.or.opacity(0.45), lineWidth: 1))
+        .onAppear { if brouillon.isEmpty { brouillon = texte } }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("carte-confirmation")
+    }
+}
+
+/// Carte « Assistant » : la question posée au PC (et dans quel domaine), puis sa réponse quand elle arrive.
 struct CarteClaude: View {
     var question: String
     var reponse: String?
     var agent: String?
+    /// Question partie, réponse au prochain passage de l'assistant (message du PC).
+    var attente: String? = nil
     var retirer: () -> Void
 
     var body: some View {
@@ -556,7 +636,7 @@ struct CarteClaude: View {
                 Image(systemName: icone)
                     .font(.system(size: 12, weight: .semibold))
                     .symbolEffect(.pulse, isActive: reponse == nil)
-                Text(agent.map { "Claude · \($0)" } ?? "Claude · PC")
+                Text(agent.map { "Assistant · \($0)" } ?? "Assistant du bureau")
                     .font(PoliceAssistant.texte(11, .semibold, relativeTo: .caption2))
                     .textCase(.uppercase)
                     .tracking(1.8)
@@ -585,11 +665,18 @@ struct CarteClaude: View {
                 .scrollBounceBehavior(.basedOnSize)
                 .transition(.opacity.combined(with: .offset(y: 6)))
             } else {
-                HStack(spacing: Espace.xs) {
-                    ProgressView().controlSize(.small).tint(Color.or)
-                    Text(agent.map { "L’agent \($0) cherche sur le PC…" } ?? "Claude cherche dans les dossiers, Bexio et les e-mails…")
+                if let attente {
+                    Label(attente, systemImage: "clock")
                         .font(PoliceAssistant.texte(13, relativeTo: .footnote))
-                        .foregroundStyle(Color.orClair.opacity(0.55))
+                        .foregroundStyle(Color.orClair.opacity(0.7))
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    HStack(spacing: Espace.xs) {
+                        ProgressView().controlSize(.small).tint(Color.or)
+                        Text("Question transmise ; l’assistant la traite en lecture seule…")
+                            .font(PoliceAssistant.texte(13, relativeTo: .footnote))
+                            .foregroundStyle(Color.orClair.opacity(0.55))
+                    }
                 }
             }
         }

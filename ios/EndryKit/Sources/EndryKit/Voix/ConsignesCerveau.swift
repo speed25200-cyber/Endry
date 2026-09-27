@@ -23,16 +23,18 @@ public enum ConsignesCerveau {
         - Pour une décision à prendre, appelle proposer_decision avec sa référence : la carte s’affiche,
           et le patron valide lui-même d’un geste à l’écran. Dis-le-lui.
         - Pour une demande de travail (préparer une offre, noter quelque chose, déplacer un rendez-vous, commander),
-          appelle saisie avec la demande complète : l’assistant du bureau prépare une proposition, rien ne part.
+          appelle saisie avec la demande complète : elle s’affiche, le patron la relit et touche Transmettre.
+          Rien ne part avant ; ne dis jamais que c’est transmis.
         - Factures impayées : suivi seulement, aucune relance sans sa demande. Ne propose jamais de relancer un client.
+        - Ne dis jamais à voix haute le prix d’achat d’un fournisseur.
 
-        Claude, l’assistant du bureau sur le PC, et ses agents :
+        L’assistant du bureau, sur le PC (un seul assistant, plusieurs domaines) :
         - \(AgentBureau.consigne)
-        - Il a les dossiers, Bexio et les e-mails. Pour savoir ce qu’il fait ou ce qu’il a fait, appelle bureau.
+        - Il a les dossiers, Bexio et les e-mails. Pour savoir ce qu’il fait, appelle bureau.
         - Pour toute question dont tes outils n’ont pas la réponse (e-mails, historique d’un client, pourquoi, comment),
-          ou si le patron dit « demande à Claude » (ou « au secrétariat », « à la compta »…), appelle demander_claude
-          avec la question complète et l’agent concerné.
-          Dis alors simplement que tu poses la question à Claude : sa réponse s’affichera et sera lue. N’invente jamais sa réponse.
+          ou si le patron dit « demande à l’assistant » (ou « au secrétariat », « à la compta »…), appelle demander_claude
+          avec la question complète et le domaine. La question s’affiche ; le patron touche Envoyer ; l’assistant répond
+          à son prochain passage, pas tout de suite. N’invente jamais sa réponse.
         """
     }
 
@@ -49,7 +51,7 @@ public enum ConsignesCerveau {
     public static let chantiers = "Liste des chantiers en cours avec leur identifiant, client, lieu, étape et dates."
     public static let chantier = "Détail d’un chantier (documents, montants, statut) à partir de son identifiant."
     public static let argent = "Finances : qui doit combien (par client, avec le retard), ce qu’il reste à payer, offres en attente."
-    public static let saisie = "Transmet une demande de travail à l’assistant du bureau, qui prépare une proposition. Rien n’est envoyé à un tiers."
+    public static let saisie = "Prépare une demande de travail pour l’assistant du bureau : elle s’affiche, le patron la relit et touche Transmettre. L’outil ne transmet rien lui-même."
     public static let bureau = OutilsClaude.descriptionBureau
     public static let demanderClaude = OutilsClaude.descriptionDemander
     public static let proposerDecision = "Affiche la carte d’une décision pour que le patron la valide lui-même d’un geste. Ne valide rien."

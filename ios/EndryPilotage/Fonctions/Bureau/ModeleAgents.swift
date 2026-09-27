@@ -4,13 +4,15 @@ import Observation
 
 /// Une question posée à un agent depuis sa fiche, et sa réponse.
 struct EchangeAgent: Identifiable, Hashable {
-    enum Etat: Hashable { case enCours, repondu, erreur }
+    enum Etat: Hashable { case enCours, enAttente, repondu, erreur }
     let id = UUID()
     var question: String
     var etat: Etat = .enCours
     var reponse: String?
     var sources: [SourceReponse] = []
     var decisionReference: String?
+    /// Suivi côté PC, pour revérifier sur `maj saisies`.
+    var suivi: SuiviQuestion?
 }
 
 /// Le bureau vu depuis l'app : agents de Claude sur le PC, leur état, leur journal, et les échanges du patron avec eux.
@@ -76,21 +78,21 @@ final class ModeleAgents {
             let resultat: ReponseAgent?
             switch posee {
             case .reponse(let r): resultat = r
-            case .enAttente(let suivi):
+            case .enAttente(let suivi, let message):
+                mettreAJour { $0.suivi = suivi }
+                if let message {
+                    // Hors horaires : on l'affiche et on ne sonde pas ; la réponse viendra au prochain passage.
+                    mettreAJour { e in
+                        e.etat = .enAttente
+                        e.reponse = message
+                    }
+                    await charger()
+                    return
+                }
                 await charger()
                 resultat = await bureau.attendre(suivi)
             }
-            mettreAJour { e in
-                if let resultat, resultat.statut == .repondu, let r = resultat.reponse {
-                    e.etat = .repondu
-                    e.reponse = r
-                    e.sources = resultat.sources
-                    e.decisionReference = resultat.decisionReference
-                } else {
-                    e.etat = .erreur
-                    e.reponse = resultat?.message ?? "Pas encore de réponse : elle apparaîtra ici dès qu’elle arrive."
-                }
-            }
+            mettreAJour { e in appliquer(resultat, a: &e) }
         } catch {
             mettreAJour { e in
                 e.etat = .erreur
@@ -98,6 +100,33 @@ final class ModeleAgents {
             }
         }
         await charger()
+    }
+
+    /// Réponses arrivées depuis (appelé sur chaque `maj saisies` du PC).
+    func verifierEnAttente() async {
+        for (agentId, liste) in echanges {
+            for echange in liste where echange.etat == .enAttente {
+                guard let suivi = echange.suivi, let r = await bureau.verifier(suivi) else { continue }
+                if let index = echanges[agentId]?.firstIndex(where: { $0.id == echange.id }) {
+                    appliquer(r, a: &echanges[agentId]![index])
+                }
+            }
+        }
+    }
+
+    private func appliquer(_ resultat: ReponseAgent?, a e: inout EchangeAgent) {
+        if let resultat, resultat.statut == .repondu, let r = resultat.reponse {
+            e.etat = .repondu
+            e.reponse = r
+            e.sources = resultat.sources
+            e.decisionReference = resultat.decisionReference
+        } else if let resultat, resultat.statut == .erreur {
+            e.etat = .erreur
+            e.reponse = resultat.message ?? "L’assistant n’a pas pu répondre."
+        } else {
+            e.etat = .enAttente
+            e.reponse = "L’assistant répondra à son prochain passage ; la réponse s’affichera ici."
+        }
     }
 
     /// Confier un travail à un agent : saisie « Pour l'agent … » (gardée sur l'iPhone sans réseau).

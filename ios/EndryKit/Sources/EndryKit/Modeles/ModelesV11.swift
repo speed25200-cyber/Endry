@@ -73,8 +73,17 @@ public struct SaisieHistorique: Decodable, Sendable, Hashable, Identifiable {
     public var statut: StatutSaisie
     public var resume: String?
     public var decisionReference: String?
+    /// Question du patron (lecture seule côté PC), et non demande de travail.
+    public var question: Bool
+    /// Domaine de l'assistant qui la traite (`secretariat`…).
+    public var agent: String?
+    public var tacheId: String?
 
-    public init(id: String, cree: String?, texte: String, photos: Int, statut: StatutSaisie, resume: String? = nil, decisionReference: String? = nil) {
+    public init(id: String, cree: String?, texte: String, photos: Int, statut: StatutSaisie, resume: String? = nil, decisionReference: String? = nil,
+                question: Bool = false, agent: String? = nil, tacheId: String? = nil) {
+        self.question = question
+        self.agent = agent
+        self.tacheId = tacheId
         self.id = id
         self.cree = cree
         self.texte = texte
@@ -96,6 +105,9 @@ public struct SaisieHistorique: Decodable, Sendable, Hashable, Identifiable {
         statut = c.texte("statut").flatMap(StatutSaisie.init(rawValue:)) ?? .transmis
         resume = c.texte("resume")
         decisionReference = c.texte("decision_reference").flatMap { $0.isEmpty ? nil : $0 }
+        question = c.booleen("question") ?? BureauClaude.estQuestion(texte)
+        agent = c.texte("agent").flatMap { $0.isEmpty ? nil : $0 }
+        tacheId = c.texte("tache_id")
     }
 
     /// « Décision prête » : traitée et une décision attend le patron.
@@ -119,11 +131,21 @@ public struct EtatAssistant: Decodable, Sendable, Equatable {
     public var pause: Bool
     public var file: Int
     public var derniereActivite: String?
+    /// Ce que l'assistant traite en ce moment (texte ou nombre selon le PC).
+    public var enCours: String?
+    /// Faux hors des horaires de passage de l'assistant.
+    public var enService: Bool?
+    /// Horaires de passage, en toutes lettres (« du lundi au vendredi, de 7 h à 18 h »).
+    public var horaires: String?
 
-    public init(pause: Bool, file: Int = 0, derniereActivite: String? = nil) {
+    public init(pause: Bool, file: Int = 0, derniereActivite: String? = nil, enCours: String? = nil,
+                enService: Bool? = nil, horaires: String? = nil) {
         self.pause = pause
         self.file = file
         self.derniereActivite = derniereActivite
+        self.enCours = enCours
+        self.enService = enService
+        self.horaires = horaires
     }
 
     public init(from decoder: Decoder) throws {
@@ -131,6 +153,9 @@ public struct EtatAssistant: Decodable, Sendable, Equatable {
         pause = c.booleen("pause") ?? false
         file = c.entier("file") ?? 0
         derniereActivite = c.texte("derniere_activite")
+        enCours = c.texte("en_cours").flatMap { $0.isEmpty || $0 == "0" ? nil : $0 }
+        enService = c.booleen("en_service")
+        horaires = c.texte("horaires").flatMap { $0.isEmpty ? nil : $0 }
     }
 }
 

@@ -36,13 +36,25 @@ public final class ModelePilotage {
     /// Met l'assistant en pause ou le reprend. Renvoie vrai si la commande est passée.
     @discardableResult
     public func basculer() async -> Bool {
+        await definir(pause: !enPause)
+    }
+
+    /// Reprise explicite (bandeau de pause de l'écran Aujourd'hui).
+    @discardableResult
+    public func reprendre() async -> Bool {
+        await definir(pause: false)
+    }
+
+    @discardableResult
+    public func definir(pause cible: Bool) async -> Bool {
         guard !enCours else { return false }
-        let cible = !enPause
         enCours = true
         defer { enCours = false }
         do {
             try await api.mettreEnPause(cible)
-            etat = EtatAssistant(pause: cible, file: etat?.file ?? 0, derniereActivite: etat?.derniereActivite)
+            var nouvel = etat ?? EtatAssistant(pause: cible)
+            nouvel.pause = cible
+            etat = nouvel
             surChangement?(cible)
             toast = Toast(cible ? "Assistant en pause : il ne prépare plus rien." : "Assistant repris.", style: .succes)
             return true

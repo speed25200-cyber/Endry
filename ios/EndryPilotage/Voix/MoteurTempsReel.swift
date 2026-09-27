@@ -207,9 +207,14 @@ final class MoteurTempsReel: MoteurVoix {
     }
 
     func annoncer(question: String, reponse: String, agent: String?) async {
-        let qui = agent.map { "de l’agent \($0) de Claude" } ?? "de Claude"
+        let qui = agent.map { "de l’assistant du PC, côté \($0)," } ?? "de l’assistant du PC"
         envoyer(CommandeRealtime.messageTexte(
-            "[Réponse \(qui), sur le PC, à la question « \(question) »] \(reponse)\nTransmets-la fidèlement au patron, en commençant par « Claude répond »."))
+            "[Réponse \(qui), sur le PC, à la question « \(question) »] \(reponse)\nTransmets-la fidèlement au patron, en commençant par « L’assistant répond », sans jamais dire de prix d’achat fournisseur."))
+        envoyer(CommandeRealtime.creerReponse)
+    }
+
+    func signaler(_ texte: String) async {
+        envoyer(CommandeRealtime.messageTexte("[Information de l’app, à dire au patron en une phrase] \(texte)"))
         envoyer(CommandeRealtime.creerReponse)
     }
 

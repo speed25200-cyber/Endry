@@ -81,7 +81,7 @@ extension EndryAPI {
             return Charge(valeur: valeur, majLe: Date(), depuisCache: false, erreur: nil)
         } catch {
             switch error {
-            case .injoignable, .horsLigne, .nonAuthentifie:
+            case .injoignable, .horsLigne, .nonAuthentifie, .delaiDepasse:
                 if let cache, let cle = requete.cleCache, let enCache = await cache.lire(cle: cle),
                    let valeur = try? decoder(T.self, depuis: enCache.data) {
                     return Charge(valeur: valeur, majLe: enCache.date, depuisCache: true, erreur: error)

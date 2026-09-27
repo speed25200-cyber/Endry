@@ -48,6 +48,12 @@ struct ConsignesSheet: View {
                         .scrollContentBackground(.hidden)
                         .focused($focus)
                         .accessibilityIdentifier("champ-consignes")
+                        .onAppear {
+                            // Texte modifiable : le brouillon est proposé tel quel, à retoucher.
+                            if mode == .corriger, carte.modifiable, texte.isEmpty, let brouillon = carte.texte, !brouillon.isEmpty {
+                                texte = brouillon
+                            }
+                        }
                 }
                 .padding(Espace.s)
                 .frame(minHeight: 140)

@@ -80,6 +80,6 @@ public enum AgentBureau: String, CaseIterable, Sendable, Hashable {
 
     /// Consigne pour les modèles vocaux : les agents et leurs domaines.
     public static var consigne: String {
-        "Agents de Claude sur le PC : " + allCases.map { "\($0.nom) (\($0.domaine))" }.joined(separator: " ; ") + "."
+        "Domaines de l’assistant du PC (un seul assistant) : " + allCases.map { "\($0.nom) (\($0.domaine))" }.joined(separator: " ; ") + "."
     }
 }

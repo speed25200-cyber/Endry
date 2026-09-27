@@ -209,15 +209,14 @@ struct CarteDecisionView: View {
                         .buttonStyle(BoutonPrincipal(couleur: .vertControle))
                         .accessibilityIdentifier("oui-\(carte.reference)")
                     }
-                    if carte.modifiable {
-                        Button {
-                            feuille = .corriger
-                        } label: {
-                            Text("Corriger")
-                        }
-                        .buttonStyle(BoutonSecondaire())
-                        .accessibilityIdentifier("corriger-\(carte.reference)")
+                    // « Corriger » sur toute validation ; `modifiable` ne fait que pré-remplir le texte à retoucher.
+                    Button {
+                        feuille = .corriger
+                    } label: {
+                        Text("Corriger")
                     }
+                    .buttonStyle(BoutonSecondaire())
+                    .accessibilityIdentifier("corriger-\(carte.reference)")
                     boutonNon
                 }
                 .disabled(!actionsPossibles || enCours)

@@ -6,19 +6,18 @@ import Foundation
 ///
 /// Écoute sur l'iPhone (SpeechAnalyzer, ou SFSpeechRecognizer fr-CH), comprend et répond avec le modèle
 /// d'Apple Intelligence embarqué (qui lit les données par les outils), parle avec la meilleure voix française
-/// installée. Sans Apple Intelligence, il répond aux questions simples à partir des données en cache et
-/// transmet tout le reste à l'assistant du PC sous forme de saisie.
+/// installée. Sans Apple Intelligence, il répond aux questions simples à partir des données en cache.
+/// Rien ne part au PC par la voix : une question ou une demande s'affiche, le patron la relit et la confirme.
 @MainActor
 final class MoteurLocal: MoteurVoix {
     var nom: String { cerveau == nil ? "Sur l’iPhone" : "Apple Intelligence · sur l’iPhone" }
 
     private let donnees: @MainActor () -> RepondeurLocal.Donnees
-    private let transmettre: @MainActor (String) async -> ModeleSaisie.ResultatDemande
     private let cerveau: (any CerveauVocal)?
     /// Outils (Claude sur le PC, données) ; `nil` tant que l'app n'est pas connectée.
     private let executeur: ExecuteurOutils?
-    /// Réponses de Claude arrivées pendant un tour : dites juste après.
-    private var annoncesEnAttente: [(question: String, reponse: String, agent: String?)] = []
+    /// Réponses du PC ou informations arrivées pendant un tour : dites juste après.
+    private var annoncesEnAttente: [(question: String?, texte: String)] = []
     private let synthese = AVSpeechSynthesizer()
     private let delegue = DelegueSynthese()
     private var transcripteur: (any Transcripteur)?
@@ -36,11 +35,9 @@ final class MoteurLocal: MoteurVoix {
     private static let delaiSilence: Duration = .milliseconds(1_300)
 
     init(donnees: @escaping @MainActor () -> RepondeurLocal.Donnees,
-         transmettre: @escaping @MainActor (String) async -> ModeleSaisie.ResultatDemande,
          cerveau: (any CerveauVocal)? = nil,
          executeur: ExecuteurOutils? = nil) {
         self.donnees = donnees
-        self.transmettre = transmettre
         self.cerveau = cerveau
         self.executeur = executeur
         synthese.delegate = delegue
@@ -132,8 +129,17 @@ final class MoteurLocal: MoteurVoix {
 
     /// Réponse de Claude arrivée du PC : dite tout de suite si Endry est libre, sinon juste après le tour en cours.
     func annoncer(question: String, reponse: String, agent: String?) async {
+        let qui = agent.map { "L’assistant, côté \($0), répond : " } ?? "L’assistant répond : "
+        await annoncer(question: question, texte: qui + reponse)
+    }
+
+    func signaler(_ texte: String) async {
+        await annoncer(question: nil, texte: texte)
+    }
+
+    private func annoncer(question: String?, texte: String) async {
         guard actif else { return }
-        annoncesEnAttente.append((question, reponse, agent))
+        annoncesEnAttente.append((question, texte))
         guard !enReflexion else { return }
         enReflexion = true
         silence?.cancel()
@@ -183,34 +189,26 @@ final class MoteurLocal: MoteurVoix {
                 await dire("Je n’arrive pas à voir l’activité du PC pour l’instant.")
             }
         case .transmettre(let demande):
-            switch await transmettre(demande) {
-            case .transmise:
-                await dire("C’est transmis à l’assistant du bureau. Vous verrez la proposition dans vos décisions.")
-            case .gardee:
-                await dire("Pas de réseau pour l’instant : la demande est gardée et partira toute seule.")
-            case .refusee(let raison):
-                await dire("Je n’ai pas pu transmettre la demande. \(raison)")
-            }
+            // Jamais transmis d'office : la demande s'affiche, le patron la relit et touche « Transmettre ».
+            surEvenement?(.effet(.saisieAConfirmer(texte: demande)))
+            await dire("Voici la demande pour le bureau. Relisez-la, puis touchez Transmettre.")
         }
         await terminerTour()
     }
 
-    /// Question pour Claude, sur le PC : la carte « Claude cherche » apparaît, la réponse sera dite à son arrivée.
+    /// Question pour l'assistant du PC : elle s'affiche, le patron la relit et touche « Envoyer ».
     private func demanderClaude(_ question: String) async {
         guard let executeur else {
-            await dire("Connectez d’abord l’app au bureau pour interroger Claude.")
+            await dire("Connectez d’abord l’app au bureau pour interroger l’assistant.")
             return
         }
         let r = await executeur.executer(nom: "demander_claude", arguments: Self.json(["question": question]))
         surEvenement?(.effet(r.effet))
-        switch r.effet {
-        case .questionClaude(_, _, let agent):
-            let destinataire = agent.map { "à l’agent \($0) de Claude" } ?? "à Claude"
-            await dire("Je pose la question \(destinataire), sur le PC. Je vous lis sa réponse dès qu’elle arrive.")
-        case .reponseClaude(_, let reponse, _):
-            await dire(reponse)
-        default:
-            await dire("Je n’ai pas pu joindre Claude sur le PC.")
+        if case .questionAConfirmer(_, let agent, _) = r.effet {
+            let cote = agent.map { ", côté \($0)" } ?? ""
+            await dire("Voici la question pour l’assistant du bureau\(cote). Touchez Envoyer : il répondra à son prochain passage.")
+        } else {
+            await dire("Je n’ai pas pu préparer la question.")
         }
     }
 
@@ -225,9 +223,8 @@ final class MoteurLocal: MoteurVoix {
             let annonce = annoncesEnAttente.removeFirst()
             enReflexion = true
             surEvenement?(.nouveauTour)
-            surEvenement?(.patron(definitif: annonce.question, provisoire: ""))
-            let qui = annonce.agent.map { "L’agent \($0) répond : " } ?? "Claude répond : "
-            await dire(qui + annonce.reponse)
+            if let question = annonce.question { surEvenement?(.patron(definitif: question, provisoire: "")) }
+            await dire(annonce.texte)
             await terminerTour()
             return
         }

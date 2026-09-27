@@ -129,10 +129,11 @@ public enum SuiviQuestion: Sendable, Hashable {
     case saisie(id: String?, texte: String)
 }
 
-/// Question posée à Claude ou à l'un de ses agents.
+/// Question posée à l'assistant (tous domaines ou un domaine précis).
 public enum QuestionPosee: Sendable, Equatable {
     case reponse(ReponseAgent)
-    case enAttente(SuiviQuestion)
+    /// La réponse viendra plus tard ; `message` : hors horaires, « l'assistant répondra à son prochain passage… ».
+    case enAttente(SuiviQuestion, message: String?)
 }
 
 /// Dialogue avec Claude et ses agents, sur le PC.
@@ -219,7 +220,8 @@ public struct BureauClaude: Sendable {
         return (nil, nil)
     }
 
-    /// Pose la question à l'agent (`agentId`), sinon à Claude qui choisit l'agent, sinon par la saisie.
+    /// Pose la question au domaine (`agentId`), sinon à l'assistant qui choisit, sinon (serveur v1.1) par la saisie.
+    /// Le PC l'exécute en lecture seule et répond à son prochain passage.
     public func poser(_ question: String, agentId: String? = nil, nomAgent: String? = nil) async throws(ErreurAPI) -> QuestionPosee {
         let q = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { throw .refus("La question est vide.") }
@@ -234,7 +236,9 @@ public struct BureauClaude: Sendable {
             case .repondu where reponse.reponse != nil:
                 return .reponse(reponse)
             case .enCours:
-                if let id = reponse.questionId { return .enAttente(.question(id: id, agent: reponse.agent)) }
+                if let id = reponse.questionId {
+                    return .enAttente(.question(id: id, agent: reponse.agent), message: reponse.message.flatMap { $0.isEmpty ? nil : $0 })
+                }
             case .erreur:
                 throw .refus(reponse.message ?? "L’agent n’a pas pu répondre.")
             default:
@@ -245,32 +249,37 @@ public struct BureauClaude: Sendable {
         let formulaire = FormulaireMultipart(champs: [Parametre("texte", texte)] + (agentId.map { [Parametre("agent", $0)] } ?? []))
         let reponse = try await api.charger(ReponseSimple.self, .saisie(formulaire))
         guard reponse.ok else { throw .refus(reponse.message ?? "Le PC n’a pas accepté la question.") }
-        return .enAttente(.saisie(id: reponse.saisieId, texte: texte))
+        return .enAttente(.saisie(id: reponse.saisieId, texte: texte), message: nil)
     }
 
-    /// Attend la réponse (question v1.2 ou saisie v1.1). `nil` : toujours rien au bout du délai.
-    public func attendre(_ suivi: SuiviQuestion, delai: Duration = .seconds(300), intervalle: Duration? = nil) async -> ReponseAgent? {
+    /// Attend la réponse d'une question v1.2 : `GET /questions/{id}` toutes les 2 s pendant 60 s.
+    /// Au-delà (ou pour une question déposée en saisie), on ne sonde plus : `verifier` est rappelé
+    /// à chaque événement `maj saisies` du PC. `nil` : pas encore de réponse.
+    public func attendre(_ suivi: SuiviQuestion, delai: Duration = .seconds(60), intervalle: Duration = .seconds(2)) async -> ReponseAgent? {
+        guard case .question = suivi else { return await verifier(suivi) }
         let limite = ContinuousClock.now + delai
         while ContinuousClock.now < limite, !Task.isCancelled {
-            switch suivi {
-            case .question(let id, let agent):
-                if let data = try? await api.envoyer(.suiviQuestion(id)),
-                   var r = try? JSONDecoder().decode(ReponseAgent.self, from: data), r.statut != .enCours {
-                    if r.agent == nil { r.agent = agent }
-                    return r
-                }
-                try? await Task.sleep(for: intervalle ?? .seconds(2))
-            case .saisie(let saisieId, let texte):
-                if let saisies = try? await api.saisies(),
-                   let s = saisies.first(where: { saisie in saisieId.map { $0 == saisie.id } ?? (saisie.texte == texte) }),
-                   s.statut == .traite || s.statut == .erreur {
-                    return ReponseAgent(statut: s.statut == .traite ? .repondu : .erreur, agent: Self.nomAgent(texte),
-                                        reponse: s.resume, decisionReference: s.decisionReference)
-                }
-                try? await Task.sleep(for: intervalle ?? .seconds(3))
-            }
+            if let r = await verifier(suivi) { return r }
+            try? await Task.sleep(for: intervalle)
         }
         return nil
+    }
+
+    /// Une seule vérification : la réponse est-elle arrivée ?
+    public func verifier(_ suivi: SuiviQuestion) async -> ReponseAgent? {
+        switch suivi {
+        case .question(let id, let agent):
+            guard let data = try? await api.envoyer(.suiviQuestion(id)),
+                  var r = try? JSONDecoder().decode(ReponseAgent.self, from: data), r.statut != .enCours else { return nil }
+            if r.agent == nil { r.agent = agent }
+            return r
+        case .saisie(let saisieId, let texte):
+            guard let saisies = try? await api.saisies(),
+                  let s = saisies.first(where: { saisie in saisieId.map { $0 == saisie.id } ?? (saisie.texte == texte) }),
+                  s.statut == .traite || s.statut == .erreur else { return nil }
+            return ReponseAgent(statut: s.statut == .traite ? .repondu : .erreur, agent: Self.nomAgent(texte),
+                                reponse: s.resume, decisionReference: s.decisionReference)
+        }
     }
 }
 

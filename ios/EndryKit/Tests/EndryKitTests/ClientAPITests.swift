@@ -195,13 +195,23 @@ final class ClientAPITests: XCTestCase {
     }
 
     func testServeurInjoignableEtTunnelMort() async {
-        let client = ClientAPI(base: base, jeton: "J1", transport: TransportEnPanne())
+        let client = ClientAPI(base: base, jeton: "J1", transport: TransportEnPanne(code: .cannotFindHost))
         do {
             _ = try await client.accueil()
             XCTFail()
         } catch {
             XCTAssertTrue(error.estProblemeReseau)
             XCTAssertTrue(error.demandeNouveauLien)
+        }
+        // Délai dépassé : le PC répond lentement ; on ne demande pas de nouveau lien.
+        let lent = ClientAPI(base: base, jeton: "J1", transport: TransportEnPanne(code: .timedOut))
+        do {
+            _ = try await lent.accueil()
+            XCTFail()
+        } catch {
+            XCTAssertEqual(error, .delaiDepasse)
+            XCTAssertTrue(error.estProblemeReseau)
+            XCTAssertFalse(error.demandeNouveauLien)
         }
         let horsLigne = ClientAPI(base: base, jeton: "J1", transport: TransportEnPanne(code: .notConnectedToInternet))
         do {

@@ -41,16 +41,24 @@ final class ModeleApp {
     /// Mises à jour poussées par le PC (SSE), avec repli sur une interrogation toutes les 60 s.
     @ObservationIgnored let flux = FluxEvenements()
     @ObservationIgnored private var dernierJetonEnvoye: String?
+    /// Assistant vocal ouvert : ses questions en attente sont revérifiées à chaque `maj saisies`.
+    @ObservationIgnored weak var assistantActif: AssistantVocal?
 
     // MARK: - Assistant vocal
 
     /// Nouvelle conversation : moteur temps réel si le PC fournit une session éphémère, sinon moteur local.
     func nouvelAssistant() -> AssistantVocal {
-        AssistantVocal(
+        let assistant = AssistantVocal(
             fabrique: { await self.moteurPrefere() },
             repli: { self.moteurLocal() },
-            bureau: session.api.map { BureauClaude(api: $0) }
+            bureau: session.api.map { BureauClaude(api: $0) },
+            transmettre: { [weak self] demande in
+                guard let saisie = self?.saisie else { return .refusee("Connectez d’abord l’app au bureau.") }
+                return await saisie.transmettre(demande: demande)
+            }
         )
+        assistantActif = assistant
+        return assistant
     }
 
     private func moteurPrefere() async -> any MoteurVoix {
@@ -61,17 +69,12 @@ final class ModeleApp {
     }
 
     private func moteurLocal() -> any MoteurVoix {
-        let transmettre: @MainActor @Sendable (String) async -> ModeleSaisie.ResultatDemande = { [weak self] demande in
-            guard let saisie = self?.saisie else { return .refusee("Connectez d’abord l’app au bureau.") }
-            return await saisie.transmettre(demande: demande)
-        }
-        return MoteurLocal(
+        MoteurLocal(
             donnees: {
                 RepondeurLocal.Donnees(accueil: self.decisions?.accueil, argent: self.argent?.argent, chantiers: self.chantiers?.tous ?? [])
             },
-            transmettre: transmettre,
             // Apple Intelligence sur l'iPhone : comprend les questions libres et lit les données par les outils.
-            cerveau: FabriqueCerveau.creer(executeur: session.api.map { ExecuteurOutils(api: $0) }, transmettre: transmettre),
+            cerveau: FabriqueCerveau.creer(executeur: session.api.map { ExecuteurOutils(api: $0) }),
             executeur: session.api.map { ExecuteurOutils(api: $0) }
         )
     }
@@ -225,6 +228,12 @@ final class ModeleApp {
             if sujets.contains(.argent) { groupe.addTask { await a?.charger() } }
             if sujets.contains(.saisies) { groupe.addTask { await s?.chargerHistorique() } }
             if sujets.contains(.agents) || sujets.contains(.saisies) { groupe.addTask { await g?.charger() } }
+            if sujets.contains(.saisies) {
+                // Réponses aux questions posées à l'assistant (plus de sondage : on attend ce signal du PC).
+                let assistant = assistantActif
+                groupe.addTask { await assistant?.verifierEnAttente() }
+                groupe.addTask { await g?.verifierEnAttente() }
+            }
         }
     }
 
@@ -262,7 +271,7 @@ final class ModeleApp {
         guard let api = session.api, session.estConnecte else { return }
         guard let liste = try? await api.decisions(),
               let carte = liste.decisions.first(where: { $0.reference == reference }),
-              !carte.exigeGlisser, !carte.estQuestion, !(decisions?.enPause ?? false) else {
+              !carte.exigeGlisser, !carte.estQuestion else {
             ouvrir(reference: reference)
             return
         }

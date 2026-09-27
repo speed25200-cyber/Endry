@@ -17,6 +17,12 @@ public enum ErreurAPI: Error, Equatable, Sendable {
     case horsLigne
     /// `POST /actualiser` : Bexio ne répond pas (502 en v1.0, 503 `bexio_indisponible` en v1.1).
     case bexioIndisponible
+    /// Le PC répond, mais trop lentement (délai de la requête dépassé) : l'action a peut-être abouti.
+    case delaiDepasse
+    /// `GET /app/doc/…` : le PC n'a pas pu produire le PDF (503 `pdf_indisponible`).
+    case documentIndisponible(String?)
+    /// `POST /session/appareil` : ce jeton est déjà propre à l'appareil (409 `deja_par_appareil`).
+    case dejaParAppareil
 
     public var message: String {
         switch self {
@@ -36,6 +42,12 @@ public enum ErreurAPI: Error, Equatable, Sendable {
             "Hors ligne : action impossible sans réseau."
         case .bexioIndisponible:
             "Bexio ne répond pas, réessayez dans un instant."
+        case .delaiDepasse:
+            "Le PC met plus de temps que prévu à répondre. Vérifiez dans un instant."
+        case .documentIndisponible(let m):
+            m ?? "Le document n’est pas disponible pour le moment. Réessayez dans un instant."
+        case .dejaParAppareil:
+            "Cet iPhone a déjà son propre jeton."
         }
     }
 
@@ -50,9 +62,48 @@ public enum ErreurAPI: Error, Equatable, Sendable {
     /// Faut-il basculer sur le cache hors ligne ?
     public var estProblemeReseau: Bool {
         switch self {
-        case .injoignable, .horsLigne: true
+        case .injoignable, .horsLigne, .delaiDepasse: true
         default: false
         }
+    }
+}
+
+/// Routes facultatives que le PC ne connaît pas (404 / 405) : on ne les rappelle plus pendant la session.
+/// Mémoire par hôte, en mémoire vive seulement : remise à zéro à chaque lancement.
+public final class CapacitesServeur: @unchecked Sendable {
+    public static let partage = CapacitesServeur()
+    private let verrou = NSLock()
+    private var absentes: Set<String> = []
+
+    public init() {}
+
+    /// Routes ajoutées après v1.0 : leur absence n'est pas une panne.
+    static let prefixesFacultatifs = [
+        "/app/api/v1/agents", "/app/api/v1/journal", "/app/api/v1/questions", "/app/api/v1/assistant/",
+        "/app/api/v1/saisies", "/app/api/v1/appareils", "/app/api/v1/voix/", "/app/api/v1/session/appareil",
+        "/app/api/v1/evenements",
+    ]
+
+    public static func estFacultative(_ chemin: String) -> Bool {
+        prefixesFacultatifs.contains { chemin.hasPrefix($0) }
+    }
+
+    static func cle(hote: String?, methode: Requete.Methode, chemin: String) -> String {
+        "\(hote?.lowercased() ?? "")|\(methode.rawValue) \(chemin)"
+    }
+
+    public func absente(hote: String?, methode: Requete.Methode, chemin: String) -> Bool {
+        let c = Self.cle(hote: hote, methode: methode, chemin: chemin)
+        return verrou.withLock { absentes.contains(c) }
+    }
+
+    public func marquerAbsente(hote: String?, methode: Requete.Methode, chemin: String) {
+        let c = Self.cle(hote: hote, methode: methode, chemin: chemin)
+        _ = verrou.withLock { absentes.insert(c) }
+    }
+
+    public func reinitialiser() {
+        verrou.withLock { absentes.removeAll() }
     }
 }
 
@@ -163,11 +214,14 @@ public struct ClientAPI: EndryAPI {
     public let base: URL
     public let jeton: String?
     public let transport: TransportHTTP
+    public let capacites: CapacitesServeur
 
-    public init(base: URL, jeton: String?, transport: TransportHTTP = TransportURLSession()) {
+    public init(base: URL, jeton: String?, transport: TransportHTTP = TransportURLSession(),
+                capacites: CapacitesServeur = .partage) {
         self.base = base
         self.jeton = jeton
         self.transport = transport
+        self.capacites = capacites
     }
 
     public init(identifiants: Identifiants, transport: TransportHTTP = TransportURLSession()) {
@@ -239,6 +293,11 @@ public struct ClientAPI: EndryAPI {
     }
 
     public func envoyer(_ requete: Requete) async throws(ErreurAPI) -> Data {
+        let facultative = CapacitesServeur.estFacultative(requete.chemin)
+        if facultative, capacites.absente(hote: base.host, methode: requete.methode, chemin: requete.chemin) {
+            // Déjà répondu 404 / 405 pendant cette session : pas de nouvelle rafale.
+            throw .serveur(statut: 404, message: nil)
+        }
         let urlRequete = try construire(requete)
         let data: Data
         let reponse: HTTPURLResponse
@@ -248,6 +307,8 @@ public struct ClientAPI: EndryAPI {
             switch erreur.code {
             case .notConnectedToInternet, .dataNotAllowed, .internationalRoamingOff:
                 throw .horsLigne
+            case .timedOut:
+                throw .delaiDepasse
             default:
                 throw .injoignable(erreur.localizedDescription)
             }
@@ -262,6 +323,8 @@ public struct ClientAPI: EndryAPI {
             || (requete.chemin.hasSuffix("/actualiser") && [502, 503].contains(reponse.statusCode)) {
             throw .bexioIndisponible
         }
+        if corpsErreur?.erreur == "pdf_indisponible" { throw .documentIndisponible(corpsErreur?.message) }
+        if corpsErreur?.erreur == "deja_par_appareil" { throw .dejaParAppareil }
         switch reponse.statusCode {
         case 200..<300:
             return data
@@ -270,8 +333,15 @@ public struct ClientAPI: EndryAPI {
             throw .nonAuthentifie(corpsErreur?.message)
         case 400, 409, 422:
             throw .refus(corpsErreur?.message ?? "Action refusée par le serveur.")
+        case 404, 405:
+            if facultative { capacites.marquerAbsente(hote: base.host, methode: requete.methode, chemin: requete.chemin) }
+            throw .serveur(statut: reponse.statusCode, message: corpsErreur?.message)
         case 502, 503, 504, 530:
-            // Tunnel Cloudflare sans serveur derrière : l'adresse a probablement changé.
+            // Le PC a répondu en JSON : c'est lui qui refuse, pas le tunnel.
+            if let corpsErreur, corpsErreur.erreur != nil || corpsErreur.message != nil {
+                throw .serveur(statut: reponse.statusCode, message: corpsErreur.message)
+            }
+            // Tunnel sans serveur derrière : l'adresse a probablement changé.
             throw .injoignable("statut \(reponse.statusCode)")
         default:
             throw .serveur(statut: reponse.statusCode, message: corpsErreur?.message)

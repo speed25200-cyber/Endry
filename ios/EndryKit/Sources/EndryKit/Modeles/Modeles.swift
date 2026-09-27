@@ -120,6 +120,7 @@ public struct Carte: Decodable, Sendable, Hashable, Identifiable {
     /// Repli (serveur v1.0, sans `envoi_tiers`) : outils dont le « Oui » fait partir quelque chose chez un tiers.
     public static let outilsEnvoi: Set<String> = [
         "mail_envoyer", "mail_repondre", "mail_transferer", "envoyer_facture", "envoyer_offre", "envoyer_rappel",
+        "rappel_courrier", "relances_reactiver",
     ]
 
     public var type: TypeCarte

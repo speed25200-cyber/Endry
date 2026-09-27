@@ -54,9 +54,9 @@ public final class ModeleDecisions {
     }
 
     public var nombreDecisions: Int { cartes.count }
-    /// L'assistant est en pause : on lit tout, mais aucune action n'est envoyée.
+    /// L'assistant est en pause : il ne prépare rien de nouveau, mais les décisions du patron s'exécutent.
     public var enPause: Bool { accueil?.pause ?? false }
-    public var actionsPossibles: Bool { !horsLigne && decisionsAutorisees && !enPause }
+    public var actionsPossibles: Bool { !horsLigne && decisionsAutorisees }
 
     /// Pause / reprise pilotée depuis l'app (v1.1) : mise à jour immédiate de l'état affiché.
     public func appliquerPause(_ pause: Bool) {
@@ -90,9 +90,7 @@ public final class ModeleDecisions {
     @discardableResult
     public func agir(_ action: ActionDecision, sur carte: Carte, consignes: String? = nil) async -> Bool {
         guard actionsPossibles else {
-            toast = Toast(horsLigne ? ErreurAPI.horsLigne.message
-                          : enPause ? "L’assistant est en pause : reprenez-le pour agir."
-                          : "Les décisions sont en lecture seule.", style: .erreur)
+            toast = Toast(horsLigne ? ErreurAPI.horsLigne.message : "Les décisions sont en lecture seule.", style: .erreur)
             return false
         }
         // Une question se répond toujours par écrit (action `repondre`).
@@ -112,6 +110,13 @@ public final class ModeleDecisions {
             toast = Toast(reponse.message, style: action == .non ? .info : .succes)
             if let accueil { surAccueil?(accueil) }
             return true
+        } catch .delaiDepasse {
+            // Le PC a peut-être exécuté l'action : on relit les décisions (il refuse un double traitement).
+            toast = Toast(action == .oui ? "L’envoi prend plus de temps que prévu : vérifiez dans un instant."
+                                         : "Le PC met plus de temps que prévu : vérifiez dans un instant.", style: .info)
+            try? await Task.sleep(for: .seconds(2))
+            await charger()
+            return !cartes.contains { $0.reference == carte.reference }
         } catch {
             rapport?(error)
             toast = Toast(error.message, style: .erreur)

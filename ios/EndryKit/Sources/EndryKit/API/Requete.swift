@@ -56,7 +56,7 @@ extension Requete {
     /// Délai généreux : le PC peut interroger Bexio et Zoho avant de répondre.
     public static let accueil = Requete(.get, "\(prefixe)/accueil", delai: 45)
     public static let decisions = Requete(.get, "\(prefixe)/decisions")
-    public static let argent = Requete(.get, "\(prefixe)/argent")
+    public static let argent = Requete(.get, "\(prefixe)/argent", delai: 45)
     public static let actualiser = Requete(.post, "\(prefixe)/actualiser", delai: 90)
 
     public static func action(_ action: ActionDecision, reference: String, consignes: String?) -> Requete {
@@ -97,7 +97,7 @@ extension Requete {
         .init(.delete, "\(prefixe)/appareils/\(id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id)")
     }
 
-    public static let saisies = Requete(.get, "\(prefixe)/saisies")
+    public static let saisies = Requete(.get, "\(prefixe)/saisies", parametres: [Parametre("limite", "30")])
     public static let etatAssistant = Requete(.get, "\(prefixe)/assistant/etat")
     public static let pause = Requete(.post, "\(prefixe)/assistant/pause")
     public static let reprise = Requete(.post, "\(prefixe)/assistant/reprise")

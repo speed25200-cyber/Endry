@@ -66,6 +66,12 @@ struct DecisionsView: View {
         }
     }
 
+    /// Reprise depuis le bandeau de pause (serveur v1.1 et plus).
+    private var repriseAssistant: (() async -> Void)? {
+        guard let pilotage = app.pilotage, pilotage.disponible else { return nil }
+        return { _ = await pilotage.reprendre() }
+    }
+
     // MARK: - En-tête sur la photo
 
     /// Logo et réglages, fixes ; s'estompent quand la feuille recouvre la photo.
@@ -146,7 +152,7 @@ struct DecisionsView: View {
                     .padding(.horizontal, Espace.bord)
             }
             if modele.enPause {
-                BandeauPause()
+                BandeauPause(reprendre: repriseAssistant)
                     .padding(.horizontal, Espace.bord)
             }
             switch modele.etat {
@@ -436,14 +442,41 @@ enum ResumeDuJour {
 
 /// Bandeau « assistant en pause » : on lit tout, les actions attendent la reprise.
 struct BandeauPause: View {
+    /// `nil` si la reprise n'est pas pilotable depuis l'app (serveur v1.0).
+    var reprendre: (() async -> Void)?
+    @State private var enCours = false
+
     var body: some View {
-        Label("L’assistant est en pause : vous pouvez tout consulter, les actions reprendront à la reprise.", systemImage: "pause.circle")
-            .styleTexte(15, relativeTo: .subheadline, graisse: .medium)
-            .foregroundStyle(Color.ambre)
-            .padding(Espace.m)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.ambre.opacity(0.12), in: RoundedRectangle(cornerRadius: Espace.rayonPetit, style: .continuous))
-            .accessibilityIdentifier("bandeau-pause")
+        HStack(alignment: .center, spacing: Espace.s) {
+            Label("Assistant en pause : vos décisions s’exécutent, il ne prépare rien de nouveau.", systemImage: "pause.circle")
+                .styleTexte(14, relativeTo: .subheadline, graisse: .medium)
+                .foregroundStyle(Color.ambre)
+                .fixedSize(horizontal: false, vertical: true)
+            if let reprendre {
+                Spacer(minLength: 0)
+                Button {
+                    enCours = true
+                    Task {
+                        await reprendre()
+                        enCours = false
+                    }
+                } label: {
+                    if enCours { ProgressView().controlSize(.small) } else { Text("Reprendre") }
+                }
+                .styleTexte(14, relativeTo: .subheadline, graisse: .semibold)
+                .foregroundStyle(Color.fond)
+                .padding(.horizontal, Espace.m)
+                .frame(minHeight: 36)
+                .background(Color.ambre, in: Capsule())
+                .disabled(enCours)
+                .accessibilityIdentifier("reprendre-assistant")
+            }
+        }
+        .padding(Espace.m)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.ambre.opacity(0.12), in: RoundedRectangle(cornerRadius: Espace.rayonPetit, style: .continuous))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("bandeau-pause")
     }
 }
 

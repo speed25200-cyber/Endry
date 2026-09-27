@@ -139,7 +139,7 @@ public actor APIDemo: EndryAPI {
         guard let actionDecision = ActionDecision(rawValue: action) else {
             throw .serveur(statut: 404, message: "Action inconnue.")
         }
-        if pause { throw .refus("L’assistant est en pause.") }
+        // Comme le PC : la pause arrête le travail de l'assistant, pas les décisions du patron.
         guard let index = restantes.firstIndex(where: { ($0["reference"] as? String) == reference }) else {
             throw .refus("Cette décision a déjà été traitée.")
         }

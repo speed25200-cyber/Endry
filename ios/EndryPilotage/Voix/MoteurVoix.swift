@@ -43,6 +43,8 @@ protocol MoteurVoix: AnyObject {
     func interrompre()
     /// Réponse arrivée plus tard (Claude, sur le PC) : dite dès que la conversation le permet.
     func annoncer(question: String, reponse: String, agent: String?) async
+    /// Courte information à dire (demande transmise, assistant hors horaires…).
+    func signaler(_ texte: String) async
 }
 
 enum ErreurVoix: Error {
@@ -77,16 +79,21 @@ final class AssistantVocal {
 
     @ObservationIgnored private var moteur: (any MoteurVoix)?
     @ObservationIgnored private let bureau: BureauClaude?
+    /// Transmission d'une demande de travail confirmée (file hors ligne de la saisie).
+    @ObservationIgnored private let transmettre: (@MainActor (String) async -> ModeleSaisie.ResultatDemande)?
     @ObservationIgnored private var suivis: [String: Task<Void, Never>] = [:]
+    /// Questions sans réponse après 60 s : revérifiées à chaque événement `maj saisies` du PC.
+    @ObservationIgnored private var enAttente: [SuiviQuestion: (question: String, agent: String?)] = [:]
     @ObservationIgnored private var veille: Task<Void, Never>?
     @ObservationIgnored private let fabrique: @MainActor () async -> any MoteurVoix
     @ObservationIgnored private let repli: @MainActor () -> any MoteurVoix
 
     init(fabrique: @escaping @MainActor () async -> any MoteurVoix, repli: @escaping @MainActor () -> any MoteurVoix,
-         bureau: BureauClaude? = nil) {
+         bureau: BureauClaude? = nil, transmettre: (@MainActor (String) async -> ModeleSaisie.ResultatDemande)? = nil) {
         self.fabrique = fabrique
         self.repli = repli
         self.bureau = bureau
+        self.transmettre = transmettre
     }
 
     func demarrer() async {
@@ -170,8 +177,14 @@ final class AssistantVocal {
             cartes.removeAll { $0 == effet }
             cartes.insert(effet, at: 0)
             if cartes.count > 3 { cartes.removeLast() }
-            if case .questionClaude(let suivi, let question, let agent) = effet {
-                suivre(suivi, question: question, agent: agent)
+            if case .questionClaude(let suivi, let question, let agent, let message) = effet {
+                if let message {
+                    // Hors horaires : on le dit, on ne sonde pas ; la réponse viendra par notification.
+                    enAttente[suivi] = (question, agent)
+                    Task { await moteur?.signaler(message) }
+                } else {
+                    suivre(suivi, question: question, agent: agent)
+                }
             }
         case .nouveauTour:
             definitif = ""
@@ -183,7 +196,60 @@ final class AssistantVocal {
 
     // MARK: - Claude, sur le PC
 
-    /// Attend la réponse de Claude ; dès qu'elle arrive, la carte « Claude cherche » devient la réponse, et Endry la dit.
+    /// Le patron a relu et touche « Envoyer » ou « Transmettre » : c'est seulement maintenant que ça part.
+    func confirmer(_ effet: ExecuteurOutils.Effet, texte: String) async {
+        let propre = texte.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !propre.isEmpty else { return }
+        switch effet {
+        case .saisieAConfirmer:
+            retirer(effet)
+            guard let transmettre else {
+                await moteur?.signaler("Connectez d’abord l’app au bureau.")
+                return
+            }
+            switch await transmettre(propre) {
+            case .transmise: await moteur?.signaler("C’est transmis au bureau. L’assistant préparera la suite à son prochain passage.")
+            case .gardee: await moteur?.signaler("Pas de réseau : la demande est gardée et partira toute seule.")
+            case .refusee(let raison): await moteur?.signaler("La demande n’est pas partie. \(raison)")
+            }
+        case .questionAConfirmer(_, let agent, let agentId):
+            guard let bureau else { return }
+            do {
+                let posee = try await bureau.poser(propre, agentId: agentId, nomAgent: agent)
+                retirer(effet)
+                switch posee {
+                case .reponse(let r):
+                    let finale = ExecuteurOutils.Effet.reponseClaude(question: propre, reponse: r.reponse ?? "", agent: agent)
+                    ajouter(finale)
+                    await moteur?.annoncer(question: propre, reponse: r.reponse ?? "", agent: agent)
+                case .enAttente(let suivi, let message):
+                    recevoir(.effet(.questionClaude(suivi: suivi, question: propre, agent: agent, message: message)))
+                }
+            } catch {
+                await moteur?.signaler("La question n’est pas partie. \(error.message)")
+            }
+        default:
+            break
+        }
+    }
+
+    /// Réponses arrivées depuis (appelé sur chaque `maj saisies` du PC).
+    func verifierEnAttente() async {
+        guard let bureau else { return }
+        for (suivi, infos) in enAttente {
+            guard let r = await bureau.verifier(suivi) else { continue }
+            enAttente[suivi] = nil
+            await finaliser(suivi, resultat: r, question: infos.question, agent: infos.agent)
+        }
+    }
+
+    private func ajouter(_ effet: ExecuteurOutils.Effet) {
+        cartes.removeAll { $0 == effet }
+        cartes.insert(effet, at: 0)
+        if cartes.count > 3 { cartes.removeLast() }
+    }
+
+    /// Attend la réponse 60 s (`GET /questions/{id}` toutes les 2 s) ; ensuite, on attend `maj saisies`.
     private func suivre(_ suivi: SuiviQuestion, question: String, agent: String?) {
         let cle = "\(suivi)"
         guard let bureau, suivis[cle] == nil else { return }
@@ -191,25 +257,33 @@ final class AssistantVocal {
             let resultat = await bureau.attendre(suivi)
             guard !Task.isCancelled, let self else { return }
             self.suivis[cle] = nil
-            let attente = ExecuteurOutils.Effet.questionClaude(suivi: suivi, question: question, agent: agent)
-            let reponse: String
-            if let resultat, resultat.statut == .repondu, let texte = resultat.reponse, !texte.isEmpty {
-                reponse = texte
-            } else if resultat?.statut == .erreur {
-                reponse = resultat?.message ?? "L’agent n’a pas pu traiter la question sur le PC."
-            } else {
-                reponse = "Pas encore de réponse. Elle apparaîtra dans Entreprise › Le bureau et dans l’historique de Dicter."
+            guard let resultat else {
+                self.enAttente[suivi] = (question, agent)
+                let attente = ExecuteurOutils.Effet.questionClaude(suivi: suivi, question: question, agent: agent, message: nil)
+                if let index = self.cartes.firstIndex(of: attente) {
+                    self.cartes[index] = .questionClaude(suivi: suivi, question: question, agent: agent,
+                                                         message: "L’assistant répondra à son prochain passage ; vous serez prévenu.")
+                }
+                return
             }
-            let finale = ExecuteurOutils.Effet.reponseClaude(question: question, reponse: reponse, agent: agent)
-            if let index = self.cartes.firstIndex(of: attente) {
-                self.cartes[index] = finale
-            } else {
-                self.cartes.insert(finale, at: 0)
-                if self.cartes.count > 3 { self.cartes.removeLast() }
-            }
-            await self.moteur?.annoncer(question: question, reponse: reponse, agent: agent)
-            self.etatBureau = await bureau.etat() ?? self.etatBureau
+            await self.finaliser(suivi, resultat: resultat, question: question, agent: agent)
         }
+    }
+
+    private func finaliser(_ suivi: SuiviQuestion, resultat: ReponseAgent, question: String, agent: String?) async {
+        let reponse: String
+        if resultat.statut == .repondu, let texte = resultat.reponse, !texte.isEmpty {
+            reponse = texte
+        } else {
+            reponse = resultat.message ?? "L’assistant n’a pas pu traiter la question sur le PC."
+        }
+        cartes.removeAll {
+            if case .questionClaude(let s, _, _, _) = $0 { return s == suivi }
+            return false
+        }
+        ajouter(.reponseClaude(question: question, reponse: reponse, agent: agent))
+        await moteur?.annoncer(question: question, reponse: reponse, agent: agent)
+        if let bureau { etatBureau = await bureau.etat() ?? etatBureau }
     }
 
     /// Pastille « Claude travaille · 2 en cours » : rafraîchie tant que l'assistant est ouvert.

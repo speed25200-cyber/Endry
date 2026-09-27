@@ -180,15 +180,27 @@ final class ModelesTests: XCTestCase {
         XCTAssertEqual(modele.tous.count, 10, "on recharge quand même la liste")
     }
 
-    func testPauseBloqueLesActionsPasLaLecture() async throws {
-        let modele = ModeleDecisions(api: APIDemo(latence: .zero))
+    /// La pause arrête le travail de l'assistant, pas les décisions du patron (comportement du PC).
+    func testPauseLaisseLesDecisionsSExecuter() async throws {
+        let api = APIDemo(latence: .zero)
+        let modele = ModeleDecisions(api: api)
         await modele.charger()
+        _ = try await api.envoyer(.pause)
         modele.appliquerPause(true)
         XCTAssertTrue(modele.enPause)
-        XCTAssertEqual(modele.nombreDecisions, 5, "la lecture reste possible")
-        let refuse = await modele.agir(.oui, sur: modele.cartes[2])
-        XCTAssertFalse(refuse)
-        XCTAssertEqual(modele.toast?.message, "L’assistant est en pause : reprenez-le pour agir.")
+        XCTAssertTrue(modele.actionsPossibles)
+        let traite = await modele.agir(.oui, sur: modele.cartes[2])
+        XCTAssertTrue(traite)
+        XCTAssertEqual(modele.nombreDecisions, 4)
+    }
+
+    func testEnvoisATiersRepli() {
+        for outil in ["rappel_courrier", "relances_reactiver", "mail_envoyer", "envoyer_offre"] {
+            XCTAssertTrue(Carte(type: .validation, reference: "V-1", genre: "E-mail", titre: "t", motif: "", outil: outil).exigeGlisser, outil)
+        }
+        XCTAssertFalse(Carte(type: .validation, reference: "V-1", genre: "Note", titre: "t", motif: "", outil: "note_ajouter").exigeGlisser)
+        // `envoi_tiers` fait foi, même contre la liste.
+        XCTAssertFalse(Carte(type: .validation, reference: "V-1", genre: "E-mail", titre: "t", motif: "", outil: "mail_envoyer", envoiTiers: false).exigeGlisser)
     }
 }
 

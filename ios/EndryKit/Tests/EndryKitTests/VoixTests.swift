@@ -43,7 +43,7 @@ final class OutilsVoixTests: XCTestCase {
         XCTAssertEqual(proposition.effet, .afficherDecision("V-2M8R4T"))
         XCTAssertTrue(proposition.sortie.contains("geste"))
         let saisie = await executeur.executer(nom: "saisie", arguments: #"{"texte":"Prépare une facture pour la régie Dubois"}"#)
-        XCTAssertTrue(saisie.sortie.contains("Transmis"))
+        XCTAssertTrue(saisie.sortie.contains("Transmettre"), "préparée, jamais transmise d'ici")
         let inconnu = await executeur.executer(nom: "virer_argent", arguments: "{}")
         XCTAssertTrue(inconnu.sortie.contains("Outil inconnu"))
     }
@@ -96,7 +96,8 @@ final class CerveauTests: XCTestCase {
         XCTAssertTrue(t.contains("27.09.2026"))
         XCTAssertTrue(t.contains("aucune relance sans sa demande"))
         XCTAssertTrue(t.contains("proposer_decision"))
-        XCTAssertTrue(t.contains("rien ne part"))
+        XCTAssertTrue(t.contains("touche Transmettre"))
+        XCTAssertTrue(t.contains("prochain passage"))
     }
 
     func testTexteParleSansBalises() {
@@ -134,7 +135,8 @@ final class BureauClaudeTests: XCTestCase {
         XCTAssertEqual(id, "secretariat")
         XCTAssertEqual(nom, "Secrétariat")
         let posee = try await bureau.poser("Mme Gander a-t-elle rappelé ?", agentId: id, nomAgent: nom)
-        guard case .enAttente(let suivi) = posee, case .question(_, let agent) = suivi else { return XCTFail("\(posee)") }
+        guard case .enAttente(let suivi, let message) = posee, case .question(_, let agent) = suivi else { return XCTFail("\(posee)") }
+        XCTAssertNil(message)
         XCTAssertEqual(agent, "secretariat")
         // Pendant la recherche, l'agent est au travail.
         let pendant = await bureau.etat()
@@ -152,11 +154,15 @@ final class BureauClaudeTests: XCTestCase {
         XCTAssertNil(id, "Pas de GET /agents : pas d'identifiant")
         XCTAssertEqual(nom, "Secrétariat")
         let posee = try await bureau.poser("Des e-mails urgents ?", agentId: id, nomAgent: nom)
-        guard case .enAttente(let suivi) = posee, case .saisie(let saisieId, let texte) = suivi else { return XCTFail("\(posee)") }
+        guard case .enAttente(let suivi, _) = posee, case .saisie(let saisieId, let texte) = suivi else { return XCTFail("\(posee)") }
         XCTAssertNotNil(saisieId)
         XCTAssertEqual(BureauClaude.agent(texte), .secretariat)
         XCTAssertEqual(BureauClaude.questionSeule(texte), "Des e-mails urgents ?")
-        let reponse = await bureau.attendre(suivi, delai: .seconds(5), intervalle: .milliseconds(50))
+        // Plus de sondage de /saisies : une vérification, puis une autre à l'événement `maj saisies`.
+        let tropTot = await bureau.attendre(suivi)
+        XCTAssertNil(tropTot)
+        try await Task.sleep(for: .milliseconds(200))
+        let reponse = await bureau.verifier(suivi)
         XCTAssertEqual(reponse?.statut, .repondu)
         XCTAssertEqual(reponse?.agent, "Secrétariat")
         XCTAssertTrue(reponse?.reponse?.hasPrefix("Secrétariat : ") ?? false)
@@ -190,11 +196,15 @@ final class BureauClaudeTests: XCTestCase {
         let executeur = ExecuteurOutils(api: APIDemo(latence: .zero))
         let bureau = await executeur.executer(nom: "bureau", arguments: #"{"agent":"compta"}"#)
         XCTAssertTrue(bureau.sortie.contains("Comptabilité est au travail"), bureau.sortie)
+        // La voix prépare, le patron confirme : rien ne part d'ici.
         let question = await executeur.executer(nom: "demander_claude", arguments: #"{"question":"Des e-mails urgents ?"}"#)
-        guard case .questionClaude(let suivi, let q, let agent) = question.effet else { return XCTFail("\(question.effet)") }
+        guard case .questionAConfirmer(let q, let agent, let agentId) = question.effet else { return XCTFail("\(question.effet)") }
         XCTAssertEqual(q, "Des e-mails urgents ?")
         XCTAssertEqual(agent, "Secrétariat", "Les e-mails vont au secrétariat")
-        guard case .question = suivi else { return XCTFail("v1.2 attendu : \(suivi)") }
+        XCTAssertEqual(agentId, "secretariat")
+        let saisie = await executeur.executer(nom: "saisie", arguments: #"{"texte":"Prépare une offre pour Mme Rey"}"#)
+        XCTAssertEqual(saisie.effet, .saisieAConfirmer(texte: "Prépare une offre pour Mme Rey"))
+        XCTAssertTrue(saisie.sortie.contains("rien n’est parti"))
     }
 
     func testDecodageV12() throws {

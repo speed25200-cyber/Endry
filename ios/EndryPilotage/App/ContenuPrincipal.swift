@@ -10,7 +10,7 @@ struct ContenuPrincipal: View {
         guard DemandesRaccourcis.partage.assistantDemande, !app.verrou.doitAfficherEcran else { return }
         DemandesRaccourcis.partage.assistantDemande = false
         app.reglagesPresentes = false
-        app.assistantPresente = true
+        app.ouvrirAssistant()
     }
 
     var body: some View {
@@ -26,7 +26,7 @@ struct ContenuPrincipal: View {
             }
 
             BarreOnglets(selection: $app.onglet, badgeDecisions: app.decisions?.nombreDecisions ?? 0) {
-                app.assistantPresente = true
+                app.ouvrirAssistant()
             }
                 .padding(.bottom, 4)
                 .ignoresSafeArea(.keyboard)
@@ -76,13 +76,27 @@ struct ContenuPrincipal: View {
         let actif = app.onglet == onglet
         contenu()
             .opacity(actif ? 1 : 0)
-            .scaleEffect(actif ? 1 : 0.97)
-            .blur(radius: actif ? 0 : 8)
+            .scaleEffect(actif ? 1 : 0.985)
             .allowsHitTesting(actif)
             .accessibilityHidden(!actif)
             // L'écran actif passe devant : les écrans masqués ne recouvrent jamais ses champs.
             .zIndex(actif ? 1 : 0)
             .animation(.endry, value: actif)
+    }
+}
+
+extension ModeleApp {
+    /// L'assistant se présente sans glissement de feuille : c'est lui qui éclot au-dessus de l'app.
+    func ouvrirAssistant() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { assistantPresente = true }
+    }
+
+    func fermerAssistant() {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { assistantPresente = false }
     }
 }
 

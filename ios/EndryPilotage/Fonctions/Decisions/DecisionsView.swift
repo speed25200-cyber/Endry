@@ -10,7 +10,9 @@ struct DecisionsView: View {
     var modele: ModeleDecisions
 
     @State private var visible = false
-    @State private var defilement: CGFloat = 0
+    /// Position de défilement lue seulement par la photo et la barre du haut : le reste de l'écran
+    /// n'est pas réévalué à chaque image.
+    @State private var suivi = SuiviDefilement()
     @State private var carteVisible: String?
     @State private var fiche: Carte?
     @Namespace private var zoom
@@ -21,11 +23,7 @@ struct DecisionsView: View {
         NavigationStack {
             ZStack(alignment: .top) {
                 Color.espresso.ignoresSafeArea()
-                PhotoVivante(nom: PhotosMarque.accueil, ancre: UnitPoint(x: 0.4, y: 0.5))
-                    .frame(height: hauteurPhoto + max(0, -defilement))
-                    .overlay(VoilePhoto(haut: 0.7, bas: 0.95))
-                    .offset(y: defilement > 0 ? -defilement * 0.35 : 0)
-                    .ignoresSafeArea(edges: .top)
+                PhotoAccueil(suivi: suivi, hauteur: hauteurPhoto)
 
                 ScrollView {
                     VStack(spacing: 0) {
@@ -39,12 +37,15 @@ struct DecisionsView: View {
                 .scrollIndicators(.hidden)
                 .tirerPourActualiser { await modele.charger() }
                 .onScrollGeometryChange(for: CGFloat.self) { geometrie in
-                    geometrie.contentOffset.y + geometrie.contentInsets.top
+                    // Au-delà de la photo, plus rien ne bouge : inutile de suivre.
+                    min(geometrie.contentOffset.y + geometrie.contentInsets.top, 700)
                 } action: { _, valeur in
-                    defilement = valeur
+                    suivi.y = valeur
                 }
             }
-            .overlay(alignment: .top) { barreHaute }
+            .overlay(alignment: .top) {
+                BarreHauteAccueil(suivi: suivi) { barreHaute }
+            }
             .toolbar(.hidden, for: .navigationBar)
         }
         .toast(Binding(get: { modele.toast }, set: { modele.toast = $0 }))
@@ -87,7 +88,6 @@ struct DecisionsView: View {
         }
         .padding(.horizontal, Espace.bord + 4)
         .padding(.top, Espace.xs)
-        .opacity(max(0, 1 - defilement / 220))
     }
 
     private var entete: some View {
@@ -117,7 +117,7 @@ struct DecisionsView: View {
                     .apparitionEnCascade(index: 3, visible: visible)
                     .accessibilityIdentifier("resume-du-jour")
             }
-            BoutonParlerEndry { app.assistantPresente = true }
+            BoutonParlerEndry { app.ouvrirAssistant() }
                 .padding(.top, Espace.s)
                 .apparitionEnCascade(index: 4, visible: visible)
         }
@@ -240,6 +240,41 @@ struct DecisionsView: View {
     }
 }
 
+/// Position de défilement de l'accueil, observée par les seules vues qui en dépendent.
+@MainActor
+@Observable
+final class SuiviDefilement {
+    var y: CGFloat = 0
+}
+
+/// Photo de l'accueil : s'étire quand on tire, glisse en parallaxe quand on défile.
+private struct PhotoAccueil: View {
+    var suivi: SuiviDefilement
+    var hauteur: CGFloat
+
+    var body: some View {
+        let y = suivi.y
+        PhotoVivante(nom: PhotosMarque.accueil, ancre: UnitPoint(x: 0.4, y: 0.5))
+            .frame(height: hauteur + max(0, -y))
+            .overlay(VoilePhoto(haut: 0.7, bas: 0.95))
+            .offset(y: y > 0 ? -y * 0.35 : 0)
+            .ignoresSafeArea(edges: .top)
+    }
+}
+
+/// Logo et réglages : s'estompent quand la feuille recouvre la photo.
+private struct BarreHauteAccueil<Contenu: View>: View {
+    var suivi: SuiviDefilement
+    @ViewBuilder var contenu: Contenu
+
+    var body: some View {
+        let opacite = max(0, 1 - suivi.y / 220)
+        contenu
+            .opacity(opacite)
+            .allowsHitTesting(opacite > 0.1)
+    }
+}
+
 /// « Parler à Endry » : l'assistant vocal à portée de pouce, avec une onde d'or qui respire.
 struct BoutonParlerEndry: View {
     var action: () -> Void
@@ -258,8 +293,9 @@ struct BoutonParlerEndry: View {
             .foregroundStyle(Color.espresso)
             .padding(.horizontal, Espace.m)
             .frame(minHeight: 44)
-            .background(.degradeOr, in: Capsule())
-            .shadow(color: Color.or.opacity(0.35), radius: 14, y: 4)
+            .background {
+                Capsule().fill(.degradeOr).shadow(color: Color.or.opacity(0.35), radius: 14, y: 4)
+            }
         }
         .buttonStyle(.plain)
         .accessibilityHint(Text("Ouvre l’assistant vocal : posez une question ou dictez une demande"))

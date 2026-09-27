@@ -25,7 +25,8 @@ enum PhotosMarque {
     }
 }
 
-/// Photo qui zoome très lentement (Ken Burns) ; figée si « Réduire les animations ».
+/// Photo qui avance très lentement vers le spectateur (Ken Burns, une seule fois : aucune horloge ne tourne
+/// ensuite) ; figée si « Réduire les animations ».
 struct PhotoVivante: View {
     var nom: String
     var ancre: UnitPoint = .center
@@ -43,7 +44,7 @@ struct PhotoVivante: View {
         }
         .onAppear {
             guard !reduireAnimations, !Configuration.testsUI else { return }
-            withAnimation(.easeInOut(duration: 24).repeatForever(autoreverses: true)) { zoom = true }
+            withAnimation(.easeOut(duration: 16)) { zoom = true }
         }
         .accessibilityHidden(true)
     }
@@ -74,14 +75,13 @@ struct FeuilleMaison<Contenu: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background {
                 UnevenRoundedRectangle(topLeadingRadius: 32, topTrailingRadius: 32, style: .continuous)
-                    .fill(Color.fond)
+                    .fill(Color.fond.shadow(.drop(color: .black.opacity(0.35), radius: 30, y: -10)))
                     .overlay(alignment: .top) {
                         UnevenRoundedRectangle(topLeadingRadius: 32, topTrailingRadius: 32, style: .continuous)
                             .stroke(Color.or.opacity(0.22), lineWidth: Espace.filet)
                             .frame(height: 64)
                             .mask(LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom))
                     }
-                    .shadow(color: .black.opacity(0.35), radius: 30, y: -10)
             }
     }
 }
@@ -144,8 +144,10 @@ struct CarteApercuDecision: View {
         }
         .padding(Espace.m)
         .frame(maxWidth: .infinity, minHeight: 236, alignment: .topLeading)
-        .background(Color.papier, in: RoundedRectangle(cornerRadius: Espace.rayon, style: .continuous))
-        .shadow(color: .black.opacity(0.28), radius: 18, y: 10)
+        .background {
+            RoundedRectangle(cornerRadius: Espace.rayon, style: .continuous)
+                .fill(Color.papier.shadow(.drop(color: .black.opacity(0.28), radius: 18, y: 10)))
+        }
         .opacity(enCours ? 0.75 : 1)
         .environment(\.colorScheme, .light)
         .accessibilityElement(children: .contain)

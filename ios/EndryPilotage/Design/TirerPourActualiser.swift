@@ -15,9 +15,10 @@ struct TirerPourActualiser: ViewModifier {
         content
             .contentMargins(.top, enCours ? 64 : 0, for: .scrollContent)
             .onScrollGeometryChange(for: CGFloat.self) { geo in
-                -(geo.contentOffset.y + geo.contentInsets.top)
+                // Nul pendant le défilement normal : l'action ne tourne que pendant le tirage.
+                max(0, -(geo.contentOffset.y + geo.contentInsets.top)).rounded()
             } action: { _, valeur in
-                tirage = max(0, valeur)
+                tirage = valeur
                 if tirage >= seuil, !arme, !enCours { arme = true }
             }
             .onScrollPhaseChange { ancienne, nouvelle in

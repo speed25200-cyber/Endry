@@ -16,6 +16,7 @@ final class MoteurLocal: MoteurVoix {
     private let transmettre: @MainActor (String) async -> ModeleSaisie.ResultatDemande
     private let cerveau: (any CerveauVocal)?
     private let synthese = AVSpeechSynthesizer()
+    private let delegue = DelegueSynthese()
     private var transcripteur: (any Transcripteur)?
     private var surEvenement: (@MainActor (EvenementVoix) -> Void)?
     private var dernierDefinitif = ""
@@ -36,11 +37,16 @@ final class MoteurLocal: MoteurVoix {
         self.donnees = donnees
         self.transmettre = transmettre
         self.cerveau = cerveau
+        synthese.delegate = delegue
     }
 
     func demarrer(surEvenement: @escaping @MainActor (EvenementVoix) -> Void) async throws {
         self.surEvenement = surEvenement
         actif = true
+        delegue.surMot = { [weak self] fin in
+            guard let self, self.actif else { return }
+            self.surEvenement?(.progressionParole(fin))
+        }
         // Sans micro (refusé, ou tests d'interface), la conversation continue au clavier.
         guard !Configuration.testsUI else {
             surEvenement(.phase(.ecoute))
@@ -182,6 +188,7 @@ final class MoteurLocal: MoteurVoix {
     private func dire(_ texte: String) async {
         guard actif else { return }
         surEvenement?(.assistant(texte))
+        surEvenement?(.progressionParole(0))
         surEvenement?(.phase(.parole))
         let enonce = AVSpeechUtterance(string: texte)
         enonce.voice = Self.meilleureVoix()
@@ -198,6 +205,7 @@ final class MoteurLocal: MoteurVoix {
             try? await Task.sleep(for: .milliseconds(50))
         }
         surEvenement?(.niveauVoix(0))
+        surEvenement?(.progressionParole(texte.utf16.count))
     }
 
     /// Meilleure voix française installée : Premium, puis Enhanced ; fr-CH avant fr-FR.
@@ -214,5 +222,18 @@ final class MoteurLocal: MoteurVoix {
         }
         let francaises = AVSpeechSynthesisVoice.speechVoices().filter { $0.language.hasPrefix("fr") }
         return francaises.max { score($0) < score($1) } ?? AVSpeechSynthesisVoice(language: "fr-FR")
+    }
+}
+
+/// Suit la synthèse vocale mot à mot, pour allumer la réponse au rythme de la voix.
+final class DelegueSynthese: NSObject, AVSpeechSynthesizerDelegate, @unchecked Sendable {
+    /// Posé une fois, sur l'acteur principal, avant la première phrase.
+    var surMot: (@MainActor @Sendable (Int) -> Void)?
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, willSpeakRangeOfSpeechString characterRange: NSRange,
+                           utterance: AVSpeechUtterance) {
+        let fin = characterRange.location + characterRange.length
+        guard let rappel = surMot else { return }
+        Task { @MainActor in rappel(fin) }
     }
 }

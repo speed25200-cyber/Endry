@@ -80,10 +80,9 @@ struct BarreOnglets: View {
         .frame(height: 66)
         .background {
             Capsule()
-                .fill(Color.espresso.opacity(0.94))
+                .fill(Color.espresso.opacity(0.94).shadow(.drop(color: .black.opacity(0.35), radius: 22, y: 10)))
                 .overlay(Capsule().stroke(Color(hex: 0x443A2C), lineWidth: 1))
         }
-        .shadow(color: .black.opacity(0.35), radius: 22, y: 10)
         .padding(.horizontal, Espace.m)
         .sensoryFeedback(.selection, trigger: selection)
     }
@@ -123,7 +122,7 @@ struct BarreOnglets: View {
     }
 }
 
-/// Bouton micro doré, qui respire au repos et rayonne quand il est actif.
+/// Bouton micro doré, qui rayonne quand il est actif.
 /// Toucher court : dictée (saisie terrain). Toucher long : assistant vocal plein écran.
 struct BoutonMicroCentral: View {
     var actif: Bool
@@ -156,11 +155,6 @@ struct BoutonMicroCentral: View {
                     .contentTransition(.symbolEffect(.replace))
             }
             .scaleEffect(presse ? 1.08 : 1)
-            .phaseAnimator(reduireAnimations || actif ? [false] : [false, true]) { contenu, phase in
-                contenu.scaleEffect(phase ? 1.04 : 1)
-            } animation: { _ in
-                .easeInOut(duration: 1.8)
-            }
             .contentShape(Circle())
         }
         .buttonStyle(.plain)

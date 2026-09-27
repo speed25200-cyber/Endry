@@ -11,14 +11,14 @@ struct SurfaceCarte: ViewModifier {
         let forme = RoundedRectangle(cornerRadius: rayon, style: .continuous)
         content
             .background {
-                forme.fill(remplissage)
+                // Ombre portée par la forme seule : aucun rendu hors écran du contenu pendant le défilement.
+                forme.fill(remplissage.shadow(.drop(color: Color.ombre, radius: 22, y: 12)))
                     // Lumière rasante venue du haut : la carte semble taillée dans la matière.
                     .overlay(forme.fill(LinearGradient(colors: [Color.reflet, .clear],
                                                        startPoint: .top, endPoint: .center)))
             }
             // Filet or 0.5 pt à 18 %.
             .overlay { forme.strokeBorder(Color.bordureOr, lineWidth: Espace.filet) }
-            .shadow(color: Color.ombre, radius: 22, y: 12)
     }
 }
 
@@ -27,7 +27,7 @@ extension View {
         modifier(SurfaceCarte(rayon: rayon, remplissage: remplissage))
     }
 
-    /// Apparition en cascade : flou + translation, désactivée si « Réduire les animations ».
+    /// Apparition en cascade : fondu + translation, désactivée si « Réduire les animations ».
     func apparitionEnCascade(index: Int, visible: Bool) -> some View {
         modifier(ApparitionCascade(index: index, visible: visible))
     }
@@ -38,7 +38,6 @@ extension View {
             contenu
                 .scaleEffect(phase.isIdentity ? 1 : 0.965, anchor: phase.value < 0 ? .bottom : .top)
                 .opacity(phase.isIdentity ? 1 : 0.72)
-                .blur(radius: phase.isIdentity ? 0 : 1.2)
         }
     }
 }
@@ -51,7 +50,6 @@ private struct ApparitionCascade: ViewModifier {
     func body(content: Content) -> some View {
         content
             .opacity(visible ? 1 : 0)
-            .blur(radius: visible || reduireAnimations ? 0 : 8)
             .offset(y: visible || reduireAnimations ? 0 : 18)
             .animation(
                 reduireAnimations ? .fonduDoux : Animation.endry.delay(Double(min(index, 8)) * 0.05),

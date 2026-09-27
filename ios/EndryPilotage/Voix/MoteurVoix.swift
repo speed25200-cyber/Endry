@@ -26,6 +26,8 @@ enum EvenementVoix: Sendable {
     case effet(ExecuteurOutils.Effet)
     /// Nouveau tour de parole : on efface la transcription précédente.
     case nouveauTour
+    /// La synthèse vocale a dit la réponse jusqu'à ce décalage (UTF-16) : les mots s'allument au fil de la voix.
+    case progressionParole(Int)
 }
 
 /// Protocole commun aux deux moteurs : temps réel (parole-à-parole) et local (repli gratuit).
@@ -58,6 +60,8 @@ final class AssistantVocal {
     private(set) var definitif = ""
     private(set) var provisoire = ""
     private(set) var reponse = ""
+    /// Partie de la réponse déjà dite (UTF-16) ; `nil` : tout est affiché.
+    private(set) var reponseLue: Int?
     private(set) var niveauMicro: Float = 0
     private(set) var niveauVoix: Float = 0
     /// Cartes contextuelles, de la plus récente à la plus ancienne.
@@ -138,7 +142,10 @@ final class AssistantVocal {
             definitif = d
             provisoire = p
         case .assistant(let texte):
+            if texte != reponse { reponseLue = nil }
             reponse = texte
+        case .progressionParole(let lu):
+            reponseLue = lu
         case .niveauMicro(let n):
             niveauMicro = niveauMicro * 0.55 + n * 0.45
         case .niveauVoix(let n):
@@ -152,6 +159,7 @@ final class AssistantVocal {
             definitif = ""
             provisoire = ""
             reponse = ""
+            reponseLue = nil
         }
     }
 }

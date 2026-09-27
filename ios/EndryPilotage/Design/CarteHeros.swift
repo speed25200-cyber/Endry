@@ -3,18 +3,15 @@ import SwiftUI
 
 // MARK: - Matières
 
-/// Aurore dorée : MeshGradient dont les points dérivent lentement (fond des cartes héros et de l'accueil).
+/// Aurore dorée : MeshGradient figé (fond des cartes héros). Rendu une fois, jamais redessiné pendant le défilement.
 struct AuroreOr: View {
     var intensite: Double = 1
-    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduireAnimations)) { contexte in
-            let t = Float(contexte.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 3_600))
-            MeshGradient(
+        MeshGradient(
                 width: 3,
                 height: 3,
-                points: Self.points(t: t, amplitude: reduireAnimations ? 0 : 1),
+                points: Self.points(t: 11, amplitude: 1),
                 colors: [
                     Color(hex: 0x3A2D1E), Color(hex: 0x241C15), Color(hex: 0x1B150F),
                     Color(hex: 0x46341C), Color(hex: 0x9F722A).opacity(0.35 + 0.2 * intensite), Color(hex: 0x241C15),
@@ -22,7 +19,6 @@ struct AuroreOr: View {
                 ],
                 smoothsColors: true
             )
-        }
     }
 
     /// Points du maillage 3×3 : les bords restent fixes, le centre et les milieux dérivent.
@@ -40,25 +36,21 @@ struct AuroreOr: View {
     }
 }
 
-/// Fond des écrans : noir chaud (ou ivoire), aurore or presque imperceptible qui dérive très lentement,
-/// grain photographique léger (shader Metal). Figé si « Réduire les animations ».
+/// Fond des écrans : noir chaud (ou ivoire), aurore or presque imperceptible, grain photographique léger
+/// (shader Metal). Figé : rendu une fois, le défilement ne le redessine pas.
 struct FondAmbiant: View {
-    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
     @Environment(\.colorScheme) private var schema
 
     var body: some View {
         ZStack(alignment: .top) {
             Color.fond
-            TimelineView(.animation(minimumInterval: 1.0 / 15.0, paused: reduireAnimations)) { contexte in
-                let t = Float(contexte.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 3_600))
-                MeshGradient(
-                    width: 3,
-                    height: 3,
-                    points: AuroreOr.points(t: t * 0.35, amplitude: reduireAnimations ? 0 : 1),
-                    colors: schema == .dark ? Self.nuit : Self.jour,
-                    smoothsColors: true
-                )
-            }
+            MeshGradient(
+                width: 3,
+                height: 3,
+                points: AuroreOr.points(t: 7, amplitude: 1),
+                colors: schema == .dark ? Self.nuit : Self.jour,
+                smoothsColors: true
+            )
             .frame(height: 560)
             .mask(LinearGradient(colors: [.black, .black.opacity(0.6), .clear], startPoint: .top, endPoint: .bottom))
         }
@@ -79,19 +71,16 @@ struct FondAmbiant: View {
     ]
 }
 
-/// Matière des cartes héros : aurore + grain + reflet qui balaie (shader Metal), filet doré.
+/// Matière des cartes héros : aurore + grain + lueur chaude (shader Metal), filet doré. Figée.
 struct MatiereEspresso: View {
     var rayon: CGFloat = Espace.rayon
-    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
     var body: some View {
         let forme = RoundedRectangle(cornerRadius: rayon, style: .continuous)
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reduireAnimations)) { contexte in
-            let temps = Float(contexte.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1_400))
-            AuroreOr()
-                .clipShape(forme)
-                .colorEffect(ShaderLibrary.refletEspresso(.boundingRect, .float(temps), .float(reduireAnimations ? 0 : 1)))
-        }
+        AuroreOr()
+            .clipShape(forme)
+            .colorEffect(ShaderLibrary.refletEspresso(.boundingRect, .float(0), .float(0)))
+            .background(forme.fill(Color.espresso.shadow(.drop(color: Color.ombre, radius: 26, y: 16))))
         .overlay {
             forme.strokeBorder(
                 LinearGradient(colors: [Color.orClair.opacity(0.5), Color.or.opacity(0.10), Color.or.opacity(0.3)],
@@ -99,7 +88,6 @@ struct MatiereEspresso: View {
                 lineWidth: Espace.filet
             )
         }
-        .shadow(color: Color.ombre, radius: 26, y: 16)
     }
 }
 
@@ -126,7 +114,8 @@ struct RefletDore: ViewModifier {
             }
             .onAppear {
                 guard !reduireAnimations else { return }
-                withAnimation(.easeInOut(duration: 2.6).delay(0.8).repeatForever(autoreverses: false)) {
+                // Un seul passage à l'apparition : aucune animation perpétuelle.
+                withAnimation(.easeInOut(duration: 2.6).delay(0.8)) {
                     phase = 1.4
                 }
             }

@@ -49,7 +49,6 @@ struct GlisserPourEnvoyer: View {
                                                   (surPapier ? Color.orOmbre : Color.or).opacity(0.35 + 0.55 * progression)],
                                          startPoint: .leading, endPoint: .trailing))
                     .frame(width: decalage + diametre + marge * 2)
-                    .shadow(color: Color.or.opacity(0.45 * progression), radius: 12 * progression)
 
                 HStack(spacing: Espace.xs) {
                     Text(enCours ? "Envoi…" : valide ? "Envoyé" : libelle)
@@ -59,9 +58,7 @@ struct GlisserPourEnvoyer: View {
                     if !enCours, !valide {
                         Image(systemName: "chevron.right.2")
                             .font(.system(size: 13, weight: .bold))
-                            .phaseAnimator(reduireAnimations ? [0.0] : [0.0, 6.0]) { contenu, phase in
-                                contenu.offset(x: phase)
-                            } animation: { _ in .easeInOut(duration: 0.9) }
+                            .symbolEffect(.variableColor.iterative, options: .repeating, isActive: !reduireAnimations)
                     }
                 }
                 .foregroundStyle((surPapier ? Color.encrePapier : Color.orClair).opacity(0.92 - progression * 0.8))

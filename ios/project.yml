@@ -58,6 +58,8 @@ targets:
           UIColorName: FondLancement
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIRequiresFullScreen: true
+        # ProMotion : animations et défilement à 120 Hz sur les iPhone Pro.
+        CADisableMinimumFrameDurationOnPhone: true
         UIAppFonts:
           - CormorantGaramond-Medium.ttf
           - CormorantGaramond-SemiBold.ttf

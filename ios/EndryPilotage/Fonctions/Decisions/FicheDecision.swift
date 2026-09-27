@@ -22,6 +22,7 @@ struct FicheDecision: View {
                             .textCase(.uppercase)
                             .tracking(2.2)
                             .foregroundStyle(Color.or)
+                            .accessibilityIdentifier("fiche-decision")
                         if let date = carte.dateCreation {
                             Text("Préparée \(DateEndry.ilYa(date))")
                                 .styleTexte(13, relativeTo: .footnote)

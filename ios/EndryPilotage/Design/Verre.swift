@@ -129,46 +129,55 @@ struct BoutonMicroCentral: View {
     var actif: Bool
     var appuiLong: () -> Void = {}
     var action: () -> Void
-    @GestureState private var presse = false
+    @State private var presse = false
+    @State private var appuiLongDeclenche = false
     @State private var assistantOuvert = 0
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
     var body: some View {
-        ZStack {
-            Circle()
-                .stroke(Color.or.opacity(actif || presse ? 0.55 : 0.25), lineWidth: 1)
-                .frame(width: 62, height: 62)
-            Circle()
-                .fill(Color.or)
-                .frame(width: 52, height: 52)
-            Image(systemName: presse ? "waveform" : "mic.fill")
-                .font(.system(size: 21, weight: .semibold))
-                .foregroundStyle(Color.espresso)
-                .contentTransition(.symbolEffect(.replace))
+        Button {
+            // Après un toucher long (assistant ouvert), le relâchement n'ouvre pas la dictée.
+            if appuiLongDeclenche {
+                appuiLongDeclenche = false
+                return
+            }
+            action()
+        } label: {
+            ZStack {
+                Circle()
+                    .stroke(Color.or.opacity(actif || presse ? 0.55 : 0.25), lineWidth: 1)
+                    .frame(width: 62, height: 62)
+                Circle()
+                    .fill(Color.or)
+                    .frame(width: 52, height: 52)
+                Image(systemName: presse ? "waveform" : "mic.fill")
+                    .font(.system(size: 21, weight: .semibold))
+                    .foregroundStyle(Color.espresso)
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .scaleEffect(presse ? 1.08 : 1)
+            .phaseAnimator(reduireAnimations || actif ? [false] : [false, true]) { contenu, phase in
+                contenu.scaleEffect(phase ? 1.04 : 1)
+            } animation: { _ in
+                .easeInOut(duration: 1.8)
+            }
+            .contentShape(Circle())
         }
-        .scaleEffect(presse ? 1.08 : 1)
-        .phaseAnimator(reduireAnimations || actif ? [false] : [false, true]) { contenu, phase in
-            contenu.scaleEffect(phase ? 1.05 : 1)
-        } animation: { _ in
-            .easeInOut(duration: 1.8)
-        }
-        .contentShape(Circle())
-        .gesture(
+        .buttonStyle(.plain)
+        .simultaneousGesture(
             LongPressGesture(minimumDuration: 0.45)
-                .updating($presse) { valeur, etat, _ in etat = valeur }
                 .onEnded { _ in
+                    appuiLongDeclenche = true
                     assistantOuvert += 1
                     appuiLong()
                 }
-                .exclusively(before: TapGesture().onEnded { action() })
         )
-        .animation(.endryVif, value: presse)
+        .onLongPressGesture(minimumDuration: 0.45, perform: {}, onPressingChanged: { enCours in
+            withAnimation(.endryVif) { presse = enCours }
+        })
         .sensoryFeedback(.impact(weight: .medium), trigger: assistantOuvert)
-        .accessibilityElement()
         .accessibilityLabel(Text("Dicter une saisie terrain"))
         .accessibilityHint(Text("Toucher long : assistant vocal."))
-        .accessibilityAddTraits(.isButton)
-        .accessibilityAction { action() }
         .accessibilityAction(named: Text("Parler à l’assistant")) { appuiLong() }
         .accessibilityIdentifier("onglet-saisie")
     }

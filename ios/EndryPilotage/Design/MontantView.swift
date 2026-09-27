@@ -10,8 +10,9 @@ struct MontantView: View {
     var couleurDevise: Color? = nil
     var afficherCentimes = true
     var style: Font.TextStyle = .largeTitle
-    /// Chiffres en or brossé (montants héros).
+    /// Chiffres en or brossé (montants héros) ; bronze sur le papier du thème clair.
     var dore = false
+    @Environment(\.colorScheme) private var schema
 
     var body: some View {
         let parties = FormatSuisse.parties(afficherCentimes ? montant : montant.rounded())
@@ -19,7 +20,7 @@ struct MontantView: View {
             Text("CHF")
                 .font(Police.texteLibre(max(10, taille * 0.32), relativeTo: .caption, graisse: .semibold))
                 .tracking(taille * 0.02)
-                .foregroundStyle(couleurDevise ?? couleur.opacity(0.62))
+                .foregroundStyle(dore && schema != .dark ? Color.bronze.opacity(0.75) : (couleurDevise ?? couleur.opacity(0.62)))
             HStack(alignment: .firstTextBaseline, spacing: 1) {
                 Text(parties.signe + parties.francs)
                     .font(Police.chiffres(taille, relativeTo: style, graisse: .medium))
@@ -34,7 +35,7 @@ struct MontantView: View {
                         .opacity(0.78)
                 }
             }
-            .foregroundStyle(dore ? AnyShapeStyle(.texteOr) : AnyShapeStyle(couleur))
+            .foregroundStyle(dore ? (schema == .dark ? AnyShapeStyle(.texteOr) : AnyShapeStyle(Color.bronze)) : AnyShapeStyle(couleur))
         }
         .monospacedDigit()
         .lineLimit(1)

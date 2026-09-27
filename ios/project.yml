@@ -59,18 +59,17 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         UIRequiresFullScreen: true
         UIAppFonts:
-          - InterTight-Medium.ttf
-          - InterTight-SemiBold.ttf
-          - Inter-Regular.ttf
-          - Inter-Medium.ttf
-          - Inter-SemiBold.ttf
+          - CormorantGaramond-Medium.ttf
+          - CormorantGaramond-SemiBold.ttf
+          - CormorantGaramond-MediumItalic.ttf
+          - Cinzel-SemiBold.ttf
         CFBundleURLTypes:
           - CFBundleURLName: com.endrysa.endry
             CFBundleURLSchemes: [endrypilotage]
         NSAppTransportSecurity:
           # Réseau privé Tailscale (http://100.x.y.z:8080) : connexions locales autorisées, rien d'autre.
           NSAllowsLocalNetworking: true
-        NSMicrophoneUsageDescription: "Le micro sert à dicter vos consignes et vos saisies de chantier."
+        NSMicrophoneUsageDescription: "Le micro sert à dicter vos consignes et vos saisies de chantier, et à parler à l’assistant vocal."
         NSSpeechRecognitionUsageDescription: "La reconnaissance vocale transforme votre dictée en texte, sur l’iPhone lorsque c’est possible."
         NSCameraUsageDescription: "L’appareil photo sert à scanner des bons, des factures et des QR codes d’accès."
         NSPhotoLibraryUsageDescription: "Vos photos de chantier peuvent être jointes à une saisie."

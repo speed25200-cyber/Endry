@@ -124,7 +124,7 @@ final class EndryPilotageUITests: XCTestCase {
         XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 5))
         ouvrirFiche("V-7K3F9Q", dans: app)
         // La fiche montre tout : destinataires, texte complet, pièce jointe, gestes.
-        XCTAssertTrue(app.staticTexts["Proposition de l’assistant"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.descendants(matching: .any)["fiche-decision"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.buttons["fermer-fiche"].exists)
         capturer(app, "6-fiche-decision")
         app.buttons["fermer-fiche"].tap()
@@ -189,6 +189,10 @@ final class EndryPilotageUITests: XCTestCase {
                 if onglet == "onglet-chantiers", planning.waitForExistence(timeout: 2) {
                     planning.tap()
                     sleep(1)
+                    if !planning.isSelected {
+                        planning.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+                        sleep(1)
+                    }
                     capturer(app, "2b-planning\(suffixe)")
                     app.buttons["segment-pipeline"].tap()
                 }

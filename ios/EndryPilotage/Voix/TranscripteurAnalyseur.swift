@@ -128,7 +128,9 @@ nonisolated final class TranscripteurAnalyseur: Transcripteur, Oreille, @uncheck
         let (analyseur, format, flux, continuation) = try await preparer(surTexte: surTexte)
 
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP, .allowBluetoothA2DP])
+        // Mode par défaut, pas « appel » : le traitement téléphonique (filtre, compression) dégrade la reconnaissance.
+        // Endry ne parle pas pendant qu'il écoute : pas besoin d'annulation d'écho ici.
+        try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothHFP, .allowBluetoothA2DP])
         try session.setActive(true, options: .notifyOthersOnDeactivation)
 
         let entree = moteurAudio.inputNode

@@ -64,6 +64,8 @@ struct ReglagesView: View {
                     Text("Gardé sur cet iPhone. Exemple : « Bonjour, Luc ». Sans prénom : « Bonjour. »")
                 }
 
+                ReglageVoixEndry()
+
                 Section {
                     BasculeModeClient()
                         .listRowInsets(EdgeInsets())

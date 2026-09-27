@@ -228,7 +228,7 @@ final class BureauClaudeTests: XCTestCase {
         let session = try JSONDecoder().decode(SessionVoix.self, from: Data(#"{"disponible":true,"client_secret":"x","outils":[]}"#.utf8))
         let data = CommandeRealtime.configuration(session: session, vocabulaire: [])
         let texte = String(decoding: data, as: UTF8.self)
-        XCTAssertTrue(texte.contains("demander_claude"))
+        XCTAssertTrue(texte.contains("demander_assistant"))
         XCTAssertTrue(texte.contains("\"bureau\""))
     }
 }

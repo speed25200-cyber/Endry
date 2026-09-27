@@ -137,7 +137,7 @@ public enum OutilsClaude {
 
     public static var consigne: String { consigneBase + " " + AgentBureau.consigne }
 
-    static let consigneBase = "L’assistant du bureau tourne sur le PC ; il a les dossiers, Bexio et les e-mails, et travaille par domaines. Pour savoir ce qu’il fait, appelle bureau. Pour toute question dont tes outils n’ont pas la réponse, ou si le patron dit « demande à l’assistant », appelle demander_claude : la question s’affiche, le patron la relit et touche Envoyer ; l’assistant répond à son prochain passage, pas tout de suite. Une demande de travail (saisie) s’affiche aussi et n’est transmise que quand le patron touche Transmettre. N’invente jamais une réponse du PC."
+    static let consigneBase = "L’assistant du bureau tourne sur le PC ; il a les dossiers, Bexio et les e-mails, et travaille par domaines. Pour savoir ce qu’il fait, appelle bureau. Pour toute question dont tes outils n’ont pas la réponse, ou si le patron dit « demande à l’assistant », appelle demander_assistant : la question s’affiche, le patron la relit et touche Envoyer ; l’assistant répond à son prochain passage, pas tout de suite. Une demande de travail (saisie) s’affiche aussi et n’est transmise que quand le patron touche Transmettre. N’invente jamais une réponse du PC."
 
     public static var definitions: [[String: Any]] {
         [
@@ -145,7 +145,7 @@ public enum OutilsClaude {
          "parameters": ["type": "object", "properties": [
              "agent": ["type": "string", "description": "Agent précis (secrétariat, comptabilité…), ou vide pour tout le bureau."],
          ]]],
-        ["type": "function", "name": "demander_claude", "description": descriptionDemander,
+        ["type": "function", "name": "demander_assistant", "description": descriptionDemander,
          "parameters": ["type": "object", "properties": [
              "question": ["type": "string", "description": "La question du patron, complète."],
              "agent": ["type": "string",

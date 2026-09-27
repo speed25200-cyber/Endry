@@ -34,7 +34,7 @@ final class MoteurLocal: MoteurVoix {
     private var enParole = false
 
     /// Fin de phrase : silence après la dernière parole reconnue.
-    private static let delaiSilence: Duration = .milliseconds(1_300)
+    private static let delaiSilence: Duration = .milliseconds(1_600)
 
     init(donnees: @escaping @MainActor () -> RepondeurLocal.Donnees,
          cerveau: (any CerveauVocal)? = nil,
@@ -204,7 +204,7 @@ final class MoteurLocal: MoteurVoix {
             await dire("Connectez d’abord l’app au bureau pour interroger l’assistant.")
             return
         }
-        let r = await executeur.executer(nom: "demander_claude", arguments: Self.json(["question": question]))
+        let r = await executeur.executer(nom: "demander_assistant", arguments: Self.json(["question": question]))
         surEvenement?(.effet(r.effet))
         if case .questionAConfirmer(_, let agent, _) = r.effet {
             let cote = agent.map { ", côté \($0)" } ?? ""
@@ -281,8 +281,12 @@ final class MoteurLocal: MoteurVoix {
     }
 
 
-    /// Meilleure voix française installée : Premium, puis Enhanced ; fr-CH avant fr-FR.
+    /// Voix choisie dans Réglages › Voix d'Endry, sinon la meilleure voix française installée :
+    /// Premium, puis Améliorée ; fr-CH avant fr-FR.
     static func meilleureVoix() -> AVSpeechSynthesisVoice? {
+        if let id = UserDefaults.standard.string(forKey: VoixEndry.cle), let choisie = AVSpeechSynthesisVoice(identifier: id) {
+            return choisie
+        }
         func score(_ voix: AVSpeechSynthesisVoice) -> Int {
             var s = 0
             switch voix.quality {

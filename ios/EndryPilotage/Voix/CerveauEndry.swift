@@ -187,7 +187,7 @@ struct OutilProposerDecision: Tool {
 /// Question pour Claude, l'assistant du bureau sur le PC : la réponse arrive plus tard, affichée et dite.
 @available(iOS 26.0, *)
 struct OutilDemanderClaude: Tool {
-    let name = "demander_claude"
+    let name = "demander_assistant"
     let description = ConsignesCerveau.demanderClaude
     let executeur: ExecuteurOutils
     let effets: CollecteurEffets

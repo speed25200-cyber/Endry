@@ -91,7 +91,7 @@ public struct ExecuteurOutils: Sendable {
                     "derniers_travaux": etat.traitees.prefix(5).map { ["demande": BureauClaude.questionSeule($0.texte), "resultat": $0.resume ?? "",
                                                                       "decision_a_valider": $0.decisionReference ?? ""] },
                 ]), .aucun)
-            case "demander_claude":
+            case "demander_assistant", "demander_claude":
                 // Préparée seulement : le patron voit la question et touche « Envoyer » (puis `POST /assistant/question`).
                 let question = (args["question"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !question.isEmpty else { return (json(["ok": false, "message": "Question vide."]), .aucun) }

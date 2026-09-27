@@ -7,8 +7,7 @@
 #   ios-testflight signature + IPA + envoi TestFlight, sur un tag « ios-v* » ou lancé à la main.
 #
 # Aucun secret dans ce fichier : la signature utilise l'intégration App Store Connect « PetMind ASC API »
-# et la clé CERTIFICATE_PRIVATE_KEY du groupe Codemagic « endry_signature » ; certificat et profils
-# sont créés automatiquement par le build.
+# et le certificat de distribution enregistré dans l'équipe Codemagic (Code signing identities).
 
 definitions:
   outils: &outils
@@ -103,14 +102,16 @@ workflows:
     name: iOS · TestFlight
     instance_type: mac_mini_m2
     max_build_duration: 90
-    # Même intégration App Store Connect que Picshop ; certificat et profils créés par le build.
+    # Même intégration App Store Connect et même signature automatique que Picshop.
     integrations:
       app_store_connect: PetMind ASC API
     environment:
       xcode: latest
-      groups:
-        # CERTIFICATE_PRIVATE_KEY : clé RSA (PEM) du certificat de distribution géré par ce workflow.
-        - endry_signature
+      # Signature automatique Codemagic (comme Picshop) : certificat de distribution de l'équipe
+      # (Code signing identities) + profils App Store de l'app et de son widget.
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.endrysa.endry
       vars:
         XCODE_PROJECT: ios/EndryPilotage.xcodeproj
         BUNDLE_ID: com.endrysa.endry
@@ -128,19 +129,14 @@ workflows:
       - name: Tests du paquet EndryKit
         working_directory: ios/EndryKit
         script: swift test
-      - name: Certificat et profils (créés automatiquement)
+      - name: Appliquer la signature
         script: |
           set -e
-          if ! printf '%s' "${CERTIFICATE_PRIVATE_KEY:-}" | grep -q "PRIVATE KEY"; then
-            echo "CERTIFICATE_PRIVATE_KEY absente ou invalide : ajoutez-la dans le groupe « endry_signature » (voir ios/README.md)."
-            exit 1
-          fi
-          keychain initialize
-          # Crée au besoin le certificat Apple Distribution lié à cette clé, puis les profils App Store
-          # de l'app et du widget (avec les capacités de leurs App IDs), via l'intégration App Store Connect.
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --certificate-key=@env:CERTIFICATE_PRIVATE_KEY --create
-          app-store-connect fetch-signing-files "$BUNDLE_ID_WIDGET" --type IOS_APP_STORE --certificate-key=@env:CERTIFICATE_PRIVATE_KEY --create
-          keychain add-certificates
+          echo "Profils installés par Codemagic :"
+          for f in "$HOME/Library/MobileDevice/Provisioning Profiles"/*.mobileprovision; do
+            [ -e "$f" ] || continue
+            security cms -D -i "$f" 2>/dev/null | plutil -extract Entitlements.application-identifier raw -o - - 2>/dev/null || true
+          done
           xcode-project use-profiles --project "$XCODE_PROJECT"
       - name: Numéro de build
         script: |

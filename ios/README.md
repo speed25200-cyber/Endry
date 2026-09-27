@@ -87,10 +87,10 @@ Codemagic n’a pas besoin de fastlane : sa CLI (`app-store-connect`, `xcode-pro
 
 ### À faire une seule fois (vous)
 
-> **Configuration actuelle** : le workflow `ios-testflight` utilise l’intégration App Store Connect
-> **« PetMind ASC API »** de l’équipe Codemagic et **crée lui-même** le certificat de distribution et les profils
-> (app + widget). Une seule variable à fournir : `CERTIFICATE_PRIVATE_KEY` dans le groupe **`endry_signature`**
-> (point 3 ci-dessous). Les points 1, 2 et le groupe `endry_app_store` ne servent plus.
+> **Configuration actuelle (sans Mac)** : le workflow `ios-testflight` utilise, comme Picshop, l’intégration
+> **« PetMind ASC API »** et la signature automatique de Codemagic (`ios_signing`) avec le certificat
+> « Apple Distribution » enregistré dans Codemagic › Teams › **Code signing identities** (clé privée incluse).
+> S’il n’y en a pas : onglet *iOS certificates* › **Generate certificate**. Les points 1 à 3 ne servent pas.
 
 **1. Clé API App Store Connect** (`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`)
 - [appstoreconnect.apple.com](https://appstoreconnect.apple.com) › **Utilisateurs et accès** › onglet **Intégrations** ›

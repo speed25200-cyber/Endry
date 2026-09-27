@@ -187,6 +187,12 @@ final class EndryPilotageUITests: XCTestCase {
         champ.tap()
         champ.typeText("Demande à Claude si Mme Gander a rappelé")
         app.buttons["envoyer-question"].tap()
+        // Capture prise par le système (même si l'app ne répond plus), pour le diagnostic.
+        sleep(2)
+        let ecran = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        ecran.name = "8-apres-envoi"
+        ecran.lifetime = .keepAlways
+        add(ecran)
         // Rien ne part sans geste : la question s'affiche d'abord, à confirmer.
         let confirmer = app.buttons["confirmer-envoi"]
         XCTAssertTrue(confirmer.waitForExistence(timeout: 10), "La question n’a pas été proposée à la confirmation.")

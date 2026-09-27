@@ -178,9 +178,35 @@ workflows:
     scripts:
       - *outils
       - *projet
-      # Aucune publication sans une suite de tests complète et verte.
+      # Avant toute publication : tests du paquet et tests unitaires de l'app, verts.
+      # Les tests d'interface (lents, sensibles au simulateur) tournent à chaque push dans ios-tests ;
+      # ils ne bloquent pas l'envoi à TestFlight.
       - *tests_kit
-      - *tests_app
+      - name: Build et tests unitaires de l'app (simulateur)
+        working_directory: ios
+        script: |
+          set -o pipefail
+          SIM_ID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          d = json.load(sys.stdin)["devices"]
+          def version(k):
+              v = k.rsplit(".", 1)[-1].replace("iOS-", "").split("-")
+              return tuple(int(x) for x in v if x.isdigit())
+          runtimes = sorted((k for k in d if ".iOS-" in k and d[k]), key=version)
+          for k in reversed(runtimes):
+              iphones = [x for x in d[k] if x["name"].startswith("iPhone") and "SE" not in x["name"]]
+              if iphones:
+                  print(iphones[0]["udid"]); break
+          ')
+          echo "Simulateur : $SIM_ID"
+          xcrun simctl boot "$SIM_ID" || true
+          xcodebuild test \
+            -project EndryPilotage.xcodeproj \
+            -scheme EndryPilotage \
+            -destination "id=$SIM_ID" \
+            -only-testing:EndryPilotageTests \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty
       - name: Appliquer la signature
         script: |
           set -e

@@ -59,7 +59,7 @@ struct CarteOffresASuivre: View {
                     suggestions: ["Ton chaleureux", "Proposer une variante moins chère", "Rappeler la date de validité", "Proposer une visite"]
                 ) { consignes in
                     guard let api = app.session.api else { return .failure(.horsLigne) }
-                    do { return .success(try await api.preparerSuivi(a, consignes: consignes)) } catch { return .failure(error) }
+                    do throws(ErreurAPI) { return .success(try await api.preparerSuivi(a, consignes: consignes)) } catch { return .failure(error) }
                 }
                 .presentationDetents([.medium, .large])
             }

@@ -30,6 +30,25 @@ public enum RepondeurLocal {
         let q = normaliser(question)
         let mots = Set(q.split(separator: " ").map(String.init))
 
+        // Outils de terrain : l'écran s'ouvre, le patron remplit et transmet lui-même.
+        if q.contains("bon de regie") || (mots.contains("regie") && ["fais", "faire", "nouveau", "nouvelle", "ouvre", "ouvrir"].contains { mots.contains($0) }) {
+            return .dire("J’ouvre un bon de régie : dictez les travaux, puis faites signer le client.",
+                         carte: .ouvrirOutil(outil: "regie", chantierId: meilleurChantier(q, dans: d.chantiers)?.id))
+        }
+        if q.contains("bon de livraison") || q.contains("scanner un bon") || q.contains("scanne le bon") {
+            return .dire("J’ouvre le scanner : photographiez le bon, je le rattache au chantier.",
+                         carte: .ouvrirOutil(outil: "bon_livraison", chantierId: meilleurChantier(q, dans: d.chantiers)?.id))
+        }
+        if mots.contains("releve") || q.contains("mesurer la piece") || q.contains("prendre les mesures") {
+            return .dire("J’ouvre le relevé : filmez la pièce, les mesures se font seules.",
+                         carte: .ouvrirOutil(outil: "releve", chantierId: meilleurChantier(q, dans: d.chantiers)?.id))
+        }
+        if mots.contains("briefing") {
+            let b = Briefing.composer(accueil: d.accueil, semaine: d.accueil?.chantiers7Jours ?? [], argent: d.argent,
+                                      offresASuivre: SuiviOffres.aSuivre(d.argent?.offres.offres ?? d.accueil?.offres.offres ?? []))
+            return .dire(b.texteParle, carte: .aucun)
+        }
+
         // Actions (préparer, mettre, envoyer, créer…) : toujours pour l'assistant du PC.
         let verbesAction = ["prepare", "preparer", "mets", "mettre", "deplace", "deplacer", "cree", "creer", "envoie", "envoyer",
                             "ajoute", "ajouter", "note", "noter", "facture", "commande", "commander", "planifie", "planifier"]

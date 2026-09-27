@@ -398,3 +398,49 @@ final class ModeleEntretiensTests: XCTestCase {
         XCTAssertEqual(modele.etat, .pret)
     }
 }
+
+@MainActor
+final class ModeleEquipeTests: XCTestCase {
+    func testPointageGardeEtRelu() async {
+        let fichier = FileManager.default.temporaryDirectory.appendingPathComponent("journee-\(UUID().uuidString).json")
+        let t0 = DateEndry.lire("2026-09-28T07:30:00")!
+        let modele = ModeleEquipe(api: APIDemo(latence: .zero), ouvrier: "Marco", fichier: fichier, le: t0)
+        await modele.charger()
+        XCTAssertEqual(modele.chantiers.count, 2)
+        modele.commencer(modele.chantiers[0], le: t0)
+        modele.arreter(le: t0.addingTimeInterval(3 * 3600))
+        modele.remarques = "Manque 2 coudes de 22."
+        // Relance de l'app le même jour : la journée est relue.
+        let relu = ModeleEquipe(api: APIDemo(latence: .zero), ouvrier: "Marco", fichier: fichier, le: t0.addingTimeInterval(4 * 3600))
+        XCTAssertEqual(relu.feuille.pointages.count, 1)
+        XCTAssertEqual(relu.remarques, "Manque 2 coudes de 22.")
+        relu.corriger(chantierId: "18", heures: 3.5)
+        XCTAssertEqual(relu.feuille.heuresParChantier().first?.heures, 3.5)
+        // Le lendemain : page blanche.
+        let demain = ModeleEquipe(api: APIDemo(latence: .zero), ouvrier: "Marco", fichier: fichier, le: t0.addingTimeInterval(86_400))
+        XCTAssertTrue(demain.feuille.pointages.isEmpty)
+    }
+}
+
+final class VoixTerrainTests: XCTestCase {
+    let donnees = RepondeurLocal.Donnees(accueil: Fixtures.accueil, argent: Fixtures.argent, chantiers: Fixtures.chantiers.chantiers)
+
+    func testOutilsParLaVoix() {
+        guard case .dire(_, let carte) = RepondeurLocal.repondre("Fais un bon de régie pour Morel", avec: donnees) else { return XCTFail() }
+        XCTAssertEqual(carte, .ouvrirOutil(outil: "regie", chantierId: "18"))
+        guard case .dire(_, let bon) = RepondeurLocal.repondre("Scanner un bon de livraison", avec: donnees) else { return XCTFail() }
+        XCTAssertEqual(bon, .ouvrirOutil(outil: "bon_livraison", chantierId: nil))
+        guard case .dire(let briefing, _) = RepondeurLocal.repondre("Mon briefing", avec: donnees) else { return XCTFail() }
+        XCTAssertTrue(briefing.contains("Nous sommes"))
+    }
+
+    func testOutilsExecuteur() async {
+        let executeur = ExecuteurOutils(api: APIDemo(latence: .zero))
+        let r = await executeur.executer(nom: "ouvrir_outil", arguments: #"{"outil":"releve","chantier_id":"18"}"#)
+        XCTAssertEqual(r.effet, .ouvrirOutil(outil: "releve", chantierId: "18"))
+        let inconnu = await executeur.executer(nom: "ouvrir_outil", arguments: #"{"outil":"facture"}"#)
+        XCTAssertEqual(inconnu.effet, .aucun)
+        let b = await executeur.executer(nom: "briefing", arguments: "{}")
+        XCTAssertTrue(b.sortie.contains("briefing"))
+    }
+}

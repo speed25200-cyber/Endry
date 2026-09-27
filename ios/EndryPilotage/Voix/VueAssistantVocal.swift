@@ -485,6 +485,35 @@ struct CarteContexte: View {
                               confirmer: confirmer, annuler: retirer)
         case .reponseClaude(let question, let reponse, let agent):
             CarteClaude(question: question, reponse: reponse, agent: agent, retirer: retirer)
+        case .ouvrirOutil(let nom, let chantierId):
+            let outil: OutilTerrain = nom == "bon_livraison" ? .bonLivraison : nom == "releve" ? .releve : .regie
+            Button {
+                retirer()
+                app.fermerAssistant()
+                // L'assistant se ferme, puis l'outil s'ouvre en plein écran.
+                Task {
+                    try? await Task.sleep(for: .milliseconds(450))
+                    app.ouvrirOutil(outil, chantier: chantierId)
+                }
+            } label: {
+                HStack(spacing: Espace.s) {
+                    Image(systemName: outil.icone)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.espressoProfond)
+                        .frame(width: 40, height: 40)
+                        .background(.degradeOr, in: Circle())
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Ouvrir : \(outil.titre)").styleTexte(15, relativeTo: .subheadline, graisse: .semibold).foregroundStyle(Color.encre)
+                        Text(app.dossier(chantierId)?.titre ?? outil.sousTitre).styleTexte(13, relativeTo: .footnote).foregroundStyle(Color.encreDouce)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "arrow.up.right").font(.system(size: 13, weight: .bold)).foregroundStyle(Color.bronze)
+                }
+                .padding(Espace.m)
+                .surfaceCarte(rayon: Espace.rayonPetit)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("carte-ouvrir-outil")
         case .aucun:
             EmptyView()
         }

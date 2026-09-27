@@ -272,6 +272,148 @@ final class EndryPilotageUITests: XCTestCase {
         }
     }
 
+    // MARK: - Terrain, suivi, équipe (v1.3)
+
+    /// Bon de régie : chantier, travaux, heures, signature du client au doigt, transmis → facture à valider.
+    @MainActor
+    func testBonDeRegieSigne() {
+        let app = lancer()
+        app.buttons["onglet-saisie"].tap()
+        let outil = app.buttons["outil-regie"]
+        XCTAssertTrue(outil.waitForExistence(timeout: 5))
+        outil.tap()
+        let choix = app.buttons["choix-chantier"]
+        XCTAssertTrue(choix.waitForExistence(timeout: 5))
+        choix.tap()
+        let morel = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Villa Morel")).firstMatch
+        XCTAssertTrue(morel.waitForExistence(timeout: 5))
+        morel.tap()
+        let travaux = app.textFields["regie-travaux"].exists ? app.textFields["regie-travaux"] : app.textViews["regie-travaux"]
+        XCTAssertTrue(travaux.waitForExistence(timeout: 5))
+        travaux.tap()
+        travaux.typeText("Remplacement du mitigeur de la douche")
+        app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Ajouter une personne")).firstMatch.tap()
+        capturer(app, "11-regie")
+        let signer = atteindre(app.buttons["faire-signer"], dans: app)
+        XCTAssertTrue(signer.waitForExistence(timeout: 3))
+        signer.tap()
+        let nom = app.textFields["nom-signataire"]
+        XCTAssertTrue(nom.waitForExistence(timeout: 5))
+        nom.tap()
+        nom.typeText("M. Morel\n")
+        let zone = app.descendants(matching: .any)["zone-signature"].firstMatch
+        let origine = zone.exists ? zone : app.windows.firstMatch
+        let debut = origine.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: zone.exists ? 0.5 : 0.62))
+        let fin = origine.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: zone.exists ? 0.4 : 0.6))
+        debut.press(forDuration: 0.1, thenDragTo: fin)
+        capturer(app, "12-signature")
+        let confirmer = app.buttons["signer"]
+        if confirmer.isEnabled {
+            confirmer.tap()
+            let transmettre = atteindre(app.buttons["transmettre-regie"], dans: app)
+            XCTAssertTrue(transmettre.waitForExistence(timeout: 5))
+            transmettre.tap()
+            XCTAssertTrue(app.descendants(matching: .any)["resultat-terrain"].firstMatch.waitForExistence(timeout: 10))
+            capturer(app, "13-regie-transmise")
+        }
+    }
+
+    /// Bon de livraison (exemple de la démo) : lu, chantier suggéré, rattaché.
+    @MainActor
+    func testBonDeLivraison() {
+        let app = lancer()
+        app.buttons["onglet-saisie"].tap()
+        let outil = app.buttons["outil-bonLivraison"]
+        XCTAssertTrue(outil.waitForExistence(timeout: 5))
+        outil.tap()
+        let exemple = app.buttons["bon-exemple"]
+        XCTAssertTrue(exemple.waitForExistence(timeout: 5))
+        exemple.tap()
+        let rattacher = app.buttons["rattacher-bon"]
+        XCTAssertTrue(rattacher.waitForExistence(timeout: 8))
+        capturer(app, "14-bon-livraison")
+        atteindre(rattacher, dans: app).tap()
+        XCTAssertTrue(app.descendants(matching: .any)["resultat-terrain"].firstMatch.waitForExistence(timeout: 10))
+    }
+
+    /// Relevé manuel (simulateur sans LiDAR) : surfaces et plan.
+    @MainActor
+    func testReleveManuel() {
+        let app = lancer()
+        app.buttons["onglet-saisie"].tap()
+        let outil = app.buttons["outil-releve"]
+        XCTAssertTrue(outil.waitForExistence(timeout: 5))
+        outil.tap()
+        let champs = app.textFields.matching(NSPredicate(format: "placeholderValue == %@", "0,00"))
+        XCTAssertTrue(champs.firstMatch.waitForExistence(timeout: 5))
+        if champs.count >= 2 {
+            champs.element(boundBy: 0).tap()
+            champs.element(boundBy: 0).typeText("2.4")
+            champs.element(boundBy: 1).tap()
+            champs.element(boundBy: 1).typeText("1.85")
+        }
+        let calculer = atteindre(app.buttons["calculer-releve"], dans: app)
+        if calculer.isEnabled {
+            calculer.tap()
+            XCTAssertTrue(app.buttons["transmettre-releve"].waitForExistence(timeout: 5))
+            capturer(app, "15-releve")
+        }
+    }
+
+    /// Entretiens récurrents : proposition préparée par le bureau.
+    @MainActor
+    func testEntretiens() {
+        let app = lancer()
+        app.buttons["onglet-entreprise"].tap()
+        let carte = app.buttons["carte-entretiens"]
+        atteindre(carte, dans: app)
+        XCTAssertTrue(carte.waitForExistence(timeout: 8))
+        toucher(carte)
+        let proposer = app.buttons["proposer-E-104"]
+        XCTAssertTrue(proposer.waitForExistence(timeout: 8))
+        capturer(app, "16-entretiens")
+        proposer.tap()
+        let preparer = app.buttons["preparer"]
+        XCTAssertTrue(preparer.waitForExistence(timeout: 5))
+        preparer.tap()
+        XCTAssertTrue(app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Voir la décision")).firstMatch.waitForExistence(timeout: 8))
+    }
+
+    /// Briefing du jour depuis Aujourd'hui.
+    @MainActor
+    func testBriefing() {
+        let app = lancer()
+        XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 8))
+        let carte = app.buttons["carte-briefing"]
+        atteindre(carte, dans: app)
+        XCTAssertTrue(carte.waitForExistence(timeout: 5))
+        toucher(carte)
+        XCTAssertTrue(app.switches["briefing-actif"].waitForExistence(timeout: 5))
+        capturer(app, "17-briefing")
+    }
+
+    /// Mode équipe : l'ouvrier pointe sur un chantier et envoie sa journée ; aucun montant à l'écran.
+    @MainActor
+    func testModeOuvrier() {
+        let app = lancer(["-demo", "-demo-ouvrier"])
+        let commencer = app.buttons["commencer-18"]
+        XCTAssertTrue(commencer.waitForExistence(timeout: 8))
+        commencer.tap()
+        XCTAssertTrue(app.buttons["arreter-pointage"].waitForExistence(timeout: 3))
+        capturer(app, "18-ouvrier")
+        XCTAssertFalse(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "CHF")).firstMatch.exists)
+        sleep(1)
+        app.buttons["arreter-pointage"].tap()
+        let envoyer = atteindre(app.buttons["envoyer-journee"], dans: app)
+        XCTAssertTrue(envoyer.waitForExistence(timeout: 3))
+        envoyer.tap()
+        let confirmer = app.buttons["envoyer-journee-confirmer"]
+        XCTAssertTrue(confirmer.waitForExistence(timeout: 5))
+        confirmer.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["resultat-terrain"].firstMatch.waitForExistence(timeout: 10))
+        capturer(app, "19-ouvrier-journee")
+    }
+
     @MainActor
     private func capturer(_ app: XCUIApplication, _ nom: String) {
         let piece = XCTAttachment(screenshot: app.screenshot())

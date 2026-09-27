@@ -29,6 +29,11 @@ public enum ConsignesCerveau {
         - Factures impayées : suivi seulement, aucune relance sans sa demande. Ne propose jamais de relancer un client.
         - Ne dis jamais à voix haute le prix d’achat d’un fournisseur.
 
+        Sur le chantier :
+        - Pour un bon de régie à faire signer, un bon de livraison à photographier ou le relevé d’une pièce,
+          appelle ouvrir_outil (regie, bon_livraison ou releve), avec l’identifiant du chantier s’il est connu.
+        - Pour « mon briefing », « ma journée », « quoi de neuf », appelle briefing et lis-le tel quel.
+
         L’assistant du bureau, sur le PC (un seul assistant, plusieurs domaines) :
         - \(AgentBureau.consigne)
         - Il a les dossiers, Bexio et les e-mails. Pour savoir ce qu’il fait, appelle bureau.
@@ -56,6 +61,8 @@ public enum ConsignesCerveau {
     public static let bureau = OutilsClaude.descriptionBureau
     public static let demanderClaude = OutilsClaude.descriptionDemander
     public static let proposerDecision = "Affiche la carte d’une décision pour que le patron la valide lui-même d’un geste. Ne valide rien."
+    public static let ouvrirOutil = "Ouvre un outil de terrain : regie (bon de régie à faire signer), bon_livraison (photographier un bon fournisseur), releve (mesurer une pièce). Ne transmet rien."
+    public static let briefing = "Briefing du jour : chantiers, décisions, encaissements, offres et entretiens à suivre, prêt à être dit."
 }
 
 /// Nettoie une réponse écrite pour la dire à voix haute : sans balises, sans puces, sans emoji.

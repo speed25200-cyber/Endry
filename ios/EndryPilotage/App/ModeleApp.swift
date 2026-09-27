@@ -43,6 +43,8 @@ final class ModeleApp {
     private(set) var agents: ModeleAgents?
     /// Entretiens récurrents repérés par le bureau (v1.3).
     private(set) var entretiens: ModeleEntretiens?
+    /// Mode équipe (lien d'ouvrier) : chantiers du jour et pointage.
+    private(set) var equipe: ModeleEquipe?
 
     @ObservationIgnored private var jetonAPNsEnAttente: String?
     /// File persistante des saisies faites sans réseau.
@@ -106,7 +108,7 @@ final class ModeleApp {
         self.session.appareil = (UIDevice.current.name, Self.modeleMachine())
         Documents.purger()
         if Configuration.lancementDemo {
-            self.session.activerDemo(latence: Configuration.testsUI ? .milliseconds(80) : .milliseconds(450))
+            self.session.activerDemo(latence: Configuration.testsUI ? .milliseconds(80) : .milliseconds(450), ouvrier: Configuration.demoOuvrier)
             verrou.marquerDeverrouille()
         }
         reconstruire()
@@ -130,6 +132,7 @@ final class ModeleApp {
             pilotage = nil
             agents = nil
             entretiens = nil
+            equipe = nil
             return
         }
         let cache = session.estDemo ? nil : session.cache
@@ -148,6 +151,13 @@ final class ModeleApp {
             return await saisie.transmettre(demande: demande)
         }
         entretiens = ModeleEntretiens(api: api)
+        if session.estOuvrier {
+            let dossier = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            equipe = ModeleEquipe(api: api, ouvrier: session.nomOuvrier ?? "Équipe",
+                                  fichier: session.estDemo ? nil : dossier?.appendingPathComponent("journee-ouvrier.json"))
+        } else {
+            equipe = nil
+        }
         dernierJetonEnvoye = nil
         reprendreFlux()
         if let jeton = jetonAPNsEnAttente { enregistrerAppareil(jeton) }
@@ -163,7 +173,7 @@ final class ModeleApp {
     }
 
     func activerDemo() {
-        session.activerDemo()
+        session.activerDemo(ouvrier: Configuration.demoOuvrier)
         verrou.marquerDeverrouille()
         reconstruire()
         onglet = .aujourdhui
@@ -209,6 +219,12 @@ final class ModeleApp {
     private func apresDeconnexion() async {
         await fileSaisies.effacer()
         Documents.purger()
+        // Plus rien de l'entreprise sur l'iPhone : Spotlight, briefing, zones de chantier, brouillon.
+        await RepertoireChantiers.effacer()
+        UserDefaults.standard.set(false, forKey: BriefingMatin.cleActif)
+        await BriefingMatin.programmer(nil)
+        await ArriveeChantier.partage.desactiver()
+        BrouillonRegie.effacer()
         reconstruire()
         DelegueApp.mettreAJourBadge(0)
     }
@@ -265,6 +281,12 @@ final class ModeleApp {
     /// Recharge les écrans : retour au premier plan, notification reçue, événement serveur.
     func rafraichirTout() async {
         guard session.estConnecte else { return }
+        // Jeton d'ouvrier : ni argent, ni décisions, ni agents (le PC répondrait 403).
+        if session.estOuvrier {
+            await equipe?.charger()
+            await saisie?.viderFile()
+            return
+        }
         let d = decisions, c = chantiers, a = argent, s = saisie, g = agents
         await withDiscardingTaskGroup { groupe in
             groupe.addTask { await d?.charger() }
@@ -279,6 +301,7 @@ final class ModeleApp {
     /// Données fraîches : briefing du prochain matin et zones de chantier à jour.
     func apresChargement() async {
         guard !session.estDemo, !session.estOuvrier else { return }
+        if let tous = chantiers?.tous, !tous.isEmpty { await RepertoireChantiers.mettreAJour(tous) }
         if BriefingMatin.actif {
             await BriefingMatin.programmer(BriefingMatin.composer(app: self, masquerMontants: true))
         }
@@ -288,6 +311,10 @@ final class ModeleApp {
     /// Recharge seulement ce que le PC signale comme modifié.
     func recharger(_ sujets: Set<SujetMaj>) async {
         guard session.estConnecte else { return }
+        if session.estOuvrier {
+            if sujets.contains(.chantiers) { await equipe?.charger() }
+            return
+        }
         let d = decisions, c = chantiers, a = argent, s = saisie, g = agents
         await withDiscardingTaskGroup { groupe in
             if sujets.contains(.decisions) { groupe.addTask { await d?.charger() } }

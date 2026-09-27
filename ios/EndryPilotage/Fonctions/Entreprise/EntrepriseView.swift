@@ -130,6 +130,8 @@ struct EntrepriseView: View {
                         CarteEntretiens(modele: entretiens)
                             .apparitionEnCascade(index: 2, visible: visible)
                     }
+                    CarteEquipe()
+                        .apparitionEnCascade(index: 2, visible: visible)
                     if let pilotage = app.pilotage, pilotage.disponible {
                         VStack(alignment: .leading, spacing: Espace.s) {
                             EnTeteSection(titre: "Claude, sur le PC")

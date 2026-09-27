@@ -6,11 +6,27 @@ import SwiftUI
 struct ContenuPrincipal: View {
     @Environment(ModeleApp.self) private var app
 
+    /// Siri, Spotlight, bouton Action : la demande attend que l'app soit déverrouillée.
     private func ouvrirAssistantDemande() {
-        guard DemandesRaccourcis.partage.assistantDemande, !app.verrou.doitAfficherEcran else { return }
-        DemandesRaccourcis.partage.assistantDemande = false
+        let demandes = DemandesRaccourcis.partage
+        guard demandes.enAttente, !app.verrou.doitAfficherEcran else { return }
         app.reglagesPresentes = false
-        app.ouvrirAssistant()
+        if demandes.assistantDemande {
+            demandes.assistantDemande = false
+            app.ouvrirAssistant()
+        }
+        if let outil = demandes.outil {
+            demandes.outil = nil
+            app.ouvrirOutil(outil)
+        }
+        if let chantier = demandes.chantier {
+            demandes.chantier = nil
+            app.ouvrirChantier(chantier)
+        }
+        if demandes.briefingDemande {
+            demandes.briefingDemande = false
+            app.briefingPresente = true
+        }
     }
 
     var body: some View {
@@ -70,7 +86,7 @@ struct ContenuPrincipal: View {
             }
         }
         // « Dis Siri, parler à Endry » : l'assistant s'ouvre une fois l'app déverrouillée.
-        .onChange(of: DemandesRaccourcis.partage.assistantDemande, initial: true) { ouvrirAssistantDemande() }
+        .onChange(of: DemandesRaccourcis.partage.enAttente, initial: true) { ouvrirAssistantDemande() }
         .onChange(of: app.verrou.doitAfficherEcran) { ouvrirAssistantDemande() }
         .overlay {
             if app.documents.chargement != nil {

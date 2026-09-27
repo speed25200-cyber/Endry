@@ -17,7 +17,12 @@ public struct ExecuteurOutils: Sendable {
         case saisieAConfirmer(texte: String)
         /// Réponse de Claude (et de l'agent qui a répondu), à afficher et à dire.
         case reponseClaude(question: String, reponse: String, agent: String?)
+        /// Outil de terrain à ouvrir (`regie`, `bon_livraison`, `releve`), éventuellement pour un chantier.
+        case ouvrirOutil(outil: String, chantierId: String?)
     }
+
+    /// Outils de terrain connus de la voix.
+    public static let outilsTerrain = ["regie", "bon_livraison", "releve"]
 
     public let api: any EndryAPI
 
@@ -99,6 +104,23 @@ public struct ExecuteurOutils: Sendable {
                 return (json(["preparee": true, "envoyee": false, "domaine": nomAgent ?? "",
                               "message": "Question affichée à l’écran. Le patron la relit et touche Envoyer ; l’assistant du PC répond à son prochain passage. N’invente pas la réponse."]),
                         .questionAConfirmer(question: question, agent: nomAgent, agentId: agentId))
+            case "ouvrir_outil":
+                // Ouvre l'écran ; le patron remplit, relit, fait signer et transmet lui-même.
+                let outil = (args["outil"] as? String ?? "").lowercased()
+                guard Self.outilsTerrain.contains(outil) else {
+                    return (json(["ok": false, "message": "Outil inconnu : regie, bon_livraison ou releve."]), .aucun)
+                }
+                let chantier = (args["chantier_id"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+                return (json(["affiche": true, "message": "L’écran s’ouvre dès que le patron touche Ouvrir. Rien n’est transmis."]),
+                        .ouvrirOutil(outil: outil, chantierId: chantier))
+            case "briefing":
+                async let a = try? api.accueil()
+                async let c = try? api.chantiers()
+                async let g = try? api.argent()
+                let (accueil, chantiers, argent) = await (a, c, g)
+                let b = Briefing.composer(accueil: accueil, semaine: chantiers?.semaine ?? [], argent: argent,
+                                          offresASuivre: SuiviOffres.aSuivre(argent?.offres.offres ?? []))
+                return (json(["briefing": b.texteParle]), .aucun)
             case "proposer_decision":
                 let reference = args["reference"] as? String ?? ""
                 return (json(["affichee": true, "message": "La carte est affichée ; le patron doit valider lui-même par un geste à l’écran."]),

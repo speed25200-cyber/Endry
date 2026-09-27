@@ -97,6 +97,8 @@ final class CerveauAppleIntelligence: CerveauVocal {
             OutilChantier(executeur: executeur, effets: effets),
             OutilProposerDecision(executeur: executeur, effets: effets),
             OutilSaisie(executeur: executeur, effets: effets),
+            OutilOuvrir(executeur: executeur, effets: effets),
+            OutilLecture(name: "briefing", description: ConsignesCerveau.briefing, executeur: executeur, effets: effets),
         ]
         return LanguageModelSession(tools: outils, instructions: ConsignesCerveau.texte())
     }
@@ -224,6 +226,29 @@ struct OutilSaisie: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         let r = await executeur.executer(nom: name, arguments: OutilChantier.json(["texte": arguments.texte]))
+        effets.ajouter(r.effet)
+        return r.sortie
+    }
+}
+
+/// Ouvre un outil de terrain (bon de régie, bon de livraison, relevé) : l'écran s'affiche, le patron fait le reste.
+@available(iOS 26.0, *)
+struct OutilOuvrir: Tool {
+    let name = "ouvrir_outil"
+    let description = ConsignesCerveau.ouvrirOutil
+    let executeur: ExecuteurOutils
+    let effets: CollecteurEffets
+
+    @Generable
+    struct Arguments {
+        @Guide(description: "regie, bon_livraison ou releve")
+        var outil: String
+        @Guide(description: "Identifiant du chantier (outil chantiers, champ id), vide s’il n’est pas connu")
+        var chantierId: String
+    }
+
+    func call(arguments: Arguments) async throws -> String {
+        let r = await executeur.executer(nom: name, arguments: OutilChantier.json(["outil": arguments.outil, "chantier_id": arguments.chantierId]))
         effets.ajouter(r.effet)
         return r.sortie
     }

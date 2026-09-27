@@ -17,6 +17,7 @@ struct ZoneSignature: UIViewRepresentable {
         toile.delegate = context.coordinator
         toile.drawing = dessin
         toile.accessibilityLabel = "Zone de signature"
+        toile.accessibilityIdentifier = "zone-signature"
         return toile
     }
 

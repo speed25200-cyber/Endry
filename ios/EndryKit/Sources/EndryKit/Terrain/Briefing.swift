@@ -128,6 +128,9 @@ public struct Briefing: Sendable, Hashable {
         return Briefing(titre: "Briefing du \(DateEndry.longue(date))", points: points, ouverture: ouverture, cloture: "Bonne journée.")
     }
 
+    /// « A, B et C ».
+    public static func enPhrase(_ elements: [String]) -> String { liste(elements) }
+
     static func liste(_ elements: [String]) -> String {
         switch elements.count {
         case 0: ""

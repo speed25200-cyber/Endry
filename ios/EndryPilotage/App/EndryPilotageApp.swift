@@ -76,7 +76,10 @@ struct RacineView: View {
         ZStack {
             Color.fond.ignoresSafeArea()
 
-            if modele.session.estConnecte {
+            if modele.session.estConnecte, modele.session.estOuvrier, let equipe = modele.equipe {
+                EspaceOuvrier(modele: equipe)
+                    .transition(.opacity)
+            } else if modele.session.estConnecte {
                 ContenuPrincipal()
                     .transition(.opacity.combined(with: .scale(scale: 1.02)))
             } else {

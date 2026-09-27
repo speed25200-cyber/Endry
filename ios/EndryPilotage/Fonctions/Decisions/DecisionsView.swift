@@ -156,6 +156,12 @@ struct DecisionsView: View {
                 VueErreur(erreur: erreur) { Task { await modele.charger() } }
             default:
                 decisions
+                if let agents = app.agents {
+                    BandeauBureau(modele: agents) { app.onglet = .entreprise }
+                        .padding(.horizontal, Espace.bord)
+                        .transitionDefilement()
+                        .task { if !agents.charge { await agents.charger() } }
+                }
                 if let accueil = modele.accueil {
                     ResumeArgent(accueil: accueil) { app.onglet = .finances }
                         .padding(.horizontal, Espace.bord)

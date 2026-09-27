@@ -1,0 +1,19 @@
+{
+  "agents": [
+    {"id": "secretariat", "nom": "Secrétariat", "role": "E-mails, courrier, téléphone, rendez-vous", "icone": "envelope.fill",
+     "etat": "occupe", "tache": "Répond à Mme Rey (variante WC)", "depuis": "2026-09-27T12:38:00", "file": 1,
+     "traitees_jour": 14, "derniere_activite": "2026-09-27T12:40:00", "resume_jour": "14 e-mails triés, 3 réponses préparées"},
+    {"id": "comptabilite", "nom": "Comptabilité", "role": "Bexio, factures, paiements", "icone": "banknote.fill",
+     "etat": "occupe", "tache": "Rapproche les paiements Raiffeisen du jour", "depuis": "2026-09-27T12:30:00", "file": 1,
+     "traitees_jour": 6, "derniere_activite": "2026-09-27T12:35:00", "resume_jour": "Facture RE-00416 préparée, 4 paiements rapprochés"},
+    {"id": "chantiers", "nom": "Chantiers", "role": "Dossiers, planning, équipes", "icone": "hammer.fill",
+     "etat": "libre", "tache": null, "file": 0, "traitees_jour": 3, "derniere_activite": "2026-09-27T10:05:00",
+     "resume_jour": "Note Villa Morel ajoutée, planning de la semaine à jour"},
+    {"id": "offres", "nom": "Offres", "role": "Offres, devis, variantes", "icone": "doc.richtext.fill",
+     "etat": "libre", "tache": null, "file": 0, "traitees_jour": 1, "derniere_activite": "2026-09-27T09:20:00",
+     "resume_jour": "Variante WC chiffrée pour Mme Rey (OF-00037-B)"},
+    {"id": "achats", "nom": "Achats", "role": "Fournisseurs, commandes, livraisons", "icone": "shippingbox.fill",
+     "etat": "pause", "tache": null, "file": 0, "traitees_jour": 0, "derniere_activite": "2026-09-26T17:10:00",
+     "resume_jour": null}
+  ]
+}

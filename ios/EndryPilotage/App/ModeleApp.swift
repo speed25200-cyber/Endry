@@ -31,6 +31,8 @@ final class ModeleApp {
     private(set) var saisie: ModeleSaisie?
     /// Pause / reprise de l'assistant du PC (v1.1).
     private(set) var pilotage: ModelePilotage?
+    /// Claude et ses agents sur le PC (Secrétariat, Comptabilité…), v1.2.
+    private(set) var agents: ModeleAgents?
 
     @ObservationIgnored private var jetonAPNsEnAttente: String?
     /// File persistante des saisies faites sans réseau.
@@ -110,6 +112,7 @@ final class ModeleApp {
             argent = nil
             saisie = nil
             pilotage = nil
+            agents = nil
             return
         }
         let cache = session.estDemo ? nil : session.cache
@@ -123,6 +126,10 @@ final class ModeleApp {
         let p = ModelePilotage(api: api)
         p.surChangement = { [weak self] pause in self?.decisions?.appliquerPause(pause) }
         pilotage = p
+        agents = ModeleAgents(api: api) { [weak self] demande in
+            guard let saisie = self?.saisie else { return .refusee("Connectez d’abord l’app au bureau.") }
+            return await saisie.transmettre(demande: demande)
+        }
         dernierJetonEnvoye = nil
         reprendreFlux()
         if let jeton = jetonAPNsEnAttente { enregistrerAppareil(jeton) }
@@ -198,24 +205,26 @@ final class ModeleApp {
     /// Recharge les écrans : retour au premier plan, notification reçue, événement serveur.
     func rafraichirTout() async {
         guard session.estConnecte else { return }
-        let d = decisions, c = chantiers, a = argent, s = saisie
+        let d = decisions, c = chantiers, a = argent, s = saisie, g = agents
         await withDiscardingTaskGroup { groupe in
             groupe.addTask { await d?.charger() }
             groupe.addTask { await c?.charger() }
             groupe.addTask { await a?.charger() }
             groupe.addTask { await s?.viderFile() }
+            groupe.addTask { await g?.charger() }
         }
     }
 
     /// Recharge seulement ce que le PC signale comme modifié.
     func recharger(_ sujets: Set<SujetMaj>) async {
         guard session.estConnecte else { return }
-        let d = decisions, c = chantiers, a = argent, s = saisie
+        let d = decisions, c = chantiers, a = argent, s = saisie, g = agents
         await withDiscardingTaskGroup { groupe in
             if sujets.contains(.decisions) { groupe.addTask { await d?.charger() } }
             if sujets.contains(.chantiers) { groupe.addTask { await c?.charger() } }
             if sujets.contains(.argent) { groupe.addTask { await a?.charger() } }
             if sujets.contains(.saisies) { groupe.addTask { await s?.chargerHistorique() } }
+            if sujets.contains(.agents) || sujets.contains(.saisies) { groupe.addTask { await g?.charger() } }
         }
     }
 

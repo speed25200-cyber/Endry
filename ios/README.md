@@ -78,6 +78,13 @@ Toucher court du micro central : dictée d'une saisie terrain. **Toucher long** 
     Consignes : `EndryKit/Voix/ConsignesCerveau.swift`.
   - Sans Apple Intelligence : réponses locales aux questions simples (qui doit quoi, chantiers, décisions),
     le reste part en saisie vers l'assistant du PC (gardée hors ligne).
+- **Le bureau** (Entreprise › Le bureau, bandeau sur Aujourd'hui, `Fonctions/Bureau/`) : chaque agent de Claude
+  (Secrétariat, Comptabilité, Chantiers, Offres, Achats… la liste vient du PC) avec son état en direct, sa tâche,
+  sa journée et son journal ; sa fiche permet de **lui poser une question** (réponse affichée, sources, décision
+  liée) et de **lui confier un travail** (saisie « Pour l'agent … », rien ne part sans geste). Contrat
+  **v1.2** dans [`CONTRAT_API.md`](CONTRAT_API.md) : `GET /agents`, `GET /agents/{id}/journal`, `GET /journal`,
+  `POST /agents/{id}/question`, `POST /assistant/question`, `GET /questions/{id}`, événements SSE `agent`,
+  `journal`, `reponse`. Tant que le PC ne les publie pas (404), l'app se replie sur v1.1 sans rien perdre.
 - **Claude, sur le PC** (`EndryKit/Voix/BureauClaude.swift`) : l'assistant vocal interroge Claude, l'assistant du
   bureau, par le contrat existant, sans modifier le serveur :
   - *« Que fait Claude ? »* (outil `bureau`, pastille en haut de l'assistant) : pause, demandes en cours, derniers

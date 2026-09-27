@@ -119,9 +119,13 @@ struct EntrepriseView: View {
                         .apparitionEnCascade(index: 0, visible: visible)
                     indicateurs
                         .apparitionEnCascade(index: 1, visible: visible)
+                    if let agents = app.agents {
+                        SectionBureau(modele: agents)
+                            .apparitionEnCascade(index: 2, visible: visible)
+                    }
                     if let pilotage = app.pilotage, pilotage.disponible {
                         VStack(alignment: .leading, spacing: Espace.s) {
-                            EnTeteSection(titre: "Assistant du bureau")
+                            EnTeteSection(titre: "Claude, sur le PC")
                             CarteAssistantBureau(pilotage: pilotage)
                         }
                         .apparitionEnCascade(index: 2, visible: visible)

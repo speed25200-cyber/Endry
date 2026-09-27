@@ -197,6 +197,31 @@ final class EndryPilotageUITests: XCTestCase {
         XCTAssertTrue(bouton.waitForExistence(timeout: 5))
     }
 
+    /// Le bureau : l'agent Secrétariat répond à une question posée depuis sa fiche.
+    @MainActor
+    func testBureauAgentRepond() {
+        let app = lancer()
+        let onglet = app.buttons["onglet-entreprise"]
+        XCTAssertTrue(onglet.waitForExistence(timeout: 8))
+        onglet.tap()
+        let tuile = app.descendants(matching: .any)["agent-secretariat"].firstMatch
+        XCTAssertTrue(tuile.waitForExistence(timeout: 8), "La section Le bureau est absente.")
+        atteindre(tuile, dans: app)
+        capturer(app, "9-bureau")
+        toucher(tuile)
+        XCTAssertTrue(app.descendants(matching: .any)["fiche-agent"].firstMatch.waitForExistence(timeout: 5))
+        let champ = app.textFields["question-agent"]
+        atteindre(champ, dans: app)
+        XCTAssertTrue(champ.waitForExistence(timeout: 5))
+        champ.tap()
+        champ.typeText("Mme Gander a-t-elle rappelé ?")
+        app.buttons["envoyer-question-agent"].tap()
+        let reponse = app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "jeudi")).firstMatch
+        let repondu = reponse.waitForExistence(timeout: 30)
+        capturer(app, repondu ? "10-agent" : "10-agent-sans-reponse")
+        XCTAssertTrue(repondu, "L’agent Secrétariat n’a pas répondu.")
+    }
+
     /// Captures relues à chaque lot : clair / sombre. La CI relance ce test sur iPhone SE en taille XXL
     /// et sur un Pro Max (variables `CAPTURE_APPAREIL` et `CAPTURE_TAILLE`, passées via `TEST_RUNNER_…`).
     @MainActor

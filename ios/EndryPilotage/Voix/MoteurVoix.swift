@@ -170,8 +170,8 @@ final class AssistantVocal {
             cartes.removeAll { $0 == effet }
             cartes.insert(effet, at: 0)
             if cartes.count > 3 { cartes.removeLast() }
-            if case .questionClaude(let id, let texte, let question, let agent) = effet {
-                suivre(saisieId: id, texte: texte, question: question, agent: agent)
+            if case .questionClaude(let suivi, let question, let agent) = effet {
+                suivre(suivi, question: question, agent: agent)
             }
         case .nouveauTour:
             definitif = ""
@@ -184,20 +184,21 @@ final class AssistantVocal {
     // MARK: - Claude, sur le PC
 
     /// Attend la réponse de Claude ; dès qu'elle arrive, la carte « Claude cherche » devient la réponse, et Endry la dit.
-    private func suivre(saisieId: String?, texte: String, question: String, agent: String?) {
-        guard let bureau, suivis[texte] == nil else { return }
-        suivis[texte] = Task { [weak self] in
-            let saisie = await bureau.attendre(saisieId: saisieId, texte: texte)
+    private func suivre(_ suivi: SuiviQuestion, question: String, agent: String?) {
+        let cle = "\(suivi)"
+        guard let bureau, suivis[cle] == nil else { return }
+        suivis[cle] = Task { [weak self] in
+            let resultat = await bureau.attendre(suivi)
             guard !Task.isCancelled, let self else { return }
-            self.suivis[texte] = nil
-            let attente = ExecuteurOutils.Effet.questionClaude(saisieId: saisieId, texte: texte, question: question, agent: agent)
+            self.suivis[cle] = nil
+            let attente = ExecuteurOutils.Effet.questionClaude(suivi: suivi, question: question, agent: agent)
             let reponse: String
-            if let saisie, saisie.statut == .traite, let resume = saisie.resume, !resume.isEmpty {
-                reponse = resume
-            } else if saisie?.statut == .erreur {
-                reponse = "Claude n’a pas pu traiter la question sur le PC."
+            if let resultat, resultat.statut == .repondu, let texte = resultat.reponse, !texte.isEmpty {
+                reponse = texte
+            } else if resultat?.statut == .erreur {
+                reponse = resultat?.message ?? "L’agent n’a pas pu traiter la question sur le PC."
             } else {
-                reponse = "Claude n’a pas encore répondu. Sa réponse apparaîtra dans l’historique de Dicter."
+                reponse = "Pas encore de réponse. Elle apparaîtra dans Entreprise › Le bureau et dans l’historique de Dicter."
             }
             let finale = ExecuteurOutils.Effet.reponseClaude(question: question, reponse: reponse, agent: agent)
             if let index = self.cartes.firstIndex(of: attente) {

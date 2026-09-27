@@ -114,41 +114,104 @@ final class CerveauTests: XCTestCase {
     }
 }
 
+/// Serveur v1.1 : les routes v1.2 répondent 404 (repli sur la saisie).
+actor APISansV12: EndryAPI {
+    let demo: APIDemo
+    init(_ demo: APIDemo) { self.demo = demo }
+    nonisolated func urlAbsolue(_ chemin: String) -> URL? { nil }
+    func envoyer(_ requete: Requete) async throws(ErreurAPI) -> Data {
+        if ["/agents", "/journal", "/questions", "/assistant/question"].contains(where: { requete.chemin.contains($0) }) {
+            throw .serveur(statut: 404, message: "Route inconnue")
+        }
+        return try await demo.envoyer(requete)
+    }
+}
+
 final class BureauClaudeTests: XCTestCase {
-    func testQuestionPoseeEtReponseLue() async throws {
-        let api = APIDemo(latence: .zero, delaiClaude: .milliseconds(200))
-        let bureau = BureauClaude(api: api)
-        let posee = try await bureau.poser("Où en est Mme Gander pour l’adoucisseur ?")
-        guard case .enAttente(let id, let texte) = posee else { return XCTFail("Réponse directe inattendue en démo") }
-        XCTAssertNotNil(id)
-        XCTAssertTrue(BureauClaude.estQuestion(texte))
-        XCTAssertEqual(BureauClaude.questionSeule(texte), "Où en est Mme Gander pour l’adoucisseur ?")
-        let saisie = await bureau.attendre(saisieId: id, texte: texte, delai: .seconds(5), intervalle: .milliseconds(50))
-        XCTAssertEqual(saisie?.statut, .traite)
-        XCTAssertTrue(saisie?.resume?.contains("Gander") ?? false)
+    func testQuestionAUnAgentV12() async throws {
+        let bureau = BureauClaude(api: APIDemo(latence: .zero, delaiClaude: .milliseconds(150)))
+        let (id, nom) = await bureau.resoudreAgent(question: "Demande au secrétariat si Mme Gander a rappelé", demande: nil)
+        XCTAssertEqual(id, "secretariat")
+        XCTAssertEqual(nom, "Secrétariat")
+        let posee = try await bureau.poser("Mme Gander a-t-elle rappelé ?", agentId: id, nomAgent: nom)
+        guard case .enAttente(let suivi) = posee, case .question(_, let agent) = suivi else { return XCTFail("\(posee)") }
+        XCTAssertEqual(agent, "secretariat")
+        // Pendant la recherche, l'agent est au travail.
+        let pendant = await bureau.etat()
+        XCTAssertEqual(pendant?.agents.first { $0.id == "secretariat" }?.etat, .occupe)
+        let reponse = await bureau.attendre(suivi, delai: .seconds(5), intervalle: .milliseconds(50))
+        XCTAssertEqual(reponse?.statut, .repondu)
+        XCTAssertTrue(reponse?.reponse?.contains("Gander") ?? false)
+        let apres = await bureau.etat()
+        XCTAssertEqual(apres?.journal.first?.type, .reponse)
     }
 
-    func testEtatDuBureau() async {
-        let bureau = BureauClaude(api: APIDemo(latence: .zero))
-        let etat = await bureau.etat()
-        XCTAssertEqual(etat?.enPause, false)
+    func testRepliSaisieV11() async throws {
+        let bureau = BureauClaude(api: APISansV12(APIDemo(latence: .zero, delaiClaude: .milliseconds(150))))
+        let (id, nom) = await bureau.resoudreAgent(question: "Des e-mails urgents ?", demande: nil)
+        XCTAssertNil(id, "Pas de GET /agents : pas d'identifiant")
+        XCTAssertEqual(nom, "Secrétariat")
+        let posee = try await bureau.poser("Des e-mails urgents ?", agentId: id, nomAgent: nom)
+        guard case .enAttente(let suivi) = posee, case .saisie(let saisieId, let texte) = suivi else { return XCTFail("\(posee)") }
+        XCTAssertNotNil(saisieId)
+        XCTAssertEqual(BureauClaude.agent(texte), .secretariat)
+        XCTAssertEqual(BureauClaude.questionSeule(texte), "Des e-mails urgents ?")
+        let reponse = await bureau.attendre(suivi, delai: .seconds(5), intervalle: .milliseconds(50))
+        XCTAssertEqual(reponse?.statut, .repondu)
+        XCTAssertEqual(reponse?.agent, "Secrétariat")
+        XCTAssertTrue(reponse?.reponse?.hasPrefix("Secrétariat : ") ?? false)
+    }
+
+    func testEtatDuBureauV12() async {
+        let etat = await BureauClaude(api: APIDemo(latence: .zero)).etat()
+        XCTAssertEqual(etat?.agents.count, 5)
+        XCTAssertEqual(etat?.libelleCourt, "2 agents au travail")
+        let phrase = etat?.phrase ?? ""
+        XCTAssertTrue(phrase.contains("Secrétariat : répond à Mme Rey"), phrase)
+        XCTAssertTrue(phrase.contains("Achats en pause"), phrase)
+        XCTAssertTrue(phrase.contains("Dernières actions : Secrétariat, réponse préparée pour Mme Rey"), phrase)
+        let secretariat = etat?.agent(cite: "Que fait le secrétariat ?")
+        XCTAssertEqual(secretariat?.id, "secretariat")
+        let detail = secretariat.flatMap { etat?.phrase(agent: $0) } ?? ""
+        XCTAssertTrue(detail.contains("Secrétariat est au travail"), detail)
+        XCTAssertTrue(detail.contains("14 e-mails triés"), detail)
+    }
+
+    func testEtatDuBureauV11() async {
+        let etat = await BureauClaude(api: APISansV12(APIDemo(latence: .zero))).etat()
+        XCTAssertEqual(etat?.agents.isEmpty, true)
         XCTAssertEqual(etat?.libelleCourt, "Claude travaille · 2 en cours")
         let phrase = etat?.phrase ?? ""
         XCTAssertTrue(phrase.contains("Claude travaille sur le PC"), phrase)
-        XCTAssertTrue(phrase.contains("Mme Gander"), phrase)
         XCTAssertTrue(phrase.contains("Facture RE-00416 préparée, à valider"), phrase)
     }
 
     func testOutilsExecutes() async {
         let executeur = ExecuteurOutils(api: APIDemo(latence: .zero))
-        let bureau = await executeur.executer(nom: "bureau", arguments: "{}")
-        XCTAssertTrue(bureau.sortie.contains("resume"))
+        let bureau = await executeur.executer(nom: "bureau", arguments: #"{"agent":"compta"}"#)
+        XCTAssertTrue(bureau.sortie.contains("Comptabilité est au travail"), bureau.sortie)
         let question = await executeur.executer(nom: "demander_claude", arguments: #"{"question":"Des e-mails urgents ?"}"#)
-        guard case .questionClaude(_, let texte, let q, let agent) = question.effet else { return XCTFail("\(question.effet)") }
+        guard case .questionClaude(let suivi, let q, let agent) = question.effet else { return XCTFail("\(question.effet)") }
         XCTAssertEqual(q, "Des e-mails urgents ?")
         XCTAssertEqual(agent, "Secrétariat", "Les e-mails vont au secrétariat")
-        XCTAssertEqual(BureauClaude.agent(texte), .secretariat)
-        XCTAssertEqual(BureauClaude.libelle(texte), "Question à Claude · Secrétariat : Des e-mails urgents ?")
+        guard case .question = suivi else { return XCTFail("v1.2 attendu : \(suivi)") }
+    }
+
+    func testDecodageV12() throws {
+        let agents = try JSONDecoder().decode(ListeAgentsPC.self, from: Fixtures.donnees(.agents)).agents
+        XCTAssertEqual(agents.map(\.id), ["secretariat", "comptabilite", "chantiers", "offres", "achats"])
+        XCTAssertEqual(agents[0].connu, .secretariat)
+        XCTAssertEqual(agents[4].etat, .pause)
+        let tolerant = try JSONDecoder().decode(ListeAgentsPC.self, from: Data(#"[{"nom":"RH","tache":"Prépare les fiches de salaire"}, {"x":1}]"#.utf8)).agents
+        XCTAssertEqual(tolerant.count, 1)
+        XCTAssertEqual(tolerant[0].etat, .occupe, "Une tâche sans état : au travail")
+        let journal = try JSONDecoder().decode(JournalPC.self, from: Fixtures.donnees(.journal)).entrees
+        XCTAssertEqual(journal.first?.type, .emailPrepare)
+        XCTAssertEqual(journal.first?.decisionReference, "V-7K3F9Q")
+        let reponse = try JSONDecoder().decode(ReponseAgent.self, from: Data(#"{"reponse":"Oui, hier à 16 h.","agent":"secretariat"}"#.utf8))
+        XCTAssertEqual(reponse.statut, .repondu)
+        let attente = try JSONDecoder().decode(ReponseAgent.self, from: Data(#"{"question_id":"Q-1"}"#.utf8))
+        XCTAssertEqual(attente.statut, .enCours)
     }
 
     func testOutilsDansLaSessionTempsReel() throws {
@@ -185,5 +248,14 @@ final class AgentsBureauTests: XCTestCase {
         XCTAssertEqual(RepondeurLocal.repondre("Demande au secrétariat si Mme Gander a rappelé", avec: donnees),
                        .demanderClaude("Demande au secrétariat si Mme Gander a rappelé"))
         XCTAssertEqual(RepondeurLocal.repondre("Que fait la compta ?", avec: donnees), .etatBureau)
+    }
+}
+
+final class EvenementsV12Tests: XCTestCase {
+    func testEvenementsAgents() {
+        XCTAssertEqual(EvenementSSE(nom: "agent", donnees: #"{"id":"secretariat","etat":"occupe"}"#).sujet, .agents)
+        XCTAssertEqual(EvenementSSE(nom: "journal", donnees: "{}").sujet, .agents)
+        XCTAssertEqual(EvenementSSE(nom: "maj", donnees: #"{"quoi":"agents"}"#).sujet, .agents)
+        XCTAssertNil(EvenementSSE(nom: "ping", donnees: "{}").sujet)
     }
 }

@@ -18,6 +18,8 @@ public enum Fixtures {
         case chantierV10 = "chantier-v10"
         case argentV10 = "argent-v10"
         case sessionV10 = "session-v10"
+        // v1.2
+        case agents, journal
     }
 
     public static func donnees(_ nom: Nom) -> Data {

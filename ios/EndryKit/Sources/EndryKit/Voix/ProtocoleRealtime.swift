@@ -132,7 +132,7 @@ public enum VocabulaireMetier {
 
 /// Outils côté app pour dialoguer avec Claude, l'assistant du bureau sur le PC.
 public enum OutilsClaude {
-    public static let descriptionBureau = "Ce que fait Claude sur le PC : pause, demandes en cours, derniers travaux et décisions à valider."
+    public static let descriptionBureau = "Ce que font Claude et ses agents sur le PC (secrétariat, comptabilité…) : état, tâche en cours, journal, décisions à valider. Paramètre agent facultatif."
     public static let descriptionDemander = "Pose une question à Claude, l’assistant du bureau sur le PC, qui a les dossiers, Bexio et les e-mails. La réponse arrive à l’écran et est lue dès qu’elle est prête."
 
     public static var consigne: String { consigneBase + " " + AgentBureau.consigne }
@@ -142,11 +142,13 @@ public enum OutilsClaude {
     public static var definitions: [[String: Any]] {
         [
         ["type": "function", "name": "bureau", "description": descriptionBureau,
-         "parameters": ["type": "object", "properties": [String: Any]()]],
+         "parameters": ["type": "object", "properties": [
+             "agent": ["type": "string", "description": "Agent précis (secrétariat, comptabilité…), ou vide pour tout le bureau."],
+         ]]],
         ["type": "function", "name": "demander_claude", "description": descriptionDemander,
          "parameters": ["type": "object", "properties": [
              "question": ["type": "string", "description": "La question du patron, complète."],
-             "agent": ["type": "string", "enum": AgentBureau.allCases.map(\.rawValue),
+             "agent": ["type": "string",
                        "description": "Agent de Claude concerné, si évident (secrétariat : e-mails, courrier ; comptabilité : Bexio, factures…)."],
          ], "required": ["question"]]],
         ]

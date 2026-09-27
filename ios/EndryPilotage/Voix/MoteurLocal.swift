@@ -177,7 +177,8 @@ final class MoteurLocal: MoteurVoix {
             await demanderClaude(q)
         case .etatBureau:
             if let executeur, let etat = await BureauClaude(api: executeur.api).etat() {
-                await dire(etat.phrase)
+                // « Que fait le secrétariat ? » : cet agent seulement ; sinon tout le bureau.
+                await dire(etat.agent(cite: question).map { etat.phrase(agent: $0) } ?? etat.phrase)
             } else {
                 await dire("Je n’arrive pas à voir l’activité du PC pour l’instant.")
             }
@@ -203,7 +204,7 @@ final class MoteurLocal: MoteurVoix {
         let r = await executeur.executer(nom: "demander_claude", arguments: Self.json(["question": question]))
         surEvenement?(.effet(r.effet))
         switch r.effet {
-        case .questionClaude(_, _, _, let agent):
+        case .questionClaude(_, _, let agent):
             let destinataire = agent.map { "à l’agent \($0) de Claude" } ?? "à Claude"
             await dire("Je pose la question \(destinataire), sur le PC. Je vous lis sa réponse dès qu’elle arrive.")
         case .reponseClaude(_, let reponse, _):

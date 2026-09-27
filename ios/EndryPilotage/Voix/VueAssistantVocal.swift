@@ -469,7 +469,7 @@ struct CarteContexte: View {
             } else {
                 resume(icone: "doc.text.fill", titre: "Facture \(numero)", detail: "Suivi seulement : aucune relance sans votre demande")
             }
-        case .questionClaude(_, _, let question, let agent):
+        case .questionClaude(_, let question, let agent):
             CarteClaude(question: question, reponse: nil, agent: agent, retirer: retirer)
         case .reponseClaude(let question, let reponse, let agent):
             CarteClaude(question: question, reponse: reponse, agent: agent, retirer: retirer)

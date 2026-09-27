@@ -3,6 +3,8 @@ import Foundation
 /// Sujet d'une mise à jour poussée par le PC (`GET /evenements`, v1.1).
 public enum SujetMaj: String, Sendable, CaseIterable {
     case decisions, chantiers, argent, saisies
+    /// v1.2 : état et journal des agents du bureau.
+    case agents
 }
 
 /// Événement Server-Sent Events complet.
@@ -15,8 +17,10 @@ public struct EvenementSSE: Equatable, Sendable {
         self.donnees = donnees
     }
 
-    /// `event: maj` + `data: {"quoi": "decisions"}` ; tout autre événement est ignoré.
+    /// `event: maj` + `data: {"quoi": "decisions"}` ; v1.2 : `agent`, `journal`, `reponse` → agents.
+    /// Tout autre événement est ignoré.
     public var sujet: SujetMaj? {
+        if ["agent", "journal", "reponse"].contains(nom) { return .agents }
         guard nom == "maj",
               let objet = (try? JSONSerialization.jsonObject(with: Data(donnees.utf8))) as? [String: Any],
               let quoi = objet["quoi"] as? String else { return nil }

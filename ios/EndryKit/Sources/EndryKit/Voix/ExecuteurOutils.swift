@@ -10,7 +10,7 @@ public struct ExecuteurOutils: Sendable {
         case afficherChantier(String)
         case afficherFacture(String)
         /// Question posée à Claude sur le PC : sa réponse arrivera dans le résumé de la saisie.
-        case questionClaude(saisieId: String?, texte: String, question: String, agent: String?)
+        case questionClaude(suivi: SuiviQuestion, question: String, agent: String?)
         /// Réponse de Claude (et de l'agent qui a répondu), à afficher et à dire.
         case reponseClaude(question: String, reponse: String, agent: String?)
     }
@@ -63,8 +63,16 @@ public struct ExecuteurOutils: Sendable {
                 guard let etat = await BureauClaude(api: api).etat() else {
                     return (json(["erreur": "Le PC ne publie pas son activité (serveur v1.0)."]), .aucun)
                 }
+                if let demande = args["agent"] as? String, !demande.isEmpty,
+                   let agent = etat.agent(cite: demande) ?? etat.agents.first(where: { $0.connu == AgentBureau(nom: demande) }) {
+                    return (json(["resume": etat.phrase(agent: agent), "agent": agent.nom, "etat": agent.etat.rawValue,
+                                  "tache": agent.tache ?? "", "journal": etat.journal.filter { $0.agent == agent.id }.prefix(5).map(\.titre)]), .aucun)
+                }
                 return (json([
                     "resume": etat.phrase, "pause": etat.enPause, "file": etat.etat?.file ?? 0,
+                    "agents": etat.agents.map { ["id": $0.id, "nom": $0.nom, "etat": $0.etat.rawValue, "tache": $0.tache ?? "",
+                                                 "aujourd_hui": $0.resumeJour ?? ""] },
+                    "journal": etat.journal.prefix(6).map { ["agent": $0.agent ?? "", "titre": $0.titre, "detail": $0.detail ?? ""] },
                     "en_cours": etat.enCours.prefix(5).map { BureauClaude.questionSeule($0.texte) },
                     "derniers_travaux": etat.traitees.prefix(5).map { ["demande": BureauClaude.questionSeule($0.texte), "resultat": $0.resume ?? "",
                                                                       "decision_a_valider": $0.decisionReference ?? ""] },
@@ -72,16 +80,18 @@ public struct ExecuteurOutils: Sendable {
             case "demander_claude":
                 let question = (args["question"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !question.isEmpty else { return (json(["ok": false, "message": "Question vide."]), .aucun) }
-                let agent = (args["agent"] as? String).flatMap(AgentBureau.init(nom:)) ?? AgentBureau.detecter(question)
-                let destinataire = agent.map { "l’agent \($0.nom) de Claude" } ?? "Claude"
-                switch try await BureauClaude(api: api).poser(question, agent: agent) {
-                case .reponse(let reponse):
-                    return (json(["reponse_de_claude": reponse, "agent": agent?.nom ?? ""]),
-                            .reponseClaude(question: question, reponse: reponse, agent: agent?.nom))
-                case .enAttente(let id, let texte):
-                    return (json(["transmise": true, "agent": agent?.nom ?? "",
+                let bureau = BureauClaude(api: api)
+                let (agentId, nomAgent) = await bureau.resoudreAgent(question: question, demande: args["agent"] as? String)
+                let destinataire = nomAgent.map { "l’agent \($0) de Claude" } ?? "Claude"
+                switch try await bureau.poser(question, agentId: agentId, nomAgent: nomAgent) {
+                case .reponse(let r):
+                    let nom = r.agent.flatMap { id in nomAgent ?? AgentBureau(nom: id)?.nom } ?? nomAgent
+                    return (json(["reponse": r.reponse ?? "", "agent": nom ?? "", "sources": r.sources.map(\.libelle)]),
+                            .reponseClaude(question: question, reponse: r.reponse ?? "", agent: nom))
+                case .enAttente(let suivi):
+                    return (json(["transmise": true, "agent": nomAgent ?? "",
                                   "message": "Question posée à \(destinataire), sur le PC. Sa réponse s’affichera et sera lue dès qu’elle arrive. Dis-le simplement au patron, sans inventer la réponse."]),
-                            .questionClaude(saisieId: id, texte: texte, question: question, agent: agent?.nom))
+                            .questionClaude(suivi: suivi, question: question, agent: nomAgent))
                 }
             case "proposer_decision":
                 let reference = args["reference"] as? String ?? ""

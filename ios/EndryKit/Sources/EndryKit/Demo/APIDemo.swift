@@ -11,6 +11,10 @@ public actor APIDemo: EndryAPI {
     private var pause = false
     /// Questions posées à Claude : instant de dépôt (la réponse « arrive » après `delaiClaude`).
     private var questions: [String: ContinuousClock.Instant] = [:]
+    /// v1.2 : agents, journal et questions directes aux agents.
+    private var agentsDemo: [[String: Any]]
+    private var journalDemo: [[String: Any]]
+    private var questionsAgents: [String: (agent: String, question: String, depot: ContinuousClock.Instant)] = [:]
     private let delaiClaude: Duration
     private let latence: Duration
     /// Tests : fait échouer `POST /actualiser` comme un Bexio indisponible.
@@ -24,6 +28,8 @@ public actor APIDemo: EndryAPI {
         restantes = Self.objet(.decisions)?["decisions"] as? [[String: Any]] ?? []
         saisies = Self.liste(.saisies)
         appareils = Self.liste(.appareils)
+        agentsDemo = Self.objet(.agents)?["agents"] as? [[String: Any]] ?? []
+        journalDemo = Self.objet(.journal)?["entrees"] as? [[String: Any]] ?? []
     }
 
     public nonisolated func urlAbsolue(_ chemin: String) -> URL? {
@@ -84,6 +90,20 @@ public actor APIDemo: EndryAPI {
         if route(.post, "app/api/v1/assistant/pause") != nil { pause = true; return json(["ok": true, "pause": true]) }
         if route(.post, "app/api/v1/assistant/reprise") != nil { pause = false; return json(["ok": true, "pause": false]) }
         if route(.post, "app/api/v1/voix/session") != nil { return Fixtures.donnees(.sessionVoix) }
+        // v1.2 : agents du bureau
+        if route(.get, "app/api/v1/agents") != nil { avancerQuestionsAgents(); return json(["agents": agentsDemo]) }
+        if let c = route(.get, "app/api/v1/agents/*/journal") { return json(["entrees": journalDemo.filter { ($0["agent"] as? String) == c[0] }]) }
+        if route(.get, "app/api/v1/journal") != nil { avancerQuestionsAgents(); return json(["entrees": journalDemo]) }
+        if let c = route(.post, "app/api/v1/agents/*/question") {
+            guard agentsDemo.contains(where: { ($0["id"] as? String) == c[0] }) else { throw .serveur(statut: 404, message: "Agent inconnu.") }
+            return deposerQuestion(agent: c[0], corps: requete.corps)
+        }
+        if route(.post, "app/api/v1/assistant/question") != nil {
+            let question = Self.champ("question", dans: requete.corps) ?? ""
+            let agent = Self.champ("agent", dans: requete.corps) ?? AgentBureau.detecter(question)?.rawValue ?? "secretariat"
+            return deposerQuestion(agent: agent, corps: requete.corps)
+        }
+        if let c = route(.get, "app/api/v1/questions/*") { return suivreQuestion(c[0]) }
         if let c = route(.get, "app/doc/*/*") {
             return PDFDemo.document(
                 titre: "\(c[0].capitalized) \(c[1])",
@@ -100,6 +120,9 @@ public actor APIDemo: EndryAPI {
         appareils = Self.liste(.appareils)
         pause = false
         questions.removeAll()
+        questionsAgents.removeAll()
+        agentsDemo = Self.objet(.agents)?["agents"] as? [[String: Any]] ?? []
+        journalDemo = Self.objet(.journal)?["entrees"] as? [[String: Any]] ?? []
         journal.removeAll()
     }
 
@@ -170,6 +193,52 @@ public actor APIDemo: EndryAPI {
                 saisies[index]["statut"] = "en_cours"
             }
         }
+    }
+
+    // MARK: v1.2
+
+    private func deposerQuestion(agent: String, corps: Requete.Corps?) -> Data {
+        let question = Self.champ("question", dans: corps) ?? ""
+        let id = "Q-\(900 + questionsAgents.count)"
+        questionsAgents[id] = (agent, question, .now)
+        mettreAgent(agent, etat: "occupe", tache: "Cherche : « \(question) »")
+        journalDemo.insert(["id": "J-\(3000 + journalDemo.count)", "horodatage": "2026-09-27T12:46:00", "agent": agent,
+                            "type": "question", "titre": "Question du patron", "detail": question], at: 0)
+        return json(["statut": "en_cours", "question_id": id, "agent": agent])
+    }
+
+    private func suivreQuestion(_ id: String) -> Data {
+        avancerQuestionsAgents()
+        guard let q = questionsAgents[id] else {
+            if let repondue = journalDemo.first(where: { ($0["question_id"] as? String) == id }) {
+                return json(["statut": "repondu", "question_id": id, "agent": repondue["agent"] ?? "",
+                             "reponse": repondue["detail"] ?? "", "sources": [["type": "email", "libelle": "Boîte info@"]]])
+            }
+            return json(["statut": "erreur", "question_id": id, "message": "Question inconnue."])
+        }
+        return json(["statut": "en_cours", "question_id": id, "agent": q.agent])
+    }
+
+    /// Les agents « répondent » après `delaiClaude` : réponse au journal, agent de nouveau libre.
+    private func avancerQuestionsAgents() {
+        for (id, q) in questionsAgents where ContinuousClock.now - q.depot >= delaiClaude {
+            questionsAgents[id] = nil
+            journalDemo.insert(["id": "J-\(3000 + journalDemo.count)", "horodatage": "2026-09-27T12:47:00", "agent": q.agent,
+                                "type": "reponse", "titre": "Réponse au patron", "detail": Self.reponseClaude(q.question),
+                                "question_id": id], at: 0)
+            mettreAgent(q.agent, etat: "libre", tache: nil)
+        }
+    }
+
+    private func mettreAgent(_ id: String, etat: String, tache: String?) {
+        guard let index = agentsDemo.firstIndex(where: { ($0["id"] as? String) == id }) else { return }
+        agentsDemo[index]["etat"] = etat
+        agentsDemo[index]["tache"] = tache ?? NSNull()
+    }
+
+    static func champ(_ nom: String, dans corps: Requete.Corps?) -> String? {
+        guard case .json(let data) = corps, let objet = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        return (objet[nom] as? String).flatMap { $0.isEmpty ? nil : $0 }
     }
 
     /// Réponses fictives de Claude, cohérentes avec les données de démonstration.

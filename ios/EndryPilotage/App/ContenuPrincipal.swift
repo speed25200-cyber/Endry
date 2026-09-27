@@ -79,10 +79,12 @@ struct ContenuPrincipal: View {
             BriefingView()
         }
         .fullScreenCover(item: $app.outilTerrain) { demande in
+            // Sans chantier précisé : celui où le patron vient d'arriver (rappel d'arrivée), s'il y en a un.
+            let chantier = app.dossier(demande.chantierId ?? ArriveeChantier.chantierRecent())
             switch demande.outil {
-            case .regie: RegieView(chantier: app.dossier(demande.chantierId))
-            case .bonLivraison: BonLivraisonView(chantier: app.dossier(demande.chantierId))
-            case .releve: Releve3DView(chantier: app.dossier(demande.chantierId))
+            case .regie: RegieView(chantier: chantier)
+            case .bonLivraison: BonLivraisonView(chantier: chantier)
+            case .releve: Releve3DView(chantier: chantier)
             }
         }
         // « Dis Siri, parler à Endry » : l'assistant s'ouvre une fois l'app déverrouillée.

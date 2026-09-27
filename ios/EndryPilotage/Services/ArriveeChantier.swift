@@ -12,7 +12,7 @@ final class ArriveeChantier {
     static let cleActif = "rappel-arrivee-actif"
     private static let cleCoordonnees = "zones-chantiers-coordonnees"
     private static let cleRappels = "zones-chantiers-rappels"
-    private static let cleDerniers = "zones-chantiers-derniers"
+    nonisolated private static let cleDerniers = "zones-chantiers-derniers"
     private static let nomMoniteur = "endry-chantiers"
 
     private var moniteur: CLMonitor?
@@ -21,6 +21,13 @@ final class ArriveeChantier {
     private let gestionnaire = CLLocationManager()
 
     var actif: Bool { UserDefaults.standard.bool(forKey: Self.cleActif) }
+
+    /// Chantier où le patron est arrivé ces dernières heures (pour pré-remplir un bon de régie ou de livraison).
+    nonisolated static func chantierRecent(depuis heures: Double = 6) -> String? {
+        let derniers = UserDefaults.standard.dictionary(forKey: cleDerniers) as? [String: Double] ?? [:]
+        let limite = Date().timeIntervalSince1970 - heures * 3600
+        return derniers.filter { $0.value >= limite }.max { $0.value < $1.value }?.key
+    }
 
     var autorisationRefusee: Bool {
         [.denied, .restricted].contains(gestionnaire.authorizationStatus)

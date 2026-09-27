@@ -108,16 +108,16 @@ cat endry_cert_key          # tout le contenu → CERTIFICATE_PRIVATE_KEY ; gard
 Codemagic crée avec elle un certificat « Apple Distribution » s’il n’en trouve pas un correspondant.
 
 **4. Identifiants dans le portail développeur** — [Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/identifiers/list) :
-- **App Groups** › « + » : `group.ch.endry.pilotage`.
-- **App IDs** › « + » : `ch.endry.pilotage` avec les capacités **Push Notifications** et **App Groups**
-  (cocher `group.ch.endry.pilotage`).
-- **App IDs** › « + » : `ch.endry.pilotage.widget` avec **App Groups** (même groupe).
+- **App Groups** › « + » : `group.com.endrysa.endry`.
+- **App IDs** › « + » : `com.endrysa.endry` avec les capacités **Push Notifications** et **App Groups**
+  (cocher `group.com.endrysa.endry`).
+- **App IDs** › « + » : `com.endrysa.endry.widget` avec **App Groups** (même groupe).
 - Le partage de trousseau app ↔ widget ne demande aucune capacité supplémentaire.
-- Si vous préférez un autre identifiant que `ch.endry.pilotage` : remplacez-le dans `ios/project.yml`,
+- Si vous préférez un autre identifiant que `com.endrysa.endry` : remplacez-le dans `ios/project.yml`,
   `ios/EndryPilotage/Services/Configuration.swift` et `codemagic.yaml` (`BUNDLE_ID`, `BUNDLE_ID_WIDGET`).
 
 **5. Fiche de l’app** : App Store Connect › **Apps** › « + » › Nouvelle app › iOS, nom « Endry Pilotage »,
-langue principale Français, identifiant de lot `ch.endry.pilotage`, SKU libre (ex. `endry-pilotage`).
+langue principale Français, identifiant de lot `com.endrysa.endry`, SKU libre (ex. `endry-pilotage`).
 L’**identifiant Apple** numérique affiché dans « Informations sur l’app » peut être ajouté en `APP_STORE_APPLE_ID`
 (facultatif : numéros de build calés sur TestFlight).
 
@@ -145,7 +145,7 @@ L’app demande l’autorisation après la connexion, puis envoie son jeton APNs
 Pour envoyer, le PC a besoin de :
 - une **clé APNs `.p8`** : Certificates, IDs & Profiles › **Keys** › « + » › cocher *Apple Push Notifications service (APNs)* ;
   notez le **Key ID** et téléchargez le fichier (une seule fois) ;
-- le **Team ID** ; le **bundle id** `ch.endry.pilotage` (en-tête `apns-topic`) ;
+- le **Team ID** ; le **bundle id** `com.endrysa.endry` (en-tête `apns-topic`) ;
 - l’hôte selon l’environnement enregistré : `api.sandbox.push.apple.com` ou `api.push.apple.com` (HTTP/2, jeton JWT ES256).
 
 Charge utile attendue par l’app — la clé `reference` ouvre la bonne carte au toucher :
@@ -167,7 +167,7 @@ def envoyer_push(jeton_apns, environnement, titre, texte, reference, badge):
     with httpx.Client(http2=True) as client:
         r = client.post(
             f"https://{hote}/3/device/{jeton_apns}",
-            headers={"authorization": f"bearer {jwt_apns}", "apns-topic": "ch.endry.pilotage", "apns-push-type": "alert"},
+            headers={"authorization": f"bearer {jwt_apns}", "apns-topic": "com.endrysa.endry", "apns-push-type": "alert"},
             json={"aps": {"alert": {"title": titre, "body": texte}, "badge": badge, "sound": "default"}, "reference": reference},
         )
     return r.status_code  # 410 : jeton périmé → le supprimer

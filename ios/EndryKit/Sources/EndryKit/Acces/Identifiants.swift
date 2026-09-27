@@ -69,7 +69,7 @@ public struct CoffreTrousseau: CoffreJeton {
     public let compte: String
     public let groupe: String?
 
-    public init(service: String = "ch.endry.pilotage", compte: String = "session", groupe: String? = nil) {
+    public init(service: String = "com.endrysa.endry", compte: String = "session", groupe: String? = nil) {
         self.service = service
         self.compte = compte
         self.groupe = groupe

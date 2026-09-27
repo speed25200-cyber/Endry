@@ -4,11 +4,11 @@
 <dict>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.ch.endry.pilotage</string>
+		<string>group.com.endrysa.endry</string>
 	</array>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)ch.endry.pilotage</string>
+		<string>$(AppIdentifierPrefix)com.endrysa.endry</string>
 	</array>
 </dict>
 </plist>

@@ -110,11 +110,11 @@ workflows:
       xcode: latest
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: ch.endry.pilotage
+        bundle_identifier: com.endrysa.endry
       vars:
         XCODE_PROJECT: ios/EndryPilotage.xcodeproj
-        BUNDLE_ID: ch.endry.pilotage
-        BUNDLE_ID_WIDGET: ch.endry.pilotage.widget
+        BUNDLE_ID: com.endrysa.endry
+        BUNDLE_ID_WIDGET: com.endrysa.endry.widget
         # Facultatif : APP_STORE_APPLE_ID (identifiant numérique de l'app) en variable Codemagic.
     triggering:
       events:

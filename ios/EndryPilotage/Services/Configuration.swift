@@ -3,14 +3,14 @@ import Foundation
 /// Identifiants partagés entre l'app et le widget. Aucun secret ici.
 nonisolated enum Configuration {
     /// Groupe d'apps (résumé pour le widget). À créer dans le portail Apple Developer.
-    static let groupeApps = "group.ch.endry.pilotage"
+    static let groupeApps = "group.com.endrysa.endry"
 
-    /// Groupe de trousseau partagé app ↔ widget : « <Team ID>.ch.endry.pilotage ».
+    /// Groupe de trousseau partagé app ↔ widget : « <Team ID>.com.endrysa.endry ».
     /// Le préfixe d'équipe est injecté au build dans Info.plist (clé `EndryPrefixeEquipe`).
     static var groupeTrousseau: String? {
         guard let prefixe = Bundle.main.object(forInfoDictionaryKey: "EndryPrefixeEquipe") as? String,
               !prefixe.isEmpty, !prefixe.contains("$") else { return nil }
-        return prefixe.hasSuffix(".") ? "\(prefixe)ch.endry.pilotage" : "\(prefixe).ch.endry.pilotage"
+        return prefixe.hasSuffix(".") ? "\(prefixe)com.endrysa.endry" : "\(prefixe).com.endrysa.endry"
     }
 
     /// Arguments de lancement utilisés par les tests UI et les captures.

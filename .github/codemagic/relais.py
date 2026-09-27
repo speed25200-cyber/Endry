@@ -47,8 +47,8 @@ import time
 commit = demande.get("commit") or os.environ.get("GITHUB_SHA", "")
 builds = (appel(f"/builds?appId={app['_id']}") or {}).get("builds", [])
 if demande.get("action") in ("attendre", "attendre_et_captures") and commit:
-    # Attend le build Codemagic de ce commit (jusqu'à ~25 min).
-    for _ in range(100):
+    # Attend le build Codemagic de ce commit (jusqu’à ~55 min, file d’attente comprise).
+    for _ in range(220):
         miens = [b for b in builds if (b.get("commit") or {}).get("hash", "").startswith(commit[:7])]
         if miens and all(b.get("status") in ("finished", "failed", "canceled", "timeout", "skipped", "warning") for b in miens):
             break

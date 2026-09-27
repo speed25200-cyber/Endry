@@ -75,7 +75,12 @@ final class RepondeurLocalTests: XCTestCase {
                        .transmettre("Prépare une facture pour la régie Dubois, huit heures à cent quarante"))
         XCTAssertEqual(RepondeurLocal.repondre("Mets le chantier de Moudon au 12 octobre", avec: donnees),
                        .transmettre("Mets le chantier de Moudon au 12 octobre"))
-        if case .transmettre = RepondeurLocal.repondre("Raconte-moi une blague", avec: donnees) {} else { XCTFail() }
+        if case .demanderClaude = RepondeurLocal.repondre("Raconte-moi une blague", avec: donnees) {} else { XCTFail() }
+        XCTAssertEqual(RepondeurLocal.repondre("Que fait Claude en ce moment ?", avec: donnees), .etatBureau)
+        XCTAssertEqual(RepondeurLocal.repondre("Demande à Claude si Mme Gander a rappelé", avec: donnees),
+                       .demanderClaude("Demande à Claude si Mme Gander a rappelé"))
+        XCTAssertEqual(RepondeurLocal.repondre("Est-ce que le fournisseur a confirmé la livraison ?", avec: donnees),
+                       .demanderClaude("Est-ce que le fournisseur a confirmé la livraison ?"))
     }
 
     func testMontantParle() {
@@ -106,5 +111,48 @@ final class CerveauTests: XCTestCase {
         XCTAssertEqual(objet["type"] as? String, "conversation.item.create")
         let item = try XCTUnwrap(objet["item"] as? [String: Any])
         XCTAssertEqual(item["role"] as? String, "user")
+    }
+}
+
+final class BureauClaudeTests: XCTestCase {
+    func testQuestionPoseeEtReponseLue() async throws {
+        let api = APIDemo(latence: .zero, delaiClaude: .milliseconds(200))
+        let bureau = BureauClaude(api: api)
+        let posee = try await bureau.poser("Où en est Mme Gander pour l’adoucisseur ?")
+        guard case .enAttente(let id, let texte) = posee else { return XCTFail("Réponse directe inattendue en démo") }
+        XCTAssertNotNil(id)
+        XCTAssertTrue(BureauClaude.estQuestion(texte))
+        XCTAssertEqual(BureauClaude.questionSeule(texte), "Où en est Mme Gander pour l’adoucisseur ?")
+        let saisie = await bureau.attendre(saisieId: id, texte: texte, delai: .seconds(5), intervalle: .milliseconds(50))
+        XCTAssertEqual(saisie?.statut, .traite)
+        XCTAssertTrue(saisie?.resume?.contains("Gander") ?? false)
+    }
+
+    func testEtatDuBureau() async {
+        let bureau = BureauClaude(api: APIDemo(latence: .zero))
+        let etat = await bureau.etat()
+        XCTAssertEqual(etat?.enPause, false)
+        XCTAssertEqual(etat?.libelleCourt, "Claude travaille · 2 en cours")
+        let phrase = etat?.phrase ?? ""
+        XCTAssertTrue(phrase.contains("Claude travaille sur le PC"), phrase)
+        XCTAssertTrue(phrase.contains("Mme Gander"), phrase)
+        XCTAssertTrue(phrase.contains("Facture RE-00416 préparée, à valider"), phrase)
+    }
+
+    func testOutilsExecutes() async {
+        let executeur = ExecuteurOutils(api: APIDemo(latence: .zero))
+        let bureau = await executeur.executer(nom: "bureau", arguments: "{}")
+        XCTAssertTrue(bureau.sortie.contains("resume"))
+        let question = await executeur.executer(nom: "demander_claude", arguments: #"{"question":"Des e-mails urgents ?"}"#)
+        guard case .questionClaude(_, _, let q) = question.effet else { return XCTFail("\(question.effet)") }
+        XCTAssertEqual(q, "Des e-mails urgents ?")
+    }
+
+    func testOutilsDansLaSessionTempsReel() throws {
+        let session = try JSONDecoder().decode(SessionVoix.self, from: Data(#"{"disponible":true,"client_secret":"x","outils":[]}"#.utf8))
+        let data = CommandeRealtime.configuration(session: session, vocabulaire: [])
+        let texte = String(decoding: data, as: UTF8.self)
+        XCTAssertTrue(texte.contains("demander_claude"))
+        XCTAssertTrue(texte.contains("\"bureau\""))
     }
 }

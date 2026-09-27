@@ -15,6 +15,10 @@ final class MoteurLocal: MoteurVoix {
     private let donnees: @MainActor () -> RepondeurLocal.Donnees
     private let transmettre: @MainActor (String) async -> ModeleSaisie.ResultatDemande
     private let cerveau: (any CerveauVocal)?
+    /// Outils (Claude sur le PC, données) ; `nil` tant que l'app n'est pas connectée.
+    private let executeur: ExecuteurOutils?
+    /// Réponses de Claude arrivées pendant un tour : dites juste après.
+    private var annoncesEnAttente: [(question: String, reponse: String)] = []
     private let synthese = AVSpeechSynthesizer()
     private let delegue = DelegueSynthese()
     private var transcripteur: (any Transcripteur)?
@@ -33,10 +37,12 @@ final class MoteurLocal: MoteurVoix {
 
     init(donnees: @escaping @MainActor () -> RepondeurLocal.Donnees,
          transmettre: @escaping @MainActor (String) async -> ModeleSaisie.ResultatDemande,
-         cerveau: (any CerveauVocal)? = nil) {
+         cerveau: (any CerveauVocal)? = nil,
+         executeur: ExecuteurOutils? = nil) {
         self.donnees = donnees
         self.transmettre = transmettre
         self.cerveau = cerveau
+        self.executeur = executeur
         synthese.delegate = delegue
     }
 
@@ -124,6 +130,17 @@ final class MoteurLocal: MoteurVoix {
         await conclure()
     }
 
+    /// Réponse de Claude arrivée du PC : dite tout de suite si Endry est libre, sinon juste après le tour en cours.
+    func annoncer(question: String, reponse: String) async {
+        guard actif else { return }
+        annoncesEnAttente.append((question, reponse))
+        guard !enReflexion else { return }
+        enReflexion = true
+        silence?.cancel()
+        transcripteur?.arreter()
+        await terminerTour()
+    }
+
     /// Toucher la sphère pendant qu'Endry parle : il se tait et écoute.
     func interrompre() {
         if synthese.isSpeaking { synthese.stopSpeaking(at: .word) }
@@ -156,6 +173,14 @@ final class MoteurLocal: MoteurVoix {
         case .dire(let texte, let carte):
             surEvenement?(.effet(carte))
             await dire(texte)
+        case .demanderClaude(let q):
+            await demanderClaude(q)
+        case .etatBureau:
+            if let executeur, let etat = await BureauClaude(api: executeur.api).etat() {
+                await dire(etat.phrase)
+            } else {
+                await dire("Je n’arrive pas à voir l’activité du PC pour l’instant.")
+            }
         case .transmettre(let demande):
             switch await transmettre(demande) {
             case .transmise:
@@ -169,8 +194,40 @@ final class MoteurLocal: MoteurVoix {
         await terminerTour()
     }
 
-    /// Fin du tour : question tapée entre-temps, sinon on rend le micro au patron.
+    /// Question pour Claude, sur le PC : la carte « Claude cherche » apparaît, la réponse sera dite à son arrivée.
+    private func demanderClaude(_ question: String) async {
+        guard let executeur else {
+            await dire("Connectez d’abord l’app au bureau pour interroger Claude.")
+            return
+        }
+        let r = await executeur.executer(nom: "demander_claude", arguments: Self.json(["question": question]))
+        surEvenement?(.effet(r.effet))
+        switch r.effet {
+        case .questionClaude:
+            await dire("Je pose la question à Claude, sur le PC. Je vous lis sa réponse dès qu’elle arrive.")
+        case .reponseClaude(_, let reponse):
+            await dire(reponse)
+        default:
+            await dire("Je n’ai pas pu joindre Claude sur le PC.")
+        }
+    }
+
+    private static func json(_ objet: [String: String]) -> String {
+        guard let data = try? JSONSerialization.data(withJSONObject: objet) else { return "{}" }
+        return String(decoding: data, as: UTF8.self)
+    }
+
+    /// Fin du tour : réponse de Claude arrivée entre-temps, question tapée, sinon on rend le micro au patron.
     private func terminerTour() async {
+        if !annoncesEnAttente.isEmpty, actif {
+            let annonce = annoncesEnAttente.removeFirst()
+            enReflexion = true
+            surEvenement?(.nouveauTour)
+            surEvenement?(.patron(definitif: annonce.question, provisoire: ""))
+            await dire("Claude répond : " + annonce.reponse)
+            await terminerTour()
+            return
+        }
         enReflexion = false
         if let suivante = questionEnAttente {
             questionEnAttente = nil

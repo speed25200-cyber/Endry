@@ -180,6 +180,19 @@ final class EndryPilotageUITests: XCTestCase {
         let repondu = reponse.waitForExistence(timeout: 30)
         capturer(app, repondu ? "7-assistant" : "7-assistant-sans-reponse")
         XCTAssertTrue(repondu, "L’assistant n’a pas répondu.")
+
+        // Question pour Claude, sur le PC : la carte « Claude cherche » puis sa réponse.
+        let champ = app.textFields["champ-assistant"]
+        XCTAssertTrue(champ.waitForExistence(timeout: 5))
+        champ.tap()
+        champ.typeText("Demande à Claude si Mme Gander a rappelé")
+        app.buttons["envoyer-question"].tap()
+        XCTAssertTrue(app.descendants(matching: .any)["carte-claude"].firstMatch.waitForExistence(timeout: 10),
+                      "La question n’est pas partie chez Claude.")
+        let reponseClaude = app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "jeudi")).firstMatch
+        let claudeRepond = reponseClaude.waitForExistence(timeout: 30)
+        capturer(app, claudeRepond ? "8-claude" : "8-claude-sans-reponse")
+        XCTAssertTrue(claudeRepond, "La réponse de Claude n’est pas arrivée.")
         app.buttons["fermer-assistant"].tap()
         XCTAssertTrue(bouton.waitForExistence(timeout: 5))
     }

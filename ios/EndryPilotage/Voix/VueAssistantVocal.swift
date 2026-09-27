@@ -19,6 +19,7 @@ struct VueAssistantVocal: View {
     /// Questions du quotidien, à toucher plutôt qu'à dire.
     private static let suggestions = [
         "Qu’est-ce qui m’attend aujourd’hui ?",
+        "Que fait Claude sur le PC ?",
         "Qui me doit de l’argent ?",
         "Quels chantiers cette semaine ?",
         "Qu’est-ce que je dois décider ?",
@@ -37,6 +38,14 @@ struct VueAssistantVocal: View {
                 EtatAssistant(phase: assistant?.phase ?? .preparation)
                     .padding(.top, Espace.xs)
                     .opacity(apparu ? 1 : 0)
+                if let nom = assistant?.nomMoteur, !nom.isEmpty {
+                    Label(nom, systemImage: nom.contains("Apple Intelligence") ? "sparkles" : "waveform")
+                        .styleTexte(11, relativeTo: .caption2, graisse: .medium)
+                        .foregroundStyle(Color.orClair.opacity(0.4))
+                        .padding(.top, 6)
+                        .accessibilityLabel(Text("Moteur vocal : \(nom)"))
+                        .transition(.opacity)
+                }
                 TranscriptionAssistant(assistant: assistant)
                     .padding(.top, Espace.l)
                     .opacity(apparu ? 1 : 0)
@@ -95,22 +104,10 @@ struct VueAssistantVocal: View {
 
     private var barreHaute: some View {
         HStack {
-            if let nom = assistant?.nomMoteur, !nom.isEmpty {
-                HStack(spacing: 6) {
-                    Image(systemName: nom.contains("Apple Intelligence") ? "sparkles" : "waveform")
-                        .font(.system(size: 12, weight: .semibold))
-                    Text(nom)
-                        .styleTexte(12, relativeTo: .caption, graisse: .medium)
-                }
-                .foregroundStyle(Color.orClair.opacity(0.75))
-                .padding(.horizontal, 12)
-                .frame(height: 30)
-                .background(Color.white.opacity(0.06), in: Capsule())
-                .overlay(Capsule().stroke(Color.or.opacity(0.18), lineWidth: Espace.filet))
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(Text("Moteur vocal : \(nom)"))
-                .transition(.opacity)
+            PastilleClaude(etat: assistant?.etatBureau) {
+                Task { await assistant?.poser("Que fait Claude sur le PC en ce moment ?") }
             }
+            .disabled(!(assistant?.pret ?? false))
             Spacer()
             Button(action: fermer) {
                 Image(systemName: "xmark")
@@ -124,7 +121,6 @@ struct VueAssistantVocal: View {
             .accessibilityIdentifier("fermer-assistant")
         }
         .padding(.top, Espace.xs)
-        .animation(.endry, value: assistant?.nomMoteur)
     }
 
     private var sphere: some View {
@@ -361,6 +357,10 @@ struct CarteContexte: View {
             } else {
                 resume(icone: "doc.text.fill", titre: "Facture \(numero)", detail: "Suivi seulement : aucune relance sans votre demande")
             }
+        case .questionClaude(_, _, let question):
+            CarteClaude(question: question, reponse: nil, retirer: retirer)
+        case .reponseClaude(let question, let reponse):
+            CarteClaude(question: question, reponse: reponse, retirer: retirer)
         case .aucun:
             EmptyView()
         }
@@ -389,6 +389,103 @@ struct CarteContexte: View {
         .padding(Espace.m)
         .surfaceCarte(rayon: Espace.rayonPetit)
         .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: - Claude, sur le PC
+
+/// Pastille « Claude travaille · 2 en cours » : ce que fait l'assistant du bureau, d'un coup d'œil.
+/// La toucher demande le détail à voix haute.
+private struct PastilleClaude: View {
+    var etat: EtatBureau?
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 7) {
+                Circle()
+                    .fill(couleur)
+                    .frame(width: 7, height: 7)
+                    .overlay(Circle().stroke(couleur.opacity(0.4), lineWidth: 3).scaleEffect(1.8))
+                Text(etat?.libelleCourt ?? "Claude · PC")
+                    .styleTexte(12, relativeTo: .caption, graisse: .medium)
+                    .foregroundStyle(Color.orClair.opacity(0.85))
+                    .contentTransition(.opacity)
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 32)
+            .background(Color.white.opacity(0.06), in: Capsule())
+            .overlay(Capsule().stroke(Color.or.opacity(0.18), lineWidth: Espace.filet))
+        }
+        .buttonStyle(.plain)
+        .animation(.endry, value: etat?.libelleCourt)
+        .accessibilityLabel(Text(etat?.libelleCourt ?? "Claude, l’assistant du PC"))
+        .accessibilityHint(Text("Demande à Endry ce que fait Claude en ce moment"))
+        .accessibilityIdentifier("pastille-claude")
+    }
+
+    private var couleur: Color {
+        guard let etat else { return Color.orClair.opacity(0.4) }
+        if etat.enPause { return Color(hex: 0xC8764A) }
+        return etat.enCours.isEmpty && (etat.etat?.file ?? 0) == 0 ? Color(hex: 0x8FB08A) : Color.or
+    }
+}
+
+/// Carte « Claude » : la question posée au PC, puis sa réponse quand elle arrive.
+struct CarteClaude: View {
+    var question: String
+    var reponse: String?
+    var retirer: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Espace.xs) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 12, weight: .semibold))
+                    .symbolEffect(.pulse, isActive: reponse == nil)
+                Text("Claude · PC")
+                    .font(Police.etiquette(11, relativeTo: .caption2))
+                    .textCase(.uppercase)
+                    .tracking(2)
+                Spacer()
+                Button(action: retirer) {
+                    Image(systemName: "xmark").font(.system(size: 11, weight: .bold))
+                        .frame(width: 28, height: 28)
+                }
+                .foregroundStyle(Color.orClair.opacity(0.5))
+                .accessibilityLabel(Text("Masquer"))
+            }
+            .foregroundStyle(Color.or)
+            Text(question)
+                .styleTitre(17, relativeTo: .subheadline, graisse: .italique)
+                .foregroundStyle(Color.orClair.opacity(0.6))
+                .lineLimit(2)
+            if let reponse {
+                ScrollView {
+                    Text(reponse)
+                        .styleTexte(15, relativeTo: .body)
+                        .foregroundStyle(Color(hex: 0xFBEBD0))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                }
+                .frame(maxHeight: 170)
+                .scrollBounceBehavior(.basedOnSize)
+                .transition(.opacity.combined(with: .offset(y: 6)))
+            } else {
+                HStack(spacing: Espace.xs) {
+                    ProgressView().controlSize(.small).tint(Color.or)
+                    Text("Claude cherche dans les dossiers, Bexio et les e-mails…")
+                        .styleTexte(13, relativeTo: .footnote)
+                        .foregroundStyle(Color.orClair.opacity(0.55))
+                }
+            }
+        }
+        .padding(Espace.m)
+        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Color.or.opacity(0.22), lineWidth: Espace.filet))
+        .animation(.endry, value: reponse)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("carte-claude")
     }
 }
 

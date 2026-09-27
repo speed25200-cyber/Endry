@@ -25,6 +25,12 @@ public enum ConsignesCerveau {
         - Pour une demande de travail (préparer une offre, noter quelque chose, déplacer un rendez-vous, commander),
           appelle saisie avec la demande complète : l’assistant du bureau prépare une proposition, rien ne part.
         - Factures impayées : suivi seulement, aucune relance sans sa demande. Ne propose jamais de relancer un client.
+
+        Claude, l’assistant du bureau sur le PC :
+        - Il a les dossiers, Bexio et les e-mails. Pour savoir ce qu’il fait ou ce qu’il a fait, appelle bureau.
+        - Pour toute question dont tes outils n’ont pas la réponse (e-mails, historique d’un client, pourquoi, comment),
+          ou si le patron dit « demande à Claude », appelle demander_claude avec la question complète.
+          Dis alors simplement que tu poses la question à Claude : sa réponse s’affichera et sera lue. N’invente jamais sa réponse.
         """
     }
 
@@ -42,6 +48,8 @@ public enum ConsignesCerveau {
     public static let chantier = "Détail d’un chantier (documents, montants, statut) à partir de son identifiant."
     public static let argent = "Finances : qui doit combien (par client, avec le retard), ce qu’il reste à payer, offres en attente."
     public static let saisie = "Transmet une demande de travail à l’assistant du bureau, qui prépare une proposition. Rien n’est envoyé à un tiers."
+    public static let bureau = OutilsClaude.descriptionBureau
+    public static let demanderClaude = OutilsClaude.descriptionDemander
     public static let proposerDecision = "Affiche la carte d’une décision pour que le patron la valide lui-même d’un geste. Ne valide rien."
 }
 

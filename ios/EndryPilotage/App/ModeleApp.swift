@@ -46,7 +46,8 @@ final class ModeleApp {
     func nouvelAssistant() -> AssistantVocal {
         AssistantVocal(
             fabrique: { await self.moteurPrefere() },
-            repli: { self.moteurLocal() }
+            repli: { self.moteurLocal() },
+            bureau: session.api.map { BureauClaude(api: $0) }
         )
     }
 
@@ -68,7 +69,8 @@ final class ModeleApp {
             },
             transmettre: transmettre,
             // Apple Intelligence sur l'iPhone : comprend les questions libres et lit les données par les outils.
-            cerveau: FabriqueCerveau.creer(executeur: session.api.map { ExecuteurOutils(api: $0) }, transmettre: transmettre)
+            cerveau: FabriqueCerveau.creer(executeur: session.api.map { ExecuteurOutils(api: $0) }, transmettre: transmettre),
+            executeur: session.api.map { ExecuteurOutils(api: $0) }
         )
     }
 

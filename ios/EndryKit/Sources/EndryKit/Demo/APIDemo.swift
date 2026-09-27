@@ -9,13 +9,17 @@ public actor APIDemo: EndryAPI {
     private var saisies: [[String: Any]]
     private var appareils: [[String: Any]]
     private var pause = false
+    /// Questions posées à Claude : instant de dépôt (la réponse « arrive » après `delaiClaude`).
+    private var questions: [String: ContinuousClock.Instant] = [:]
+    private let delaiClaude: Duration
     private let latence: Duration
     /// Tests : fait échouer `POST /actualiser` comme un Bexio indisponible.
     private let bexioIndisponible: Bool
     public private(set) var journal: [String] = []
 
-    public init(latence: Duration = .milliseconds(450), bexioIndisponible: Bool = false) {
+    public init(latence: Duration = .milliseconds(450), bexioIndisponible: Bool = false, delaiClaude: Duration = .seconds(3)) {
         self.latence = latence
+        self.delaiClaude = delaiClaude
         self.bexioIndisponible = bexioIndisponible
         restantes = Self.objet(.decisions)?["decisions"] as? [[String: Any]] ?? []
         saisies = Self.liste(.saisies)
@@ -60,7 +64,10 @@ public actor APIDemo: EndryAPI {
         if let c = route(.get, "app/api/v1/chantiers/*") { return try detailChantier(id: c[0]) }
         if route(.get, "app/api/v1/argent") != nil { return Fixtures.donnees(.argent) }
         if route(.post, "app/api/v1/saisie") != nil { return enregistrerSaisie(requete.corps) }
-        if route(.get, "app/api/v1/saisies") != nil { return json(saisies) }
+        if route(.get, "app/api/v1/saisies") != nil {
+            avancerQuestions()
+            return json(saisies)
+        }
         if route(.post, "app/api/v1/actualiser") != nil {
             if bexioIndisponible { throw .bexioIndisponible }
             return json(["ok": true])
@@ -92,6 +99,7 @@ public actor APIDemo: EndryAPI {
         saisies = Self.liste(.saisies)
         appareils = Self.liste(.appareils)
         pause = false
+        questions.removeAll()
         journal.removeAll()
     }
 
@@ -142,7 +150,42 @@ public actor APIDemo: EndryAPI {
         }
         let id = "S-\(143 + saisies.count)"
         saisies.insert(["id": id, "cree": "2026-09-27T12:45:00", "texte": texte, "photos": photos, "statut": "transmis"], at: 0)
+        if BureauClaude.estQuestion(texte) { questions[id] = .now }
         return json(["ok": true, "message": "Transmis au bureau. L’assistant préparera la suite.", "saisie_id": id])
+    }
+
+    /// Claude « réfléchit » puis répond dans le résumé de la saisie.
+    private func avancerQuestions() {
+        for (id, depot) in questions {
+            guard let index = saisies.firstIndex(where: { ($0["id"] as? String) == id }) else { continue }
+            let ecoule = ContinuousClock.now - depot
+            if ecoule >= delaiClaude {
+                let question = BureauClaude.questionSeule(saisies[index]["texte"] as? String ?? "")
+                saisies[index]["statut"] = "traite"
+                saisies[index]["resume"] = Self.reponseClaude(question)
+                questions[id] = nil
+            } else if ecoule >= delaiClaude / 2 {
+                saisies[index]["statut"] = "en_cours"
+            }
+        }
+    }
+
+    /// Réponses fictives de Claude, cohérentes avec les données de démonstration.
+    static func reponseClaude(_ question: String) -> String {
+        let q = question.lowercased()
+        if q.contains("gander") || q.contains("adoucisseur") {
+            return "Mme Gander attend toujours la visite pour l’adoucisseur. Je propose jeudi à 8 h ; rien n’est parti, la proposition est dans vos décisions si vous voulez l’envoyer."
+        }
+        if q.contains("morel") || q.contains("citerne") {
+            return "Villa Morel : la citerne est dégazée, le démontage est prévu lundi. Aucun blocage, l’équipe est prévenue."
+        }
+        if q.contains("dubois") || q.contains("facture") {
+            return "La facture RE-00416 de la régie Dubois est prête : 6 h 30 et un déplacement. Elle attend votre validation dans les décisions."
+        }
+        if q.contains("mail") || q.contains("courriel") {
+            return "Trois e-mails ce matin : Mme Rey sur la variante WC, la régie Dubois pour un débouchage et un fournisseur pour une livraison. Rien d’urgent."
+        }
+        return "Mode démonstration : sur le PC, Claude répondrait ici à partir des dossiers, de Bexio et des e-mails."
     }
 
     private func filtrerChantiers(etape: String) -> Data {

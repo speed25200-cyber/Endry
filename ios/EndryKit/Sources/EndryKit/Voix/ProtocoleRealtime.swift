@@ -69,8 +69,13 @@ public enum CommandeRealtime {
             }
             outils.append(o)
         }
+        // Outils propres à l'app (Claude sur le PC), s'ils ne sont pas déjà fournis par le PC.
+        for outil in OutilsClaude.definitions where !outils.contains(where: { ($0["name"] as? String) == outil["name"] as? String }) {
+            outils.append(outil)
+        }
         let consignes = [session.instructions ?? "", "Vocabulaire métier (orthographe exacte) : \(vocabulaire.joined(separator: ", ")).",
-                         "Ne valide jamais seul un envoi à un tiers : utilise proposer_decision et attends le geste du patron."]
+                         "Ne valide jamais seul un envoi à un tiers : utilise proposer_decision et attends le geste du patron.",
+                         OutilsClaude.consigne]
             .filter { !$0.isEmpty }.joined(separator: "\n")
         var audio: [String: Any] = [
             "input": [
@@ -123,4 +128,22 @@ public enum VocabulaireMetier {
         "boiler", "nourrice", "vase d’expansion", "chauffage au sol", "régie", "débouchage", "TVA", "Bexio", "Zoho",
         "Bussy", "Estavayer", "Epalinges", "Neuchâtel", "Moudon", "Payerne", "Romont", "Le Mont-sur-Lausanne",
     ]
+}
+
+/// Outils côté app pour dialoguer avec Claude, l'assistant du bureau sur le PC.
+public enum OutilsClaude {
+    public static let descriptionBureau = "Ce que fait Claude sur le PC : pause, demandes en cours, derniers travaux et décisions à valider."
+    public static let descriptionDemander = "Pose une question à Claude, l’assistant du bureau sur le PC, qui a les dossiers, Bexio et les e-mails. La réponse arrive à l’écran et est lue dès qu’elle est prête."
+
+    public static let consigne = "Claude est l’assistant du bureau, sur le PC : il a les dossiers, Bexio et les e-mails. Pour savoir ce qu’il fait, appelle bureau. Pour toute question dont les outils n’ont pas la réponse, ou si le patron dit « demande à Claude », appelle demander_claude avec la question complète, puis dis simplement que Claude cherche : n’invente jamais sa réponse."
+
+    public static var definitions: [[String: Any]] {
+        [
+        ["type": "function", "name": "bureau", "description": descriptionBureau,
+         "parameters": ["type": "object", "properties": [String: Any]()]],
+        ["type": "function", "name": "demander_claude", "description": descriptionDemander,
+         "parameters": ["type": "object", "properties": ["question": ["type": "string", "description": "La question du patron, complète."]],
+                        "required": ["question"]]],
+        ]
+    }
 }

@@ -97,6 +97,8 @@ final class CerveauAppleIntelligence: CerveauVocal {
             OutilLecture(name: "decisions", description: ConsignesCerveau.decisions, executeur: executeur, effets: effets),
             OutilLecture(name: "chantiers", description: ConsignesCerveau.chantiers, executeur: executeur, effets: effets),
             OutilLecture(name: "argent", description: ConsignesCerveau.argent, executeur: executeur, effets: effets),
+            OutilLecture(name: "bureau", description: ConsignesCerveau.bureau, executeur: executeur, effets: effets),
+            OutilDemanderClaude(executeur: executeur, effets: effets),
             OutilChantier(executeur: executeur, effets: effets),
             OutilProposerDecision(executeur: executeur, effets: effets),
             OutilSaisie(transmettre: transmettre),
@@ -182,6 +184,27 @@ struct OutilProposerDecision: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         let r = await executeur.executer(nom: name, arguments: OutilChantier.json(["reference": arguments.reference]))
+        effets.ajouter(r.effet)
+        return r.sortie
+    }
+}
+
+/// Question pour Claude, l'assistant du bureau sur le PC : la réponse arrive plus tard, affichée et dite.
+@available(iOS 26.0, *)
+struct OutilDemanderClaude: Tool {
+    let name = "demander_claude"
+    let description = ConsignesCerveau.demanderClaude
+    let executeur: ExecuteurOutils
+    let effets: CollecteurEffets
+
+    @Generable
+    struct Arguments {
+        @Guide(description: "La question du patron, complète, telle qu’il l’a posée")
+        var question: String
+    }
+
+    func call(arguments: Arguments) async throws -> String {
+        let r = await executeur.executer(nom: name, arguments: OutilChantier.json(["question": arguments.question]))
         effets.ajouter(r.effet)
         return r.sortie
     }

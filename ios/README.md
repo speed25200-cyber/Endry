@@ -78,6 +78,16 @@ Toucher court du micro central : dictée d'une saisie terrain. **Toucher long** 
     Consignes : `EndryKit/Voix/ConsignesCerveau.swift`.
   - Sans Apple Intelligence : réponses locales aux questions simples (qui doit quoi, chantiers, décisions),
     le reste part en saisie vers l'assistant du PC (gardée hors ligne).
+- **Claude, sur le PC** (`EndryKit/Voix/BureauClaude.swift`) : l'assistant vocal interroge Claude, l'assistant du
+  bureau, par le contrat existant, sans modifier le serveur :
+  - *« Que fait Claude ? »* (outil `bureau`, pastille en haut de l'assistant) : pause, demandes en cours, derniers
+    travaux et décisions à valider (`GET /assistant/etat` + `GET /saisies`) ;
+  - *« Demande à Claude… »* et toute question que les données de l'app ne couvrent pas (outil `demander_claude`) :
+    la question part comme une saisie marquée « Question du patron… ne prépare et n'envoie rien » (`POST /saisie`),
+    une carte « Claude cherche » s'affiche, puis la réponse (le `resume` de la saisie, suivi par `GET /saisies`)
+    s'affiche et est lue à voix haute dès qu'elle arrive ;
+  - facultatif : si le PC expose `POST /app/api/v1/assistant/question` (`{question}` → `{reponse}`), la réponse
+    est immédiate ; sinon (404) l'app passe par la saisie.
 - **Écrire plutôt que parler** : suggestions à toucher et champ « Écrire à Endry… » dans l'assistant
   (mêmes outils, mêmes règles). Toucher la sphère pendant qu'Endry parle l'interrompt.
 - **Entrées** : bouton « Parler à Endry » sur Aujourd'hui, toucher long du micro central, et Siri

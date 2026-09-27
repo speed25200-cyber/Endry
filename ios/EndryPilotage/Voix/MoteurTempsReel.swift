@@ -166,6 +166,12 @@ final class MoteurTempsReel: MoteurVoix {
         changerPhase(.reflexion)
     }
 
+    func annoncer(question: String, reponse: String) async {
+        envoyer(CommandeRealtime.messageTexte(
+            "[Réponse de Claude, l’assistant du bureau sur le PC, à la question « \(question) »] \(reponse)\nTransmets-la fidèlement au patron, en commençant par « Claude répond »."))
+        envoyer(CommandeRealtime.creerReponse)
+    }
+
     func interrompre() {
         interrompreAssistant()
         changerPhase(.ecoute)

@@ -9,6 +9,10 @@ public struct ExecuteurOutils: Sendable {
         case afficherDecision(String)
         case afficherChantier(String)
         case afficherFacture(String)
+        /// Question posée à Claude sur le PC : sa réponse arrivera dans le résumé de la saisie.
+        case questionClaude(saisieId: String?, texte: String, question: String)
+        /// Réponse de Claude, à afficher et à dire.
+        case reponseClaude(question: String, reponse: String)
     }
 
     public let api: any EndryAPI
@@ -55,6 +59,27 @@ public struct ExecuteurOutils: Sendable {
                 guard !texte.isEmpty else { return (json(["ok": false, "message": "Texte vide."]), .aucun) }
                 let r = try await api.saisie(texte: texte, fichiers: [])
                 return (json(["ok": r.ok, "message": r.message ?? "Transmis à l’assistant du bureau."]), .aucun)
+            case "bureau":
+                guard let etat = await BureauClaude(api: api).etat() else {
+                    return (json(["erreur": "Le PC ne publie pas son activité (serveur v1.0)."]), .aucun)
+                }
+                return (json([
+                    "resume": etat.phrase, "pause": etat.enPause, "file": etat.etat?.file ?? 0,
+                    "en_cours": etat.enCours.prefix(5).map { BureauClaude.questionSeule($0.texte) },
+                    "derniers_travaux": etat.traitees.prefix(5).map { ["demande": BureauClaude.questionSeule($0.texte), "resultat": $0.resume ?? "",
+                                                                      "decision_a_valider": $0.decisionReference ?? ""] },
+                ]), .aucun)
+            case "demander_claude":
+                let question = (args["question"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !question.isEmpty else { return (json(["ok": false, "message": "Question vide."]), .aucun) }
+                switch try await BureauClaude(api: api).poser(question) {
+                case .reponse(let reponse):
+                    return (json(["reponse_de_claude": reponse]), .reponseClaude(question: question, reponse: reponse))
+                case .enAttente(let id, let texte):
+                    return (json(["transmise": true,
+                                  "message": "Question posée à Claude sur le PC. Sa réponse s’affichera et sera lue dès qu’elle arrive. Dis-le simplement au patron, sans inventer la réponse."]),
+                            .questionClaude(saisieId: id, texte: texte, question: question))
+                }
             case "proposer_decision":
                 let reference = args["reference"] as? String ?? ""
                 return (json(["affichee": true, "message": "La carte est affichée ; le patron doit valider lui-même par un geste à l’écran."]),

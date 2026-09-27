@@ -8,6 +8,10 @@ public enum RepondeurLocal {
         case dire(String, carte: ExecuteurOutils.Effet)
         /// Demande de travail : à transmettre à l'assistant du PC (`POST /saisie`).
         case transmettre(String)
+        /// Question pour Claude, l'assistant du bureau sur le PC : sa réponse sera lue dès qu'elle arrive.
+        case demanderClaude(String)
+        /// « Que fait Claude ? » : activité du PC (pause, travaux en cours, derniers résultats).
+        case etatBureau
     }
 
     public struct Donnees: Sendable {
@@ -31,6 +35,14 @@ public enum RepondeurLocal {
                             "ajoute", "ajouter", "note", "noter", "facture", "commande", "commander", "planifie", "planifier"]
         if let premier = q.split(separator: " ").first.map(String.init), verbesAction.contains(premier) {
             return .transmettre(question)
+        }
+
+        // Claude, l'assistant du bureau : « que fait Claude ? », « demande à Claude… ».
+        let parleDuBureau = mots.contains("claude") || q.contains("le pc") || q.contains("l ordinateur") || q.contains("assistant du bureau")
+        if parleDuBureau {
+            let demande = ["demande", "demander", "pose", "poser", "question", "sait", "savoir", "verifie", "cherche", "regarde"]
+            if demande.contains(where: { mots.contains($0) }) { return .demanderClaude(question) }
+            return .etatBureau
         }
 
         if q.contains("doit") || q.contains("doivent") || q.contains("nous devons") == false && q.contains("dette") {
@@ -78,7 +90,8 @@ public enum RepondeurLocal {
             return .dire("\(a.decisions.count) décisions : \(titres).", carte: .afficherDecision(a.decisions[0].reference))
         }
 
-        return .transmettre(question)
+        // Tout le reste : Claude, sur le PC, a les dossiers, Bexio et les e-mails.
+        return .demanderClaude(question)
     }
 
     // MARK: - Correspondances

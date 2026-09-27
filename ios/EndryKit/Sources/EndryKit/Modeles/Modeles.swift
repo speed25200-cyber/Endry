@@ -261,16 +261,20 @@ public struct ReponseAction: Decodable, Sendable, Equatable {
 public struct ReponseSimple: Decodable, Sendable, Equatable {
     public var ok: Bool
     public var message: String?
+    /// `POST /saisie` : identifiant de la saisie créée, pour suivre son traitement.
+    public var saisieId: String?
 
-    public init(ok: Bool, message: String? = nil) {
+    public init(ok: Bool, message: String? = nil, saisieId: String? = nil) {
         self.ok = ok
         self.message = message
+        self.saisieId = saisieId
     }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.champs()
         ok = c.booleen("ok") ?? false
         message = c.texte("message") ?? c.texte("resultat")
+        saisieId = c.texte("saisie_id") ?? c.texte("id")
     }
 }
 

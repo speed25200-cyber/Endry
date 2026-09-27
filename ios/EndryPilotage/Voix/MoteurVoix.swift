@@ -41,6 +41,8 @@ protocol MoteurVoix: AnyObject {
     func poser(_ question: String) async
     /// L'assistant se tait et rend la parole au patron.
     func interrompre()
+    /// Réponse arrivée plus tard (Claude, sur le PC) : dite dès que la conversation le permet.
+    func annoncer(question: String, reponse: String) async
 }
 
 enum ErreurVoix: Error {
@@ -70,18 +72,27 @@ final class AssistantVocal {
     /// Le moteur accepte les questions (dites ou tapées).
     private(set) var pret = false
 
+    /// Activité de Claude sur le PC (pastille en haut de l'écran), rafraîchie toutes les 10 s.
+    private(set) var etatBureau: EtatBureau?
+
     @ObservationIgnored private var moteur: (any MoteurVoix)?
+    @ObservationIgnored private let bureau: BureauClaude?
+    @ObservationIgnored private var suivis: [String: Task<Void, Never>] = [:]
+    @ObservationIgnored private var veille: Task<Void, Never>?
     @ObservationIgnored private let fabrique: @MainActor () async -> any MoteurVoix
     @ObservationIgnored private let repli: @MainActor () -> any MoteurVoix
 
-    init(fabrique: @escaping @MainActor () async -> any MoteurVoix, repli: @escaping @MainActor () -> any MoteurVoix) {
+    init(fabrique: @escaping @MainActor () async -> any MoteurVoix, repli: @escaping @MainActor () -> any MoteurVoix,
+         bureau: BureauClaude? = nil) {
         self.fabrique = fabrique
         self.repli = repli
+        self.bureau = bureau
     }
 
     func demarrer() async {
         phase = .preparation
         pret = false
+        surveillerBureau()
         let premier = await fabrique()
         do {
             try await lancer(premier)
@@ -104,6 +115,10 @@ final class AssistantVocal {
         moteur?.arreter()
         moteur = nil
         pret = false
+        veille?.cancel()
+        veille = nil
+        suivis.values.forEach { $0.cancel() }
+        suivis.removeAll()
         niveauMicro = 0
         niveauVoix = 0
     }
@@ -155,11 +170,55 @@ final class AssistantVocal {
             cartes.removeAll { $0 == effet }
             cartes.insert(effet, at: 0)
             if cartes.count > 3 { cartes.removeLast() }
+            if case .questionClaude(let id, let texte, let question) = effet { suivre(saisieId: id, texte: texte, question: question) }
         case .nouveauTour:
             definitif = ""
             provisoire = ""
             reponse = ""
             reponseLue = nil
+        }
+    }
+
+    // MARK: - Claude, sur le PC
+
+    /// Attend la réponse de Claude ; dès qu'elle arrive, la carte « Claude cherche » devient la réponse, et Endry la dit.
+    private func suivre(saisieId: String?, texte: String, question: String) {
+        guard let bureau, suivis[texte] == nil else { return }
+        suivis[texte] = Task { [weak self] in
+            let saisie = await bureau.attendre(saisieId: saisieId, texte: texte)
+            guard !Task.isCancelled, let self else { return }
+            self.suivis[texte] = nil
+            let attente = ExecuteurOutils.Effet.questionClaude(saisieId: saisieId, texte: texte, question: question)
+            let reponse: String
+            if let saisie, saisie.statut == .traite, let resume = saisie.resume, !resume.isEmpty {
+                reponse = resume
+            } else if saisie?.statut == .erreur {
+                reponse = "Claude n’a pas pu traiter la question sur le PC."
+            } else {
+                reponse = "Claude n’a pas encore répondu. Sa réponse apparaîtra dans l’historique de Dicter."
+            }
+            let finale = ExecuteurOutils.Effet.reponseClaude(question: question, reponse: reponse)
+            if let index = self.cartes.firstIndex(of: attente) {
+                self.cartes[index] = finale
+            } else {
+                self.cartes.insert(finale, at: 0)
+                if self.cartes.count > 3 { self.cartes.removeLast() }
+            }
+            await self.moteur?.annoncer(question: question, reponse: reponse)
+            self.etatBureau = await bureau.etat() ?? self.etatBureau
+        }
+    }
+
+    /// Pastille « Claude travaille · 2 en cours » : rafraîchie tant que l'assistant est ouvert.
+    private func surveillerBureau() {
+        guard let bureau, veille == nil else { return }
+        veille = Task { [weak self] in
+            while !Task.isCancelled {
+                let etat = await bureau.etat()
+                guard !Task.isCancelled, let self else { return }
+                if let etat { self.etatBureau = etat }
+                try? await Task.sleep(for: .seconds(10))
+            }
         }
     }
 }

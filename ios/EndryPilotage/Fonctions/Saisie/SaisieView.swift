@@ -407,7 +407,7 @@ struct HistoriqueSaisies: View {
                         Rectangle().fill(Color.filet).frame(height: 0.5)
                     }
                     ForEach(Array(modele.historique.prefix(8).enumerated()), id: \.element.id) { index, s in
-                        ligne(texte: s.texte, date: s.cree.flatMap(DateEndry.lire), photos: s.photos, statut: s.statut,
+                        ligne(texte: BureauClaude.libelle(s.texte), date: s.cree.flatMap(DateEndry.lire), photos: s.photos, statut: s.statut,
                               resume: s.resume, reference: s.decisionReference)
                         if index < min(modele.historique.count, 8) - 1 {
                             Rectangle().fill(Color.filet).frame(height: 0.5)

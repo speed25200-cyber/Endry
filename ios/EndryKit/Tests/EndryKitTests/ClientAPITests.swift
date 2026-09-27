@@ -227,3 +227,128 @@ final class ClientAPITests: XCTestCase {
         XCTAssertEqual(client.urlAbsolue("/app/planning.ics?jeton=abc")?.absoluteString, "http://100.64.0.5:8080/app/planning.ics?jeton=abc")
     }
 }
+
+final class DocumentsEtErreursTests: XCTestCase {
+    let base = URL(string: "https://pc.exemple.ts.net")!
+
+    func testNomDeFichierGardeLExtensionReelle() {
+        let pdf = Data("%PDF-1.7".utf8)
+        XCTAssertEqual(NomDocument.nomFichier("Liste entreprises.xlsx", donnees: Data([0x50, 0x4B, 0x03, 0x04])), "Liste entreprises.xlsx")
+        XCTAssertEqual(NomDocument.nomFichier("RE-00036", donnees: pdf), "RE-00036.pdf")
+        XCTAssertEqual(NomDocument.nomFichier("Photo chantier", donnees: Data([0xFF, 0xD8, 0xFF, 0xE0])), "Photo chantier.jpg")
+        XCTAssertEqual(NomDocument.nomFichier("Facture 2026.09", donnees: pdf), "Facture 2026.09.pdf")
+        XCTAssertEqual(NomDocument.nomFichier("a/b.pdf", donnees: pdf), "a-b.pdf")
+    }
+
+    func testPdfIndisponible503() async {
+        let client = ClientAPI(base: base, jeton: "J", transport: TransportFixe(statut: 503,
+            corps: #"{"erreur":"pdf_indisponible","message":"Bexio ne fournit pas le PDF de cette offre pour le moment."}"#))
+        do {
+            _ = try await client.telechargerDocument("/app/doc/offre/37", nom: "OF-00037")
+            XCTFail()
+        } catch {
+            XCTAssertEqual(error, .documentIndisponible("Bexio ne fournit pas le PDF de cette offre pour le moment."))
+            XCTAssertFalse(error.demandeNouveauLien, "le PC a répondu : pas de nouveau lien")
+        }
+    }
+
+    func testBexioIndisponible503() async {
+        let client = ClientAPI(base: base, jeton: "J", transport: TransportFixe(statut: 503,
+            corps: #"{"ok":false,"erreur":"bexio_indisponible","message":"Bexio ne répond pas."}"#))
+        do {
+            _ = try await client.actualiser()
+            XCTFail()
+        } catch {
+            XCTAssertEqual(error, .bexioIndisponible)
+        }
+    }
+
+    func testDejaParAppareil409() async {
+        let client = ClientAPI(base: base, jeton: "J", transport: TransportFixe(statut: 409,
+            corps: #"{"erreur":"deja_par_appareil","message":"Ce jeton est déjà propre à un appareil."}"#))
+        do {
+            _ = try await client.envoyer(.migrationAppareil(nom: "iPhone", modele: "iPhone17,1"))
+            XCTFail()
+        } catch {
+            XCTAssertEqual(error, .dejaParAppareil)
+        }
+    }
+
+    func testRoutesAbsentesMemorisees() async {
+        let transport = TransportFixe(statut: 404, corps: #"{"erreur":"inconnu"}"#)
+        let capacites = CapacitesServeur()
+        let client = ClientAPI(base: base, jeton: "J", transport: transport, capacites: capacites)
+        _ = try? await client.agentsPC()
+        _ = try? await client.agentsPC()
+        _ = try? await client.agentsPC()
+        XCTAssertEqual(transport.appels, 1, "une seule requête après le premier 404")
+        // Une route v1.0 n'est jamais mise de côté.
+        _ = try? await client.accueil()
+        _ = try? await client.accueil()
+        XCTAssertEqual(transport.appels, 3)
+    }
+}
+
+/// Transport qui répond toujours le même statut et le même corps, et compte les appels.
+final class TransportFixe: TransportHTTP, @unchecked Sendable {
+    let statut: Int
+    let corps: String
+    private let verrou = NSLock()
+    private var compte = 0
+    var appels: Int { verrou.withLock { compte } }
+
+    init(statut: Int, corps: String) {
+        self.statut = statut
+        self.corps = corps
+    }
+
+    func executer(_ requete: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        verrou.withLock { compte += 1 }
+        let reponse = HTTPURLResponse(url: requete.url!, statusCode: statut, httpVersion: nil,
+                                      headerFields: ["Content-Type": "application/json"])!
+        return (Data(corps.utf8), reponse)
+    }
+}
+
+@MainActor
+final class MigrationAppareilTests: XCTestCase {
+    let base = URL(string: "https://pc.exemple.ts.net")!
+
+    func testMigrationUneSeuleFois() async {
+        let coffre = CoffreMemoire(Identifiants(base: base, jeton: "COMMUN-FICTIF"))
+        let transport = TransportFixe(statut: 200,
+            corps: #"{"jeton":"JETON-APPAREIL-FICTIF","appareil_id":"A-7","valable_jours":365,"entreprise":"Endry SA"}"#)
+        let session = ModeleSession(coffre: coffre, cache: CacheHorsLigne(dossier: nil), transport: transport)
+        session.appareil = ("iPhone de test", "iPhone17,1")
+        let migre = await session.migrerSiNecessaire()
+        XCTAssertTrue(migre)
+        XCTAssertEqual(session.appareilId, "A-7")
+        XCTAssertEqual(coffre.lire()?.jeton, "JETON-APPAREIL-FICTIF")
+        let encore = await session.migrerSiNecessaire()
+        XCTAssertFalse(encore)
+        XCTAssertEqual(transport.appels, 1)
+    }
+
+    func testMigrationDejaFaite409() async {
+        let coffre = CoffreMemoire(Identifiants(base: base, jeton: "COMMUN-FICTIF"))
+        let transport = TransportFixe(statut: 409, corps: #"{"erreur":"deja_par_appareil"}"#)
+        let session = ModeleSession(coffre: coffre, cache: CacheHorsLigne(dossier: nil), transport: transport)
+        session.appareil = ("iPhone de test", "iPhone17,1")
+        let migre = await session.migrerSiNecessaire()
+        XCTAssertFalse(migre)
+        XCTAssertEqual(coffre.lire()?.migrationTentee, true)
+        _ = await session.migrerSiNecessaire()
+        XCTAssertEqual(transport.appels, 1, "jamais retentée")
+    }
+
+    func testDeconnexionNonRevocable405() async {
+        CapacitesServeur.partage.reinitialiser()
+        let coffre = CoffreMemoire(Identifiants(base: base, jeton: "J", appareilId: "A-7"))
+        let session = ModeleSession(coffre: coffre, cache: CacheHorsLigne(dossier: nil),
+                                    transport: TransportFixe(statut: 405, corps: #"{"erreur":"methode"}"#))
+        let resultat = await session.deconnecterCetAppareil()
+        XCTAssertEqual(resultat, .nonRevocable)
+        XCTAssertFalse(session.estConnecte)
+        XCTAssertNil(coffre.lire())
+    }
+}

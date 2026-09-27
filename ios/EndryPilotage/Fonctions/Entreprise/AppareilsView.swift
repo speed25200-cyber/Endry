@@ -83,6 +83,9 @@ struct AppareilsView: View {
         do {
             try await api.supprimerAppareil(appareil.id)
             withAnimation(.endry) { appareils.removeAll { $0.id == appareil.id } }
+            app.toast = Toast("« \(appareil.nom) » est déconnecté : son jeton est révoqué.")
+        } catch .serveur(let statut, _) where statut == 404 || statut == 405 {
+            app.toast = Toast("Le PC ne permet pas encore de révoquer un appareil à distance.", style: .info)
         } catch {
             app.toast = Toast(error.message, style: .erreur)
         }

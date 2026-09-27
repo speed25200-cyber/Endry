@@ -159,12 +159,18 @@ extension EndryAPI {
         try await charger(ReponseSimple.self, .appareil(jetonAPNs: jetonAPNs, nom: nom, environnement: environnement))
     }
 
-    /// Télécharge un document (PDF) et le range dans un fichier temporaire pour QuickLook.
+    /// Télécharge un document et le range dans un fichier temporaire pour QuickLook.
+    /// L'extension réelle est gardée (PDF, image, tableur…) ; elle n'est ajoutée que si le nom n'en a pas.
     public func telechargerDocument(_ chemin: String, nom: String) async throws(ErreurAPI) -> URL {
         let data = try await envoyer(.document(chemin))
+        guard !data.isEmpty else { throw .documentIndisponible(nil) }
+        // Un PC qui répond 200 avec un corps d'erreur JSON : jamais un PDF vide dans l'aperçu.
+        if data.first == UInt8(ascii: "{"), let corps = try? JSONDecoder().decode(CorpsErreur.self, from: data),
+           corps.erreur != nil || corps.message != nil {
+            throw .documentIndisponible(corps.message)
+        }
         let dossier = FileManager.default.temporaryDirectory.appendingPathComponent("documents", isDirectory: true)
-        let nomPropre = nom.replacingOccurrences(of: "/", with: "-").isEmpty ? "document.pdf" : nom.replacingOccurrences(of: "/", with: "-")
-        let fichier = dossier.appendingPathComponent(nomPropre.lowercased().hasSuffix(".pdf") ? nomPropre : nomPropre + ".pdf")
+        let fichier = dossier.appendingPathComponent(NomDocument.nomFichier(nom, donnees: data))
         do {
             try FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
             try data.write(to: fichier, options: [.atomic])
@@ -172,6 +178,32 @@ extension EndryAPI {
             throw .serveur(statut: 0, message: "Impossible d’enregistrer le document.")
         }
         return fichier
+    }
+
+}
+
+/// Nom de fichier des documents téléchargés : l'extension réelle, jamais un `.pdf` forcé.
+public enum NomDocument {
+    /// Nom de fichier sûr, avec l'extension réelle : celle du nom si elle existe, sinon déduite du contenu.
+    public static func nomFichier(_ nom: String, donnees: Data) -> String {
+        var propre = nom.replacingOccurrences(of: "/", with: "-").trimmingCharacters(in: .whitespacesAndNewlines)
+        if propre.isEmpty { propre = "document" }
+        let extensionActuelle = (propre as NSString).pathExtension.lowercased()
+        if extensionsConnues.contains(extensionActuelle) { return propre }
+        return propre + "." + extensionDeduite(donnees)
+    }
+
+    static let extensionsConnues: Set<String> = ["pdf", "png", "jpg", "jpeg", "heic", "xlsx", "xls", "docx", "doc", "csv", "txt",
+                                                  "zip", "eml", "msg", "html", "xml", "rtf", "pages", "numbers"]
+
+    static func extensionDeduite(_ d: Data) -> String {
+        let octets = [UInt8](d.prefix(8))
+        if octets.starts(with: [0x25, 0x50, 0x44, 0x46]) { return "pdf" }
+        if octets.starts(with: [0x89, 0x50, 0x4E, 0x47]) { return "png" }
+        if octets.starts(with: [0xFF, 0xD8, 0xFF]) { return "jpg" }
+        if octets.starts(with: [0x50, 0x4B, 0x03, 0x04]) { return "zip" }
+        if octets.starts(with: Array("<".utf8)) { return "html" }
+        return "pdf"
     }
 }
 

@@ -165,10 +165,25 @@ final class ModeleApp {
         }
     }
 
-    /// Révoque le jeton de cet iPhone côté PC (v1.1), puis efface tout.
+    /// Révoque le jeton de cet iPhone côté PC (`DELETE /appareils/{id}`), puis efface tout.
     func deconnecterCetAppareil() async {
-        await session.deconnecterCetAppareil()
+        let resultat = await session.deconnecterCetAppareil()
         await apresDeconnexion()
+        switch resultat {
+        case .revoque:
+            toast = Toast("iPhone déconnecté : son jeton est révoqué sur le PC.")
+        case .nonRevocable:
+            toast = Toast("iPhone déconnecté. Le PC ne permet pas encore de révoquer ce jeton à distance : demandez un nouveau lien au bureau pour couper l’ancien.", style: .info)
+        case .pcInjoignable:
+            toast = Toast("iPhone déconnecté. Le PC était injoignable : retirez cet iPhone dans Réglages › Appareils depuis un autre appareil.", style: .info)
+        }
+    }
+
+    /// Ancien jeton commun → jeton propre à cet iPhone, une seule fois, sans nouveau lien.
+    func migrerJetonSiNecessaire() async {
+        guard !session.estDemo, await session.migrerSiNecessaire() else { return }
+        reconstruire()
+        await rafraichirTout()
     }
 
     func deconnecter() async {

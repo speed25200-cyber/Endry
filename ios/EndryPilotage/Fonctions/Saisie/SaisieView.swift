@@ -71,7 +71,7 @@ struct SaisieView: View {
         .fullScreenCover(isPresented: $cameraPresentee) {
             CameraPhoto { image in
                 cameraPresentee = false
-                if let image, let data = image.jpegData(compressionQuality: 0.82) {
+                if let image, let brut = image.jpegData(compressionQuality: 1), let data = ImagePourPC.jpeg(brut) {
                     modele.ajouter(PieceSaisie(nom: "photo-\(horodatage()).jpg", typeMIME: "image/jpeg", donnees: data, origine: .photo))
                 }
             }
@@ -232,22 +232,10 @@ struct SaisieView: View {
         guard !elements.isEmpty else { return }
         for element in elements {
             guard let data = try? await element.loadTransferable(type: Data.self) else { continue }
-            let type = element.supportedContentTypes.first
-            let heic = type?.identifier == "public.heic"
-            let donnees: Data
-            let mime: String
-            let ext: String
-            if heic || (type?.conforms(to: .jpeg) ?? false) || (type?.conforms(to: .png) ?? false) {
-                donnees = data
-                mime = heic ? "image/heic" : (type?.conforms(to: .png) ?? false) ? "image/png" : "image/jpeg"
-                ext = heic ? "heic" : (type?.conforms(to: .png) ?? false) ? "png" : "jpg"
-            } else if let image = UIImage(data: data), let jpeg = image.jpegData(compressionQuality: 0.85) {
-                donnees = jpeg
-                mime = "image/jpeg"
-                ext = "jpg"
-            } else {
-                continue
-            }
+            // HEIC, PNG ou JPEG : toujours converti en JPEG 0,85, 2560 px au plus (lisible par le PC).
+            guard let donnees = ImagePourPC.jpeg(data) else { continue }
+            let ext = "jpg"
+            let mime = "image/jpeg"
             modele.ajouter(PieceSaisie(nom: "photo-\(horodatage())-\(modele.pieces.count + 1).\(ext)", typeMIME: mime, donnees: donnees, origine: .photo))
         }
         selectionPhotos = []

@@ -77,6 +77,7 @@ struct RacineView: View {
                     .transition(.opacity.combined(with: .scale(scale: 1.02)))
             } else {
                 ConnexionView()
+                    .toast($modele.toast)
                     .transition(.opacity)
             }
 
@@ -125,7 +126,10 @@ struct RacineView: View {
                 .presentationDragIndicator(.visible)
         }
         .task {
-            if modele.session.estConnecte { await modele.verrou.deverrouiller() }
+            if modele.session.estConnecte {
+                await modele.migrerJetonSiNecessaire()
+                await modele.verrou.deverrouiller()
+            }
         }
     }
 }

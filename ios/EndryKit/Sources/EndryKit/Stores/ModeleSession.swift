@@ -118,13 +118,65 @@ public final class ModeleSession {
         await apiDemo?.reinitialiser()
     }
 
-    /// Révoque le jeton de cet iPhone côté PC (v1.1), puis efface tout localement.
+    public enum ResultatDeconnexion: Equatable, Sendable {
+        /// Le PC a révoqué le jeton de cet iPhone.
+        case revoque
+        /// Jeton commun, ou PC trop ancien (405) : effacé ici, mais pas révocable à distance.
+        case nonRevocable
+        /// PC injoignable : effacé ici ; le jeton reste valable côté PC jusqu'à sa révocation.
+        case pcInjoignable
+    }
+
+    /// Révoque le jeton de cet iPhone côté PC (`DELETE /appareils/{id}`), puis efface tout localement.
     /// Même si le PC est injoignable, l'iPhone est déconnecté.
-    public func deconnecterCetAppareil() async {
+    @discardableResult
+    public func deconnecterCetAppareil() async -> ResultatDeconnexion {
+        var resultat = ResultatDeconnexion.nonRevocable
         if let api, let id = appareilId {
-            try? await api.supprimerAppareil(id)
+            do {
+                try await api.supprimerAppareil(id)
+                resultat = .revoque
+            } catch .serveur(let statut, _) where statut == 404 || statut == 405 {
+                resultat = .nonRevocable
+            } catch {
+                resultat = error.estProblemeReseau ? .pcInjoignable : .nonRevocable
+            }
         }
         await deconnecter()
+        return resultat
+    }
+
+    /// Au lancement : un ancien jeton commun (sans `appareil_id`) est échangé une fois contre un jeton propre
+    /// à cet iPhone (`POST /session/appareil`), sans nouveau lien. Vrai si le jeton a changé.
+    public func migrerSiNecessaire() async -> Bool {
+        guard case .connecte(let i) = etat, i.appareilId == nil, i.migrationTentee != true, let appareil else { return false }
+        let client = ClientAPI(identifiants: i, transport: transport)
+        do {
+            let data = try await client.envoyer(.migrationAppareil(nom: appareil.nom, modele: appareil.modele))
+            let session = try client.decoder(SessionOuverte.self, depuis: data)
+            var nouveaux = Identifiants(base: i.base, jeton: session.jeton, entreprise: session.entreprise ?? i.entreprise,
+                                        expireLe: session.valableJours.map { Date().addingTimeInterval(TimeInterval($0) * 86_400) } ?? i.expireLe,
+                                        appareilId: session.appareilId)
+            nouveaux.migrationTentee = true
+            try? coffre.enregistrer(nouveaux)
+            etat = .connecte(nouveaux)
+            api = ClientAPI(identifiants: nouveaux, transport: transport)
+            return true
+        } catch .dejaParAppareil {
+            marquerMigration(i)
+        } catch .serveur(let statut, _) where statut == 404 || statut == 405 {
+            marquerMigration(i)
+        } catch {
+            // Réseau ou autre : on réessaiera au prochain lancement.
+        }
+        return false
+    }
+
+    private func marquerMigration(_ i: Identifiants) {
+        var marque = i
+        marque.migrationTentee = true
+        try? coffre.enregistrer(marque)
+        etat = .connecte(marque)
     }
 
     public func deconnecter() async {

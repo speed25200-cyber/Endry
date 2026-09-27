@@ -93,6 +93,11 @@ extension Requete {
 
     public static let appareils = Requete(.get, "\(prefixe)/appareils")
 
+    /// Migration sans nouveau lien : l'ancien jeton commun est échangé contre un jeton propre à cet iPhone.
+    public static func migrationAppareil(nom: String, modele: String) -> Requete {
+        .init(.post, "\(prefixe)/session/appareil", corps: .json(jsonObjet(["appareil": ["nom": nom, "modele": modele]])))
+    }
+
     public static func supprimerAppareil(_ id: String) -> Requete {
         .init(.delete, "\(prefixe)/appareils/\(id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id)")
     }

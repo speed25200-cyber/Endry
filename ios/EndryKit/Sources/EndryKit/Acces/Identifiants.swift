@@ -11,6 +11,8 @@ public struct Identifiants: Codable, Sendable, Equatable {
     public var expireLe: Date?
     /// v1.1 : identifiant de l'appareil côté PC (absent avec l'ancien jeton commun).
     public var appareilId: String?
+    /// Migration vers un jeton propre à l'appareil déjà tentée (réussie, déjà faite, ou serveur trop ancien).
+    public var migrationTentee: Bool?
 
     public init(base: URL, jeton: String, entreprise: String? = nil, expireLe: Date? = nil, appareilId: String? = nil) {
         self.base = base

@@ -6,17 +6,27 @@
 #                  à chaque push et pull request qui touche ios/ ou ce fichier.
 #   ios-testflight signature + IPA + envoi TestFlight, sur un tag « ios-v* » ou lancé à la main.
 #
-# Aucun secret dans ce fichier : ils vivent dans le groupe de variables Codemagic « endry_app_store ».
+# Aucun secret dans ce fichier : la signature utilise l'intégration App Store Connect « PetMind ASC API »
+# et le certificat de distribution déjà enregistrés dans l'équipe Codemagic (partagés avec Picshop).
 
 definitions:
   outils: &outils
     name: Outils (XcodeGen, Metal)
     script: |
       set -e
-      brew install xcodegen || brew upgrade xcodegen
       xcodebuild -version
+      brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
       # Depuis Xcode 26, le compilateur Metal (shader de la carte héros) est un composant à part.
-      xcodebuild -downloadComponent MetalToolchain || true
+      metal_ok() { xcrun -sdk iphoneos metal --version >/dev/null 2>&1; }
+      if ! metal_ok; then
+        sudo xcodebuild -runFirstLaunch || true
+        xcodebuild -downloadComponent MetalToolchain || true
+      fi
+      if ! metal_ok; then
+        DMG="$(find /System/Library/AssetsV2/com_apple_MobileAsset_MetalToolchain -name '*.dmg' 2>/dev/null | head -1)"
+        if [ -n "$DMG" ]; then sudo xcodebuild -importComponentFromPath "$DMG" || true; fi
+      fi
+      metal_ok && xcrun -sdk iphoneos metal --version | head -1 || echo "Attention : compilateur Metal introuvable."
   projet: &projet
     name: Générer le projet Xcode
     working_directory: ios
@@ -92,15 +102,20 @@ workflows:
     name: iOS · TestFlight
     instance_type: mac_mini_m2
     max_build_duration: 90
+    # Même intégration App Store Connect et même certificat de distribution que Picshop
+    # (Codemagic › Teams › Integrations / Code signing identities) : rien à recréer.
+    integrations:
+      app_store_connect: PetMind ASC API
     environment:
       xcode: latest
-      groups:
-        # ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8, APPLE_TEAM_ID, CERTIFICATE_PRIVATE_KEY
-        # (+ APP_STORE_APPLE_ID, facultatif : identifiant numérique de l'app dans App Store Connect)
-        - endry_app_store
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: ch.endry.pilotage
       vars:
+        XCODE_PROJECT: ios/EndryPilotage.xcodeproj
         BUNDLE_ID: ch.endry.pilotage
         BUNDLE_ID_WIDGET: ch.endry.pilotage.widget
+        # Facultatif : APP_STORE_APPLE_ID (identifiant numérique de l'app) en variable Codemagic.
     triggering:
       events:
         - tag
@@ -110,49 +125,48 @@ workflows:
     scripts:
       - *outils
       - *projet
-      - name: Identifiants App Store Connect
+      - name: Tests du paquet EndryKit
+        working_directory: ios/EndryKit
+        script: swift test
+      - name: Profils de signature (app + widget)
         script: |
           set -e
-          # Noms attendus par l'outillage Codemagic (app-store-connect, xcode-project).
-          echo "APP_STORE_CONNECT_KEY_IDENTIFIER=$ASC_KEY_ID" >> "$CM_ENV"
-          echo "APP_STORE_CONNECT_ISSUER_ID=$ASC_ISSUER_ID" >> "$CM_ENV"
-          {
-            echo "APP_STORE_CONNECT_PRIVATE_KEY<<FIN_CLE_ASC"
-            echo "$ASC_KEY_P8"
-            echo "FIN_CLE_ASC"
-          } >> "$CM_ENV"
-      - name: Certificats et profils (app + widget)
-        script: |
-          set -e
-          keychain initialize
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
-          app-store-connect fetch-signing-files "$BUNDLE_ID_WIDGET" --type IOS_APP_STORE --create
-          keychain add-certificates
-          xcode-project use-profiles --project ios/EndryPilotage.xcodeproj
-      - name: Numéro de build
-        working_directory: ios
-        script: |
-          set -e
-          NUMERO="$PROJECT_BUILD_NUMBER"
-          if [ -n "$APP_STORE_APPLE_ID" ]; then
-            DERNIER=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || echo 0)
-            NUMERO=$((DERNIER + 1))
+          PROFILS="$HOME/Library/MobileDevice/Provisioning Profiles"
+          ls "$PROFILS" 2>/dev/null || true
+          widget_ok() {
+            for f in "$PROFILS"/*.mobileprovision; do
+              [ -e "$f" ] || continue
+              security cms -D -i "$f" 2>/dev/null | grep -q "\.$BUNDLE_ID_WIDGET</string>" && return 0
+            done
+            return 1
+          }
+          if ! widget_ok; then
+            echo "Profil du widget absent : récupération / création via App Store Connect."
+            app-store-connect fetch-signing-files "$BUNDLE_ID_WIDGET" --type IOS_APP_STORE --create
           fi
-          echo "Build n° $NUMERO"
-          agvtool new-version -all "$NUMERO"
+          # Applique les certificats et profils récupérés par Codemagic au projet.
+          xcode-project use-profiles --project "$XCODE_PROJECT"
+      - name: Numéro de build
+        script: |
+          set -e
+          DERNIER=0
+          if [ -n "${APP_STORE_APPLE_ID:-}" ]; then
+            DERNIER=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null | tail -n 1 || true)
+          fi
+          case "$DERNIER" in ''|*[!0-9]*) DERNIER=0 ;; esac
+          SUIVANT=$(( DERNIER + 1 ))
+          if [ "$SUIVANT" -lt "${BUILD_NUMBER:-1}" ]; then SUIVANT="$BUILD_NUMBER"; fi
+          echo "Build n° $SUIVANT"
+          cd ios && agvtool new-version -all "$SUIVANT"
       - name: Construire l'IPA
         script: |
-          xcode-project build-ipa \
-            --project ios/EndryPilotage.xcodeproj \
-            --scheme EndryPilotage \
-            --config Release
+          set -e
+          xcode-project build-ipa --project "$XCODE_PROJECT" --scheme EndryPilotage --config Release
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
       - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
     publishing:
       app_store_connect:
-        api_key: $ASC_KEY_P8
-        key_id: $ASC_KEY_ID
-        issuer_id: $ASC_ISSUER_ID
+        auth: integration
         submit_to_testflight: true

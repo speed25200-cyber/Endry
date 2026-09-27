@@ -87,6 +87,10 @@ Codemagic n’a pas besoin de fastlane : sa CLI (`app-store-connect`, `xcode-pro
 
 ### À faire une seule fois (vous)
 
+> **Configuration actuelle** : le workflow `ios-testflight` réutilise l'intégration App Store Connect
+> **« PetMind ASC API »** et le certificat de distribution déjà enregistrés dans l'équipe Codemagic (comme Picshop).
+> Les étapes 1 à 3 et le groupe `endry_app_store` ci-dessous ne servent que si Endry doit avoir sa propre clé.
+
 **1. Clé API App Store Connect** (`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`)
 - [appstoreconnect.apple.com](https://appstoreconnect.apple.com) › **Utilisateurs et accès** › onglet **Intégrations** ›
   **API App Store Connect** › **Clés d’équipe** › « + » (générer une clé), accès **Gestionnaire d’app** (App Manager).

@@ -92,7 +92,7 @@ struct ChantiersView: View {
     @ViewBuilder
     private var liste: some View {
         switch modele.etat {
-        case .initial, .chargement where modele.chantiers.isEmpty:
+        case .chargement where modele.chantiers.isEmpty, .initial:
             ForEach(0..<3, id: \.self) { _ in Squelette(hauteur: 150, rayon: Espace.rayon) }
         case .erreur(let erreur) where modele.chantiers.isEmpty:
             VueErreur(erreur: erreur) { Task { await modele.charger() } }

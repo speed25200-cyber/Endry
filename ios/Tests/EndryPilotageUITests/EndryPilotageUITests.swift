@@ -32,6 +32,20 @@ final class EndryPilotageUITests: XCTestCase {
         return element
     }
 
+    /// Touche un élément dès qu'il est touchable (fin des animations d'apparition) ; sinon, touche sa position.
+    @MainActor
+    private func toucher(_ element: XCUIElement, delai: TimeInterval = 5) {
+        let limite = Date().addingTimeInterval(delai)
+        while !element.isHittable && Date() < limite {
+            usleep(200_000)
+        }
+        if element.isHittable {
+            element.tap()
+        } else {
+            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3)).tap()
+        }
+    }
+
     /// Pile de décisions : passe les cartes (« Plus tard ») jusqu'à ce que l'élément voulu soit devant.
     @MainActor
     @discardableResult
@@ -115,7 +129,7 @@ final class EndryPilotageUITests: XCTestCase {
         onglet.tap()
         let texte = app.textViews["texte-saisie"]
         XCTAssertTrue(texte.waitForExistence(timeout: 3))
-        texte.tap()
+        toucher(texte)
         texte.typeText("Chantier Rochat : citerne dégazée.")
         app.buttons["transmettre"].tap()
         XCTAssertTrue(app.staticTexts["Transmis"].waitForExistence(timeout: 5))

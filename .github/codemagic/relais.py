@@ -134,7 +134,7 @@ if demande.get("action") == "lancer_et_captures" and build_lance:
     captures(build_lance)
 elif demande.get("action") == "attendre_et_captures":
     du_commit = [b for b in builds if (b.get("commit") or {}).get("hash", "").startswith(commit[:7])
-                 and (b.get("workflowId") or b.get("fileWorkflowId")) == "ios-tests" and b.get("status") == "finished"]
+                 and (b.get("workflowId") or b.get("fileWorkflowId")) == "ios-tests" and b.get("status") in ("finished", "failed")]
     if du_commit:
         captures(du_commit[0]["_id"])
 elif demande.get("action") == "captures":

@@ -58,7 +58,7 @@ final class MoteurTempsReel: MoteurVoix {
             throw ErreurVoix.connexion
         }
 
-        nonisolated(unsafe) let canalReseau = socket
+        let canalReseau = socket
         let canal = CanalAudioTempsReel()
         canal.surVide = { [weak self] in
             Task { @MainActor in self?.lectureTerminee() }

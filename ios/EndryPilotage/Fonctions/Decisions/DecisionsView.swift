@@ -107,7 +107,7 @@ struct DecisionsView: View {
     @ViewBuilder
     private var contenu: some View {
         switch modele.etat {
-        case .initial, .chargement where modele.accueil == nil:
+        case .chargement where modele.accueil == nil, .initial:
             SqueletteCarte()
             Squelette(hauteur: 220, rayon: Espace.rayon)
         case .erreur(let erreur) where modele.accueil == nil:

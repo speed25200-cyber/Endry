@@ -25,7 +25,7 @@ struct ArgentView: View {
                     }
 
                     switch modele.etat {
-                    case .initial, .chargement where modele.argent == nil:
+                    case .chargement where modele.argent == nil, .initial:
                         Squelette(hauteur: 220, rayon: Espace.rayon)
                         Squelette(hauteur: 160, rayon: Espace.rayon)
                     case .erreur(let erreur) where modele.argent == nil:

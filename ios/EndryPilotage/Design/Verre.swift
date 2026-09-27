@@ -22,42 +22,42 @@ extension View {
 // MARK: - Onglets
 
 enum Onglet: String, CaseIterable, Identifiable, Hashable {
-    case decisions, chantiers, saisie, argent, planning
+    case aujourdhui, chantiers, saisie, finances, entreprise
 
     var id: String { rawValue }
 
     var titre: String {
         switch self {
-        case .decisions: "Décisions"
+        case .aujourdhui: "Aujourd’hui"
         case .chantiers: "Chantiers"
         case .saisie: "Dicter"
-        case .argent: "Argent"
-        case .planning: "Planning"
+        case .finances: "Finances"
+        case .entreprise: "Entreprise"
         }
     }
 
     var icone: String {
         switch self {
-        case .decisions: "checkmark.seal"
+        case .aujourdhui: "sun.horizon"
         case .chantiers: "hammer"
         case .saisie: "mic"
-        case .argent: "banknote"
-        case .planning: "calendar"
+        case .finances: "chart.line.uptrend.xyaxis"
+        case .entreprise: "building.2"
         }
     }
 
     var iconeActive: String {
         switch self {
-        case .decisions: "checkmark.seal.fill"
+        case .aujourdhui: "sun.horizon.fill"
         case .chantiers: "hammer.fill"
         case .saisie: "mic.fill"
-        case .argent: "banknote.fill"
-        case .planning: "calendar.badge.clock"
+        case .finances: "chart.line.uptrend.xyaxis"
+        case .entreprise: "building.2.fill"
         }
     }
 }
 
-/// Barre d'onglets flottante en verre, bouton micro central surélevé doré.
+/// Barre d'onglets flottante en verre sombre ; onglet actif en or, micro doré surélevé au centre.
 struct BarreOnglets: View {
     @Binding var selection: Onglet
     var badgeDecisions: Int
@@ -66,19 +66,23 @@ struct BarreOnglets: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            bouton(.decisions)
+            bouton(.aujourdhui)
             bouton(.chantiers)
             BoutonMicroCentral(actif: selection == .saisie) {
-                selection = .saisie
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) { selection = .saisie }
             }
             .frame(maxWidth: .infinity)
-            bouton(.argent)
-            bouton(.planning)
+            bouton(.finances)
+            bouton(.entreprise)
         }
         .padding(.horizontal, 6)
-        .frame(height: 64)
+        .frame(height: 66)
+        .background(Color.espressoProfond.opacity(0.55), in: Capsule())
         .verre(Capsule(), interactif: true)
-        .shadow(color: Color.espressoProfond.opacity(0.18), radius: 20, y: 8)
+        .overlay(Capsule().strokeBorder(
+            LinearGradient(colors: [Color.white.opacity(0.16), Color.white.opacity(0.03)], startPoint: .top, endPoint: .bottom),
+            lineWidth: 0.7))
+        .shadow(color: .black.opacity(0.55), radius: 26, y: 12)
         .padding(.horizontal, Espace.m)
         .sensoryFeedback(.selection, trigger: selection)
     }
@@ -90,49 +94,53 @@ struct BarreOnglets: View {
                 selection = onglet
             }
         } label: {
-            VStack(spacing: 3) {
+            VStack(spacing: 4) {
                 Image(systemName: actif ? onglet.iconeActive : onglet.icone)
                     .font(.system(size: 18, weight: actif ? .semibold : .regular))
                     .symbolEffect(.bounce.down, value: actif)
+                    .foregroundStyle(actif ? AnyShapeStyle(.degradeOr) : AnyShapeStyle(Color.encrePale))
                     .overlay(alignment: .topTrailing) {
-                        if onglet == .decisions, badgeDecisions > 0 {
+                        if onglet == .aujourdhui, badgeDecisions > 0 {
                             Text("\(badgeDecisions)")
                                 .font(Police.titre(10, relativeTo: .caption2))
                                 .monospacedDigit()
-                                .foregroundStyle(Color.espresso)
+                                .foregroundStyle(Color.espressoProfond)
                                 .padding(.horizontal, 4)
                                 .frame(minWidth: 16, minHeight: 16)
                                 .background(Color.or, in: Capsule())
-                                .offset(x: 10, y: -6)
+                                .offset(x: 11, y: -7)
                                 .contentTransition(.numericText(value: Double(badgeDecisions)))
                                 .accessibilityHidden(true)
                         }
                     }
                 Text(onglet.titre)
                     .font(Police.texte(10, relativeTo: .caption2, graisse: actif ? .semibold : .medium))
+                    .foregroundStyle(actif ? Color.orClair : Color.encrePale)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            .foregroundStyle(actif ? Color.encre : Color.encrePale)
-            .frame(maxWidth: .infinity, minHeight: 52)
-            .background {
-                if actif {
-                    Capsule()
-                        .fill(Color.encre.opacity(0.07))
-                        .matchedGeometryEffect(id: "onglet", in: espace)
-                        .padding(.vertical, 2)
+                    .minimumScaleFactor(0.75)
+                // Point lumineux sous l'onglet actif.
+                ZStack {
+                    if actif {
+                        Circle()
+                            .fill(Color.or)
+                            .frame(width: 4, height: 4)
+                            .shadow(color: Color.or, radius: 4)
+                            .matchedGeometryEffect(id: "point", in: espace)
+                    }
                 }
+                .frame(height: 4)
             }
+            .frame(maxWidth: .infinity, minHeight: 56)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text(onglet == .decisions && badgeDecisions > 0 ? "\(onglet.titre), \(badgeDecisions) en attente" : onglet.titre))
+        .accessibilityLabel(Text(onglet == .aujourdhui && badgeDecisions > 0 ? "\(onglet.titre), \(badgeDecisions) décisions en attente" : onglet.titre))
         .accessibilityAddTraits(actif ? .isSelected : [])
         .accessibilityIdentifier("onglet-\(onglet.rawValue)")
     }
 }
 
-/// Bouton micro doré, qui respire au repos.
+/// Bouton micro doré, qui respire au repos et rayonne quand il est actif.
 struct BoutonMicroCentral: View {
     var actif: Bool
     var action: () -> Void
@@ -142,20 +150,24 @@ struct BoutonMicroCentral: View {
         Button(action: action) {
             ZStack {
                 Circle()
+                    .fill(Color.or.opacity(actif ? 0.35 : 0.18))
+                    .frame(width: 76, height: 76)
+                    .blur(radius: 14)
+                Circle()
                     .fill(.degradeOr)
                     .frame(width: 60, height: 60)
-                    .shadow(color: Color.bronzeMoyen.opacity(0.55), radius: 14, y: 6)
-                    .overlay(Circle().strokeBorder(Color.white.opacity(0.45), lineWidth: 0.8).padding(1))
+                    .overlay(Circle().strokeBorder(Color.white.opacity(0.5), lineWidth: 0.8).padding(1))
+                    .shadow(color: Color.or.opacity(0.45), radius: 16, y: 6)
                 Image(systemName: "mic.fill")
                     .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(Color.espresso)
+                    .foregroundStyle(Color.espressoProfond)
             }
             .phaseAnimator(reduireAnimations || actif ? [false] : [false, true]) { contenu, phase in
-                contenu.scaleEffect(phase ? 1.045 : 1)
+                contenu.scaleEffect(phase ? 1.05 : 1)
             } animation: { _ in
                 .easeInOut(duration: 1.8)
             }
-            .offset(y: -14)
+            .offset(y: -16)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text("Dicter une saisie terrain"))

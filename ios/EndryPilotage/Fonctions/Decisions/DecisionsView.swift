@@ -42,7 +42,7 @@ struct DecisionsView: View {
                     withAnimation(.spring) { lecteur.scrollTo(reference, anchor: .top) }
                 }
             }
-            .background(Color.fond)
+            .background(FondAmbiant())
             .toolbar(.hidden, for: .navigationBar)
         }
         .toast(Binding(get: { modele.toast }, set: { modele.toast = $0 }))
@@ -56,34 +56,58 @@ struct DecisionsView: View {
     // MARK: - En-tête
 
     private var entete: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: Espace.xxs) {
-                Text(modele.accueil?.date ?? DateEndry.longue(Date()))
-                    .styleSurtitre()
-                Text(modele.accueil?.salut ?? "Bonjour")
-                    .styleTitre(32, relativeTo: .largeTitle)
-                    .foregroundStyle(Color.encre)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: Espace.m)
-            Button {
-                app.reglagesPresentes = true
-            } label: {
-                ZStack {
-                    Circle().fill(Color.espresso)
-                    Text("E").font(Police.titre(17, relativeTo: .body)).foregroundStyle(.degradeOr)
-                    if app.session.estDemo {
-                        Circle().fill(Color.or).frame(width: 9, height: 9)
-                            .overlay(Circle().stroke(Color.fond, lineWidth: 2))
-                            .offset(x: 14, y: -14)
+        VStack(alignment: .leading, spacing: Espace.m) {
+            HStack(alignment: .center) {
+                Text((modele.accueil?.date ?? DateEndry.longue(Date())).capitalizedPremiere)
+                    .font(Police.texte(12, relativeTo: .caption, graisse: .semibold))
+                    .textCase(.uppercase)
+                    .tracking(1.4)
+                    .foregroundStyle(Color.or)
+                Spacer()
+                Button {
+                    app.reglagesPresentes = true
+                } label: {
+                    ZStack {
+                        Circle().fill(Color.surfaceCreuse)
+                        Circle().strokeBorder(.degradeOr, lineWidth: 1)
+                        Text("E").font(Police.titre(17, relativeTo: .body)).foregroundStyle(.degradeOr)
+                        if app.session.estDemo {
+                            Circle().fill(Color.or).frame(width: 9, height: 9)
+                                .overlay(Circle().stroke(Color.fond, lineWidth: 2))
+                                .offset(x: 14, y: -14)
+                        }
                     }
+                    .frame(width: 40, height: 40)
                 }
-                .frame(width: 40, height: 40)
+                .accessibilityLabel(Text("Réglages"))
+                .accessibilityIdentifier("bouton-reglages")
             }
-            .accessibilityLabel(Text("Réglages"))
-            .accessibilityIdentifier("bouton-reglages")
+            Text(modele.accueil?.salut ?? "Bonjour")
+                .styleTitre(36, relativeTo: .largeTitle)
+                .foregroundStyle(Color.encre)
+                .fixedSize(horizontal: false, vertical: true)
+            if let accueil = modele.accueil {
+                apercu(accueil)
+            }
         }
-        .padding(.top, Espace.m)
+        .padding(.top, Espace.s)
+    }
+
+    /// Résumé du jour en pastilles de verre.
+    private func apercu(_ accueil: Accueil) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Espace.xs) {
+                PastilleApercu(icone: "checkmark.seal.fill", texte: "\(modele.nombreDecisions) à décider", accent: modele.nombreDecisions > 0)
+                PastilleApercu(icone: "hammer.fill", texte: "\(accueil.chantiers7Jours.count) chantiers cette semaine", accent: false)
+                if !accueil.payer.cetteSemaine.isEmpty {
+                    PastilleApercu(icone: "calendar.badge.clock", texte: "\(accueil.payer.cetteSemaine.count) paiements sous 7 j", accent: false)
+                }
+                if accueil.encaisser.anciennete.plus30 > 0 {
+                    PastilleApercu(icone: "exclamationmark.triangle.fill", texte: "\(FormatSuisse.chfArrondi(accueil.encaisser.anciennete.plus30)) > 30 j", accent: false, alerte: true)
+                }
+            }
+        }
+        .scrollClipDisabled()
     }
 
     // MARK: - Contenu
@@ -100,9 +124,14 @@ struct DecisionsView: View {
         default:
             if let accueil = modele.accueil {
                 CarteHeros(encaisser: accueil.encaisser, offres: accueil.offres, payer: accueil.payer) {
-                    app.onglet = .argent
+                    app.onglet = .finances
                 }
                 .apparitionEnCascade(index: 1, visible: visible)
+
+                if !accueil.chantiers7Jours.isEmpty {
+                    AgendaSemaine(semaine: accueil.chantiers7Jours) { app.onglet = .chantiers }
+                        .apparitionEnCascade(index: 2, visible: visible)
+                }
 
                 HStack(alignment: .firstTextBaseline, spacing: Espace.xs) {
                     Text("À décider").styleTitre(24, relativeTo: .title2).foregroundStyle(Color.encre)
@@ -146,12 +175,96 @@ struct DecisionsView: View {
                     }
                 }
 
-                if !accueil.chantiers7Jours.isEmpty {
-                    SemaineChantiers(semaine: accueil.chantiers7Jours)
-                        .padding(.top, Espace.s)
-                }
             }
         }
+    }
+}
+
+/// Pastille de résumé en verre.
+struct PastilleApercu: View {
+    var icone: String
+    var texte: String
+    var accent: Bool
+    var alerte = false
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icone).font(.system(size: 11, weight: .bold))
+            Text(texte).styleTexte(12, relativeTo: .caption, graisse: .semibold)
+        }
+        .foregroundStyle(alerte ? Color.rouille : accent ? Color.espressoProfond : Color.encreDouce)
+        .padding(.horizontal, 12)
+        .frame(minHeight: 30)
+        .background {
+            if accent {
+                Capsule().fill(.degradeOr)
+            } else {
+                Capsule().fill(Color.surfaceCreuse)
+                    .overlay(Capsule().strokeBorder(Color.white.opacity(0.07), lineWidth: 0.6))
+            }
+        }
+    }
+}
+
+/// Agenda des 7 prochains jours : cartes horizontales qui s'effacent en glissant.
+struct AgendaSemaine: View {
+    var semaine: [Semaine]
+    var ouvrir: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Espace.s) {
+            EnTeteSection(titre: "Cette semaine", detail: "sur les chantiers", action: ouvrir, libelleAction: "Planning")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Espace.s) {
+                    ForEach(semaine) { item in
+                        CarteJour(item: item)
+                            .scrollTransition(.interactive, axis: .horizontal) { contenu, phase in
+                                contenu
+                                    .scaleEffect(phase.isIdentity ? 1 : 0.92)
+                                    .opacity(phase.isIdentity ? 1 : 0.55)
+                                    .rotation3DEffect(.degrees(phase.value * -8), axis: (x: 0, y: 1, z: 0))
+                            }
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.viewAligned)
+            .scrollClipDisabled()
+        }
+    }
+}
+
+private struct CarteJour: View {
+    var item: Semaine
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Espace.s) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                if let date = item.dateDebut {
+                    Text("\(DateEndry.numeroJour(date))")
+                        .styleTitre(34, relativeTo: .largeTitle)
+                        .foregroundStyle(.texteOr)
+                    Text(DateEndry.jourAbrege(date))
+                        .font(Police.texte(12, relativeTo: .caption, graisse: .semibold))
+                        .textCase(.uppercase)
+                        .foregroundStyle(Color.encreDouce)
+                } else {
+                    Image(systemName: "calendar").foregroundStyle(Color.or)
+                }
+            }
+            Text(item.titre)
+                .styleTexte(14, relativeTo: .subheadline, graisse: .semibold)
+                .foregroundStyle(Color.encre)
+                .lineLimit(2, reservesSpace: true)
+            Label([item.lieu, item.dates].compactMap { $0 }.joined(separator: " · "), systemImage: "mappin.and.ellipse")
+                .styleTexte(11, relativeTo: .caption2)
+                .foregroundStyle(Color.encrePale)
+                .lineLimit(1)
+        }
+        .padding(Espace.m)
+        .frame(width: 210, alignment: .leading)
+        .surfaceCarte(rayon: 24)
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -204,4 +317,5 @@ struct SemaineChantiers: View {
     app.activerDemo()
     return DecisionsView(modele: app.decisions!)
         .environment(app)
+        .preferredColorScheme(.dark)
 }

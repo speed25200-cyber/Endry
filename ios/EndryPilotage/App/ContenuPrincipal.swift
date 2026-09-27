@@ -2,7 +2,7 @@ import EndryKit
 import QuickLook
 import SwiftUI
 
-/// Les cinq écrans, gardés en mémoire (position de défilement conservée), sous la barre d'onglets en verre.
+/// Les quatre espaces et la saisie, gardés en mémoire (position de défilement conservée), sous la barre d'onglets en verre.
 struct ContenuPrincipal: View {
     @Environment(ModeleApp.self) private var app
 
@@ -11,11 +11,11 @@ struct ContenuPrincipal: View {
         @Bindable var documents = app.documents
         ZStack(alignment: .bottom) {
             ZStack {
-                ecran(.decisions) { if let m = app.decisions { DecisionsView(modele: m).id(ObjectIdentifier(m)) } }
-                ecran(.chantiers) { if let m = app.chantiers { ChantiersView(modele: m).id(ObjectIdentifier(m)) } }
+                ecran(.aujourdhui) { if let m = app.decisions { DecisionsView(modele: m).id(ObjectIdentifier(m)) } }
+                ecran(.chantiers) { if let m = app.chantiers { EspaceChantiers(modele: m).id(ObjectIdentifier(m)) } }
                 ecran(.saisie) { if let m = app.saisie { SaisieView(modele: m).id(ObjectIdentifier(m)) } }
-                ecran(.argent) { if let m = app.argent { ArgentView(modele: m).id(ObjectIdentifier(m)) } }
-                ecran(.planning) { if let m = app.chantiers { PlanningView(modele: m).id(ObjectIdentifier(m)) } }
+                ecran(.finances) { if let m = app.argent { ArgentView(modele: m).id(ObjectIdentifier(m)) } }
+                ecran(.entreprise) { EntrepriseView() }
             }
 
             BarreOnglets(selection: $app.onglet, badgeDecisions: app.decisions?.nombreDecisions ?? 0)
@@ -61,10 +61,11 @@ struct ContenuPrincipal: View {
         let actif = app.onglet == onglet
         contenu()
             .opacity(actif ? 1 : 0)
-            .scaleEffect(actif ? 1 : 0.985)
+            .scaleEffect(actif ? 1 : 0.97)
+            .blur(radius: actif ? 0 : 8)
             .allowsHitTesting(actif)
             .accessibilityHidden(!actif)
-            .animation(.easeOut(duration: 0.18), value: actif)
+            .animation(.spring(response: 0.42, dampingFraction: 0.88), value: actif)
     }
 }
 

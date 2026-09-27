@@ -41,7 +41,7 @@ struct ChantiersView: View {
             }
             .scrollIndicators(.hidden)
             .tirerPourActualiser { await modele.actualiser() }
-            .background(Color.fond)
+            .background(FondAmbiant())
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Dossier.self) { dossier in
                 DossierView(modele: ModeleDossier(dossier: dossier, api: app.session.api ?? APIDemo(), cache: app.session.estDemo ? nil : app.session.cache) { app.session.signaler($0) })

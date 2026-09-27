@@ -11,7 +11,7 @@ final class ModeleApp {
     let verrou = Verrou()
     let documents = Documents()
 
-    var onglet: Onglet = .decisions
+    var onglet: Onglet = .aujourdhui
     /// Carte à mettre en avant (toucher d'une notification).
     var referenceCiblee: String?
     /// Présente l'écran de connexion par-dessus l'app (nouveau lien).
@@ -71,7 +71,7 @@ final class ModeleApp {
         verrou.marquerDeverrouille()
         reconstruire()
         connexionPresentee = false
-        onglet = .decisions
+        onglet = .aujourdhui
         await proposerNotifications()
     }
 
@@ -79,7 +79,7 @@ final class ModeleApp {
         session.activerDemo()
         verrou.marquerDeverrouille()
         reconstruire()
-        onglet = .decisions
+        onglet = .aujourdhui
     }
 
     func deconnecter() async {
@@ -96,7 +96,7 @@ final class ModeleApp {
 
     func ouvrir(reference: String) {
         referenceCiblee = reference
-        onglet = .decisions
+        onglet = .aujourdhui
     }
 
     // MARK: - Badge

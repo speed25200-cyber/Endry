@@ -11,7 +11,7 @@ struct EndryPilotageApp: App {
         WindowGroup {
             RacineView()
                 .environment(modele)
-                .preferredColorScheme(Configuration.schemaForce == "sombre" ? .dark : Configuration.schemaForce == "clair" ? .light : nil)
+                .preferredColorScheme(Configuration.schemaForce == "clair" ? .light : .dark)
                 .onAppear {
                     delegue.surJetonAPNs = { [modele] jeton in modele.recevoirJetonAPNs(jeton) }
                     delegue.surReference = { [modele] reference in modele.ouvrir(reference: reference) }
@@ -32,7 +32,7 @@ struct EndryPilotageApp: App {
                 .onOpenURL { url in
                     // Lien interne : endrypilotage://decisions
                     if url.scheme == "endrypilotage", url.host == "decisions" {
-                        modele.onglet = .decisions
+                        modele.onglet = .aujourdhui
                         return
                     }
                     // Lien d'accès ouvert depuis Mail (lien universel ou schéma personnalisé).

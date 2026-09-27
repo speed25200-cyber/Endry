@@ -1,33 +1,35 @@
 import SwiftUI
 import UIKit
 
-/// Palette Endry : cabinet d'artisan suisse de prestige. Clair et sombre automatiques.
+/// Palette « banque privée » : noir profond, verre, or champagne. L'app est volontairement sombre ;
+/// les variantes claires ne servent qu'aux captures forcées (`-clair`).
 extension Color {
-    /// Fond crème / nuit chaude.
-    static let fond = Color(clair: 0xF4EEE3, sombre: 0x120E0A)
-    /// Surfaces des cartes.
-    static let surface = Color(clair: 0xFFFCF6, sombre: 0x1B1611)
-    /// Surface légèrement enfoncée (champs, pistes).
-    static let surfaceCreuse = Color(clair: 0xEDE5D6, sombre: 0x241D16)
-    /// Texte principal.
-    static let encre = Color(clair: 0x1B1510, sombre: 0xF5EDE0)
+    /// Fond : noir chaud, jamais #000 pur (évite l'effet « trou » sur OLED).
+    static let fond = Color(clair: 0xF6F3EE, sombre: 0x08080A)
+    /// Surfaces des cartes (posées sur le fond, légèrement relevées).
+    static let surface = Color(clair: 0xFFFFFF, sombre: 0x131316)
+    /// Surface relevée (tuiles, champs, pistes).
+    static let surfaceCreuse = Color(clair: 0xEEEAE3, sombre: 0x1C1C21)
+    /// Texte principal : ivoire.
+    static let encre = Color(clair: 0x111114, sombre: 0xF4EFE6)
     /// Texte secondaire (contraste AA sur fond et surface).
-    static let encreDouce = Color(clair: 0x5E5347, sombre: 0xB9AC9A)
+    static let encreDouce = Color(clair: 0x55524D, sombre: 0xA9A39A)
     /// Texte tertiaire, légendes.
-    static let encrePale = Color(clair: 0x7A6E60, sombre: 0x94877A)
+    static let encrePale = Color(clair: 0x7B766F, sombre: 0x75706A)
     /// Filets et séparateurs.
-    static let filet = Color(clair: 0xE3D8C6, sombre: 0x2E261E)
+    static let filet = Color(clair: 0xE2DDD4, sombre: 0x26262C)
 
-    static let espresso = Color(hex: 0x241C15)
-    static let espressoProfond = Color(hex: 0x140F0B)
-    static let or = Color(hex: 0xE7C68B)
-    static let orClair = Color(hex: 0xF3DCAE)
-    /// Bronze : accent lisible sur fond clair ; devient or en sombre.
-    static let bronze = Color(clair: 0x86591A, sombre: 0xE7C68B)
-    static let bronzeMoyen = Color(hex: 0xB8873C)
-    static let vertControle = Color(clair: 0x2B6649, sombre: 0x6FBF93)
-    static let rouille = Color(clair: 0x9E3720, sombre: 0xE58A6F)
-    static let ambre = Color(clair: 0x8A5A00, sombre: 0xF0B85A)
+    /// Matière sombre des cartes héros.
+    static let espresso = Color(hex: 0x111114)
+    static let espressoProfond = Color(hex: 0x050506)
+    /// Or champagne et ses nuances.
+    static let or = Color(hex: 0xD9B872)
+    static let orClair = Color(hex: 0xF3E2B8)
+    static let bronze = Color(clair: 0x8A6420, sombre: 0xD9B872)
+    static let bronzeMoyen = Color(hex: 0xA8803A)
+    static let vertControle = Color(clair: 0x1F7A4F, sombre: 0x5ED39A)
+    static let rouille = Color(clair: 0xB23A22, sombre: 0xFF7A63)
+    static let ambre = Color(clair: 0x8A5A00, sombre: 0xF4BE63)
 
     init(hex: UInt32, opacite: Double = 1) {
         self.init(
@@ -41,7 +43,7 @@ extension Color {
 
     init(clair: UInt32, sombre: UInt32) {
         self.init(uiColor: UIColor { trait in
-            let hex = trait.userInterfaceStyle == .dark ? sombre : clair
+            let hex = trait.userInterfaceStyle == .light ? clair : sombre
             return UIColor(
                 red: CGFloat((hex >> 16) & 0xFF) / 255,
                 green: CGFloat((hex >> 8) & 0xFF) / 255,
@@ -53,9 +55,15 @@ extension Color {
 }
 
 extension ShapeStyle where Self == LinearGradient {
-    /// Dégradé or des accents (bouton micro, montants héros).
+    /// Or brossé : accents, bouton micro, montants héros.
     static var degradeOr: LinearGradient {
         LinearGradient(colors: [.orClair, .or, .bronzeMoyen], startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+
+    /// Or pour le texte : reflet plus lumineux au centre.
+    static var texteOr: LinearGradient {
+        LinearGradient(colors: [Color(hex: 0xC99E4E), .orClair, Color(hex: 0xE3C585), Color(hex: 0xB88A3E)],
+                       startPoint: .leading, endPoint: .trailing)
     }
 }
 
@@ -71,6 +79,6 @@ enum Espace {
     /// Marge latérale des écrans.
     static let bord: CGFloat = 20
     /// Rayon des cartes.
-    static let rayon: CGFloat = 28
-    static let rayonPetit: CGFloat = 16
+    static let rayon: CGFloat = 30
+    static let rayonPetit: CGFloat = 18
 }

@@ -8,14 +8,22 @@ struct SurfaceCarte: ViewModifier {
     var remplissage: Color = .surface
 
     func body(content: Content) -> some View {
+        let forme = RoundedRectangle(cornerRadius: rayon, style: .continuous)
         content
-            .background(remplissage, in: RoundedRectangle(cornerRadius: rayon, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: rayon, style: .continuous)
-                    .strokeBorder(Color.filet.opacity(0.9), lineWidth: 0.5)
+            .background {
+                forme.fill(remplissage)
+                    // Lumière rasante venue du haut : la carte semble taillée dans une matière sombre.
+                    .overlay(forme.fill(LinearGradient(colors: [Color.white.opacity(0.045), .clear],
+                                                       startPoint: .top, endPoint: .center)))
             }
-            .shadow(color: Color.espresso.opacity(0.06), radius: 1, y: 1)
-            .shadow(color: Color.espresso.opacity(0.07), radius: 18, y: 10)
+            .overlay {
+                forme.strokeBorder(
+                    LinearGradient(colors: [Color.white.opacity(0.14), Color.white.opacity(0.03), Color.or.opacity(0.10)],
+                                   startPoint: .top, endPoint: .bottom),
+                    lineWidth: 0.7
+                )
+            }
+            .shadow(color: .black.opacity(0.45), radius: 24, y: 14)
     }
 }
 
@@ -421,7 +429,8 @@ struct VueErreur: View {
 // MARK: - Boutons
 
 struct BoutonPrincipal: ButtonStyle {
-    var couleur: Color = .encre
+    /// `nil` : or brossé (bouton principal par défaut).
+    var couleur: Color? = nil
 
     func makeBody(configuration: ButtonStyleConfiguration) -> some View {
         EtiquetteBouton(label: configuration.label, presse: configuration.isPressed, couleur: couleur, principal: true)
@@ -440,7 +449,7 @@ struct BoutonSecondaire: ButtonStyle {
 private struct EtiquetteBouton<Etiquette: View>: View {
     var label: Etiquette
     var presse: Bool
-    var couleur: Color
+    var couleur: Color?
     var principal: Bool
     @Environment(\.isEnabled) private var actif
 
@@ -448,22 +457,29 @@ private struct EtiquetteBouton<Etiquette: View>: View {
         if principal {
             label
                 .styleTexte(16, relativeTo: .body, graisse: .semibold)
-                .foregroundStyle(Color.fond)
-                .frame(maxWidth: .infinity, minHeight: 52)
+                .foregroundStyle(Color.espressoProfond)
+                .frame(maxWidth: .infinity, minHeight: 54)
                 .padding(.horizontal, Espace.m)
-                .background(couleur.opacity(actif ? 1 : 0.35), in: Capsule())
+                .background {
+                    Capsule()
+                        .fill(couleur.map { AnyShapeStyle($0) } ?? AnyShapeStyle(.degradeOr))
+                        .overlay(Capsule().fill(LinearGradient(colors: [Color.white.opacity(0.28), .clear],
+                                                               startPoint: .top, endPoint: .center)))
+                        .opacity(actif ? 1 : 0.35)
+                }
+                .shadow(color: (couleur ?? Color.or).opacity(actif ? 0.35 : 0), radius: presse ? 6 : 14, y: presse ? 2 : 6)
                 .scaleEffect(presse ? 0.97 : 1)
-                .animation(.snappy(duration: 0.2), value: presse)
+                .animation(.spring(response: 0.25, dampingFraction: 0.7), value: presse)
         } else {
             label
                 .styleTexte(16, relativeTo: .body, graisse: .semibold)
-                .foregroundStyle(couleur.opacity(actif ? 1 : 0.4))
-                .frame(maxWidth: .infinity, minHeight: 52)
+                .foregroundStyle((couleur ?? Color.encre).opacity(actif ? 1 : 0.4))
+                .frame(maxWidth: .infinity, minHeight: 54)
                 .padding(.horizontal, Espace.m)
-                .background(Color.surfaceCreuse.opacity(presse ? 1 : 0.7), in: Capsule())
-                .overlay(Capsule().strokeBorder(Color.filet, lineWidth: 0.5))
+                .background(Color.white.opacity(presse ? 0.10 : 0.05), in: Capsule())
+                .overlay(Capsule().strokeBorder(Color.white.opacity(0.10), lineWidth: 0.7))
                 .scaleEffect(presse ? 0.97 : 1)
-                .animation(.snappy(duration: 0.2), value: presse)
+                .animation(.spring(response: 0.25, dampingFraction: 0.7), value: presse)
         }
     }
 }

@@ -65,7 +65,7 @@ struct DossierView: View {
                 } label: {
                     Label("Dicter pour ce chantier", systemImage: "mic.fill")
                 }
-                .buttonStyle(BoutonPrincipal(couleur: .espresso))
+                .buttonStyle(BoutonPrincipal())
                 .accessibilityIdentifier("dicter-chantier")
                 .apparitionEnCascade(index: 2, visible: visible)
 
@@ -117,7 +117,7 @@ struct DossierView: View {
             .padding(.bottom, 120)
         }
         .scrollIndicators(.hidden)
-        .background(Color.fond)
+        .background(FondAmbiant())
         .navigationBarTitleDisplayMode(.inline)
         .task {
             visible = true

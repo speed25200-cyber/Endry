@@ -10,6 +10,8 @@ struct MontantView: View {
     var couleurDevise: Color? = nil
     var afficherCentimes = true
     var style: Font.TextStyle = .largeTitle
+    /// Chiffres en or brossé (montants héros).
+    var dore = false
 
     var body: some View {
         let parties = FormatSuisse.parties(afficherCentimes ? montant : montant.rounded())
@@ -32,7 +34,7 @@ struct MontantView: View {
                         .opacity(0.78)
                 }
             }
-            .foregroundStyle(couleur)
+            .foregroundStyle(dore ? AnyShapeStyle(.texteOr) : AnyShapeStyle(couleur))
         }
         .monospacedDigit()
         .lineLimit(1)

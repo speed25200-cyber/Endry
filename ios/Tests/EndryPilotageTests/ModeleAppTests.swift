@@ -39,9 +39,9 @@ final class ModeleAppTests: XCTestCase {
     func testNotificationOuvreLaCarte() {
         let app = ModeleApp(session: sessionVide())
         app.activerDemo()
-        app.onglet = .argent
+        app.onglet = .finances
         app.ouvrir(reference: "V-7K3F9Q")
-        XCTAssertEqual(app.onglet, .decisions)
+        XCTAssertEqual(app.onglet, .aujourdhui)
         XCTAssertEqual(app.referenceCiblee, "V-7K3F9Q")
     }
 

@@ -112,7 +112,7 @@ final class EndryPilotageUITests: XCTestCase {
             let app = lancer(["-demo", schema])
             XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 5))
             capturer(app, "1-decisions\(schema)")
-            for (onglet, nom) in [("onglet-chantiers", "2-chantiers"), ("onglet-saisie", "3-saisie"), ("onglet-argent", "4-argent"), ("onglet-planning", "5-planning")] {
+            for (onglet, nom) in [("onglet-chantiers", "2-chantiers"), ("onglet-saisie", "3-saisie"), ("onglet-finances", "4-finances"), ("onglet-entreprise", "5-entreprise")] {
                 app.buttons[onglet].tap()
                 sleep(1)
                 capturer(app, "\(nom)\(schema)")

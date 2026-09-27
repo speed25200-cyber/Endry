@@ -43,7 +43,7 @@ struct SaisieView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .scrollIndicators(.hidden)
-            .background(Color.fond)
+            .background(FondAmbiant())
             .toolbar(.hidden, for: .navigationBar)
         }
         .onChange(of: dictee.transcription) { _, nouvelle in

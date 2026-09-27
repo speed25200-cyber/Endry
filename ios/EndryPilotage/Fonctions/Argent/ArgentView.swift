@@ -13,7 +13,7 @@ struct ArgentView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Espace.xl) {
                     VStack(alignment: .leading, spacing: Espace.xxs) {
-                        Text("Argent").styleTitre(34, relativeTo: .largeTitle).foregroundStyle(Color.encre)
+                        Text("Finances").styleTitre(34, relativeTo: .largeTitle).foregroundStyle(Color.encre)
                         Label("Suivi seulement : aucune relance sans votre demande.", systemImage: "hand.raised")
                             .styleTexte(13, relativeTo: .footnote, graisse: .medium)
                             .foregroundStyle(Color.encreDouce)
@@ -48,7 +48,7 @@ struct ArgentView: View {
             }
             .scrollIndicators(.hidden)
             .tirerPourActualiser { await modele.charger() }
-            .background(Color.fond)
+            .background(FondAmbiant())
             .toolbar(.hidden, for: .navigationBar)
         }
         .task {
@@ -63,7 +63,7 @@ struct ArgentView: View {
         VStack(alignment: .leading, spacing: Espace.m) {
             VStack(alignment: .leading, spacing: Espace.xs) {
                 Text("À encaisser").styleSurtitre()
-                MontantView(montant: e.total, taille: 38)
+                MontantAnime(montant: e.total, taille: 44, dore: true).refletDore()
             }
             BarreAnciennete(segments: [
                 .init(libelle: "À échoir", montant: e.anciennete.aEchoir, couleur: .or),

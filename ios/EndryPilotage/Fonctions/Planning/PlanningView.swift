@@ -51,7 +51,7 @@ struct PlanningView: View {
             }
             .scrollIndicators(.hidden)
             .tirerPourActualiser { await modele.charger() }
-            .background(Color.fond)
+            .background(FondAmbiant())
             .toolbar(.hidden, for: .navigationBar)
         }
         .task {

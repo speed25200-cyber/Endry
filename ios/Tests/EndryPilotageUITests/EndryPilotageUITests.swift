@@ -130,6 +130,10 @@ final class EndryPilotageUITests: XCTestCase {
         let texte = app.textViews["texte-saisie"]
         XCTAssertTrue(texte.waitForExistence(timeout: 3))
         toucher(texte)
+        if !app.keyboards.firstMatch.waitForExistence(timeout: 2) {
+            texte.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 3), "Le champ de saisie ne prend pas le focus.")
         texte.typeText("Chantier Rochat : citerne dégazée.")
         app.buttons["transmettre"].tap()
         XCTAssertTrue(app.staticTexts["Transmis"].waitForExistence(timeout: 5))
@@ -158,11 +162,12 @@ final class EndryPilotageUITests: XCTestCase {
                 app.buttons[onglet].tap()
                 sleep(1)
                 capturer(app, "\(nom)\(suffixe)")
-                if onglet == "onglet-chantiers", app.buttons["Planning"].exists {
-                    app.buttons["Planning"].tap()
+                let planning = app.buttons["segment-planning"]
+                if onglet == "onglet-chantiers", planning.waitForExistence(timeout: 2) {
+                    planning.tap()
                     sleep(1)
                     capturer(app, "2b-planning\(suffixe)")
-                    app.buttons["Pipeline"].tap()
+                    app.buttons["segment-pipeline"].tap()
                 }
             }
             app.terminate()

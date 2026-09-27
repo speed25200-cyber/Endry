@@ -34,6 +34,7 @@ struct SelecteurSegments<Valeur: Hashable>: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(actif ? .isSelected : [])
+                .accessibilityIdentifier("segment-\(option.titre.lowercased())")
             }
         }
         .padding(3)

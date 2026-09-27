@@ -1,5 +1,6 @@
 import EndryKit
 import SwiftUI
+import UIKit
 
 /// Pile de décisions : une carte à la fois, les suivantes en retrait derrière elle.
 ///
@@ -98,7 +99,7 @@ struct PileDecisions: View {
         }
         .offset(x: largeur, y: reduireAnimations ? 0 : abs(largeur) * 0.04)
         .rotationEffect(.degrees(reduireAnimations ? 0 : Double(largeur / 26)), anchor: .bottom)
-        .simultaneousGesture(balayage(carte), including: balayageActif(carte) ? .all : .subviews)
+        .gesture(balayage(carte))
         .accessibilityAction(named: Text("Plus tard")) { reporter(carte) }
     }
 
@@ -106,31 +107,26 @@ struct PileDecisions: View {
         !carte.estQuestion && modele.actionsPossibles && !modele.enCours.contains(carte.reference)
     }
 
-    private func balayage(_ carte: Carte) -> some Gesture {
-        DragGesture(minimumDistance: 24)
-            .onChanged { valeur in
-                // Seuls les gestes franchement horizontaux déplacent la carte (le défilement reste libre).
-                guard abs(valeur.translation.width) > abs(valeur.translation.height) * 1.4 else { return }
-                // Une carte avec envoi ne part jamais à droite : seul le curseur doré envoie.
-                let largeur = carte.exigeGlisser ? min(valeur.translation.width, 0) : valeur.translation.width
-                glissement = CGSize(width: largeur, height: 0)
-            }
-            .onEnded { valeur in
-                let largeur = glissement.width
-                let predite = valeur.predictedEndTranslation.width
-                if !carte.exigeGlisser, largeur > Self.seuilBalayage || (largeur > 50 && predite > Self.seuilBalayage * 2) {
-                    partir(vers: 1)
-                    Task {
-                        // Réussi : la carte quitte la pile ; refusé : elle revient au centre.
-                        if await modele.agir(.oui, sur: carte) { glissement = .zero } else { revenir() }
-                    }
-                } else if largeur < -Self.seuilBalayage || (largeur < -50 && predite < -Self.seuilBalayage * 2) {
-                    revenir()
-                    demandesNon[carte.reference, default: 0] += 1
-                } else {
-                    revenir()
+    /// Geste UIKit : il ne démarre que pour un mouvement franchement horizontal, le défilement vertical reste libre.
+    /// Sur une carte qui envoie quelque chose, il ne démarre que vers la gauche (« Non ») : le curseur doré garde la main.
+    private func balayage(_ carte: Carte) -> BalayageHorizontal {
+        BalayageHorizontal(actif: balayageActif(carte), droiteAutorisee: !carte.exigeGlisser) { largeur in
+            glissement = CGSize(width: carte.exigeGlisser ? min(largeur, 0) : largeur, height: 0)
+        } fin: { _, vitesse in
+            let largeur = glissement.width
+            if !carte.exigeGlisser, largeur > Self.seuilBalayage || (largeur > 50 && vitesse > 700) {
+                partir(vers: 1)
+                Task {
+                    // Réussi : la carte quitte la pile ; refusé : elle revient au centre.
+                    if await modele.agir(.oui, sur: carte) { glissement = .zero } else { revenir() }
                 }
+            } else if largeur < -Self.seuilBalayage || (largeur < -50 && vitesse < -700) {
+                revenir()
+                demandesNon[carte.reference, default: 0] += 1
+            } else {
+                revenir()
             }
+        }
     }
 
     private func partir(vers sens: CGFloat) {
@@ -194,5 +190,54 @@ struct PileDecisions: View {
     private func amenerDevant(_ reference: String?) {
         guard let reference, let index = modele.cartes.firstIndex(where: { $0.reference == reference }) else { return }
         reportees = modele.cartes[..<index].map(\.reference)
+    }
+}
+
+/// Balayage horizontal d'une carte, en UIKit : `gestureRecognizerShouldBegin` refuse les mouvements verticaux,
+/// si bien que le défilement de l'écran n'est jamais bloqué quand le doigt part sur la carte.
+struct BalayageHorizontal: UIGestureRecognizerRepresentable {
+    var actif: Bool
+    var droiteAutorisee: Bool
+    var changement: (CGFloat) -> Void
+    var fin: (CGFloat, CGFloat) -> Void
+
+    func makeCoordinator(converter: CoordinateSpaceConverter) -> Coordinateur {
+        Coordinateur()
+    }
+
+    func makeUIGestureRecognizer(context: Context) -> UIPanGestureRecognizer {
+        let geste = UIPanGestureRecognizer()
+        geste.delegate = context.coordinator
+        geste.isEnabled = actif
+        context.coordinator.droiteAutorisee = droiteAutorisee
+        return geste
+    }
+
+    func updateUIGestureRecognizer(_ recognizer: UIPanGestureRecognizer, context: Context) {
+        recognizer.isEnabled = actif
+        context.coordinator.droiteAutorisee = droiteAutorisee
+    }
+
+    func handleUIGestureRecognizerAction(_ recognizer: UIPanGestureRecognizer, context: Context) {
+        let largeur = recognizer.translation(in: recognizer.view).x
+        switch recognizer.state {
+        case .changed:
+            changement(largeur)
+        case .ended, .cancelled, .failed:
+            fin(largeur, recognizer.velocity(in: recognizer.view).x)
+        default:
+            break
+        }
+    }
+
+    final class Coordinateur: NSObject, UIGestureRecognizerDelegate {
+        var droiteAutorisee = true
+
+        func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {
+            guard let pan = recognizer as? UIPanGestureRecognizer else { return false }
+            let vitesse = pan.velocity(in: pan.view)
+            guard abs(vitesse.x) > abs(vitesse.y) * 1.4 else { return false }
+            return droiteAutorisee || vitesse.x < 0
+        }
     }
 }

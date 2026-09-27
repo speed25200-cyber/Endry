@@ -118,12 +118,24 @@ def captures(build_id):
                 except Exception as e:
                     print("manifeste illisible :", e)
         for entree in archive.namelist():
-            if not entree.lower().endswith((".png", ".jpg", ".jpeg")):
-                continue
             base = entree.split("/")[-1]
-            lisible = (noms.get(base) or base).rsplit(".", 1)[0]
+            suggere = noms.get(base) or base
+            bas = entree.lower()
+            if bas.endswith(".txt"):
+                # Diagnostic d'un test en échec : hiérarchie de l'écran et description.
+                if "hierarchy" in suggere.lower() or "issue" in suggere.lower():
+                    nom = "".join(c if c.isalnum() or c in "-_" else "_" for c in suggere)[:50]
+                    with open(f"captures-out/{nom}.txt", "wb") as f:
+                        f.write(archive.read(entree)[:80_000])
+                continue
+            if bas.endswith((".mp4", ".json", "/")) or "." in base and not bas.endswith((".png", ".jpg", ".jpeg")):
+                continue
+            lisible = suggere.rsplit(".", 1)[0] if suggere.lower().endswith((".png", ".jpg", ".jpeg")) else suggere
             lisible = "".join(c if c.isalnum() or c in "-_" else "_" for c in lisible)[:60]
-            img = Image.open(io.BytesIO(archive.read(entree))).convert("RGB")
+            try:
+                img = Image.open(io.BytesIO(archive.read(entree))).convert("RGB")
+            except Exception:
+                continue
             img.thumbnail((440, 960))
             img.save(f"captures-out/{lisible}.jpg", "JPEG", quality=80, optimize=True)
             print("capture :", lisible)

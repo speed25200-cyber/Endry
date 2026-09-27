@@ -85,13 +85,16 @@ public actor APIDemo: EndryAPI {
             return json(["ok": true])
         }
         if route(.get, "app/api/v1/assistant/etat") != nil {
-            return json(["pause": pause, "file": 2, "derniere_activite": "2026-09-27T12:40:00"])
+            return json(Self.etatAssistant(pause: pause))
         }
         if route(.post, "app/api/v1/assistant/pause") != nil { pause = true; return json(["ok": true, "pause": true]) }
         if route(.post, "app/api/v1/assistant/reprise") != nil { pause = false; return json(["ok": true, "pause": false]) }
         if route(.post, "app/api/v1/voix/session") != nil { return Fixtures.donnees(.sessionVoix) }
         // v1.2 : agents du bureau
-        if route(.get, "app/api/v1/agents") != nil { avancerQuestionsAgents(); return json(["agents": agentsDemo]) }
+        if route(.get, "app/api/v1/agents") != nil {
+            avancerQuestionsAgents()
+            return json(["agents": agentsDemo, "assistant": Self.etatAssistant(pause: pause)])
+        }
         if let c = route(.get, "app/api/v1/agents/*/journal") { return json(["entrees": journalDemo.filter { ($0["agent"] as? String) == c[0] }]) }
         if route(.get, "app/api/v1/journal") != nil { avancerQuestionsAgents(); return json(["entrees": journalDemo]) }
         if let c = route(.post, "app/api/v1/agents/*/question") {
@@ -196,6 +199,12 @@ public actor APIDemo: EndryAPI {
     }
 
     // MARK: v1.2
+
+    /// État de l'assistant comme le PC le publie (démo : toujours en service).
+    static func etatAssistant(pause: Bool) -> [String: Any] {
+        ["pause": pause, "file": 2, "en_cours": "Réponse à Mme Rey", "derniere_activite": "2026-09-27T12:40:00",
+         "en_service": true, "horaires": "du lundi au vendredi, de 7 h à 18 h"]
+    }
 
     private func deposerQuestion(agent: String, corps: Requete.Corps?) -> Data {
         let question = Self.champ("question", dans: corps) ?? ""

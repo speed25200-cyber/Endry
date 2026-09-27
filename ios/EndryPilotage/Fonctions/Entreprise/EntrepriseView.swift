@@ -104,6 +104,7 @@ struct EntrepriseView: View {
     @State private var visible = false
     @State private var tousLesClients = false
     @State private var appareilsOuverts = false
+    @AppStorage(ModeDevantClient.cle) private var devantClient = false
 
     private var clients: [FicheClient] {
         Annuaire.clients(chantiers: app.chantiers?.tous ?? [], argent: app.argent?.argent)
@@ -119,6 +120,8 @@ struct EntrepriseView: View {
                         .apparitionEnCascade(index: 0, visible: visible)
                     indicateurs
                         .apparitionEnCascade(index: 1, visible: visible)
+                    BasculeModeClient()
+                        .apparitionEnCascade(index: 1, visible: visible)
                     if let agents = app.agents {
                         SectionBureau(modele: agents)
                             .apparitionEnCascade(index: 2, visible: visible)
@@ -132,8 +135,13 @@ struct EntrepriseView: View {
                     }
                     sectionClients
                         .apparitionEnCascade(index: 2, visible: visible)
-                    sectionFournisseurs
-                        .apparitionEnCascade(index: 3, visible: visible)
+                    if devantClient {
+                        BlocMasqueClient(titre: "Fournisseurs")
+                            .apparitionEnCascade(index: 3, visible: visible)
+                    } else {
+                        sectionFournisseurs
+                            .apparitionEnCascade(index: 3, visible: visible)
+                    }
                     sectionCompte
                         .apparitionEnCascade(index: 4, visible: visible)
                 }

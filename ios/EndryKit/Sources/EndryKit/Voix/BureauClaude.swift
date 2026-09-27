@@ -20,45 +20,74 @@ public struct EtatBureau: Sendable, Equatable {
     public var enPause: Bool { etat?.pause ?? false }
     public var enCours: [SaisieHistorique] { saisies.filter { $0.statut == .enCours || $0.statut == .transmis } }
     public var traitees: [SaisieHistorique] { saisies.filter { $0.statut == .traite } }
+
+    /// Horaires de passage de l'assistant (texte du PC).
+    public var horaires: String? { etat?.horaires ?? agents.first(where: { $0.horaires != nil })?.horaires }
+
+    /// Faux hors des horaires de passage (donné par le PC, sinon calculé à partir des horaires).
+    public func enService(_ date: Date = Date()) -> Bool {
+        if let enService = etat?.enService { return enService }
+        if let texte = horaires, let h = HorairesAssistant(texte: texte) { return h.enService(date) }
+        return true
+    }
+
+    /// « lundi à 7 h » quand l'assistant est hors horaires.
+    public func repasse(_ date: Date = Date()) -> String? {
+        guard !enService(date) else { return nil }
+        guard let texte = horaires, let h = HorairesAssistant(texte: texte) else { return "à son prochain passage" }
+        return h.prochainPassage(apres: date)
+    }
+
+    /// État affiché d'un domaine : jamais « Disponible » hors des horaires.
+    public func etatAffiche(_ agent: AgentPC, date: Date = Date()) -> EtatAgent {
+        if agent.etat == .libre, !enService(date) { return .horsHoraires }
+        return agent.etat
+    }
+
     public var agentsAuTravail: [AgentPC] { agents.filter { $0.etat == .occupe } }
 
     /// Libellé court pour les pastilles (assistant vocal, Aujourd'hui).
     public var libelleCourt: String {
-        if enPause { return "Claude en pause" }
+        if enPause { return "Assistant en pause" }
+        if let quand = repasse() { return "Hors horaires · repasse \(quand)" }
         if !agents.isEmpty {
-            let n = agentsAuTravail.count
-            return n == 0 ? "Bureau disponible" : "\(n) agent\(n > 1 ? "s" : "") au travail"
+            let actifs = agentsAuTravail.map(\.nom)
+            if actifs.isEmpty { return "Assistant disponible" }
+            return "Assistant au travail · " + actifs.prefix(2).joined(separator: ", ") + (actifs.count > 2 ? "…" : "")
         }
         let n = max(etat?.file ?? 0, enCours.count)
-        if n > 0 { return "Claude travaille · \(n) en cours" }
-        return "Claude disponible"
+        if n > 0 { return "Assistant au travail · \(n) en cours" }
+        return "Assistant disponible"
     }
 
-    /// Phrase à dire : tout ce qui se passe sur le PC.
+    /// Phrase à dire : tout ce qui se passe sur le PC. Un seul assistant, présenté par domaines.
     public var phrase: String {
         var morceaux: [String] = []
         if enPause {
-            morceaux.append("Claude est en pause sur le PC : rien ne part tant que vous ne le relancez pas")
+            morceaux.append("L’assistant est en pause : vos décisions s’exécutent, il ne prépare rien de nouveau")
+        } else if let quand = repasse() {
+            morceaux.append("L’assistant est hors horaires\(horaires.map { " (\($0))" } ?? ""), il repasse \(quand)")
         }
         if !agents.isEmpty {
-            let lignes = agents.map { a -> String in
-                switch a.etat {
-                case .occupe: a.tache.map { "\(a.nom) : \(Self.minuscule($0))" } ?? "\(a.nom) au travail"
-                case .libre: "\(a.nom) disponible"
-                case .pause: "\(a.nom) en pause"
-                case .erreur: "\(a.nom) bloqué"
-                }
+            let actifs = agentsAuTravail
+            if !actifs.isEmpty {
+                morceaux.append("L’assistant travaille " + actifs.map { a in
+                    "côté \(a.nom)" + (a.tache.map { " : \(Self.minuscule(Self.sansPoint($0)))" } ?? "")
+                }.joined(separator: " ; "))
+            } else if !enPause, enService() {
+                morceaux.append("L’assistant est disponible, rien en cours")
             }
-            morceaux.append("Au bureau : " + lignes.joined(separator: " ; "))
+            let enPauseDomaines = agents.filter { $0.etat == .pause }.map(\.nom)
+            if !enPauseDomaines.isEmpty { morceaux.append("En pause : " + enPauseDomaines.joined(separator: ", ")) }
             let recentes = journal.prefix(3).map { e in
-                (agents.first { $0.id == e.agent }?.nom).map { "\($0), \(Self.minuscule(Self.sansPoint(e.titre)))" } ?? Self.sansPoint(e.titre)
+                (agents.first { $0.id == e.agent }?.nom).map { "côté \($0), \(Self.minuscule(Self.sansPoint(e.titre)))" } ?? Self.sansPoint(e.titre)
             }
             if !recentes.isEmpty { morceaux.append("Dernières actions : " + recentes.joined(separator: " ; ")) }
         } else {
-            if !enPause {
+            if !enPause, enService() {
                 let n = max(etat?.file ?? 0, enCours.count)
-                morceaux.append(n == 0 ? "Claude est disponible, rien en attente"
-                                       : "Claude travaille sur le PC, \(n) demande\(n > 1 ? "s" : "") en cours")
+                morceaux.append(n == 0 ? "L’assistant est disponible, rien en attente"
+                                       : "L’assistant travaille sur le PC, \(n) demande\(n > 1 ? "s" : "") en cours")
             }
             if let courante = enCours.first {
                 morceaux.append("En ce moment : « \(Self.abreger(BureauClaude.questionSeule(courante.texte))) »")
@@ -75,14 +104,16 @@ public struct EtatBureau: Sendable, Equatable {
         return morceaux.joined(separator: ". ") + "."
     }
 
-    /// Ce que fait un agent précis : état, tâche, journée, dernières actions.
+    /// Ce que fait l'assistant dans un domaine : état, tâche, journée, dernières actions.
     public func phrase(agent: AgentPC) -> String {
         var morceaux: [String] = []
-        switch agent.etat {
-        case .occupe: morceaux.append(agent.tache.map { "\(agent.nom) est au travail : \(Self.minuscule($0))" } ?? "\(agent.nom) est au travail")
-        case .libre: morceaux.append("\(agent.nom) est disponible")
-        case .pause: morceaux.append("\(agent.nom) est en pause")
-        case .erreur: morceaux.append("\(agent.nom) est bloqué et attend une intervention")
+        let cote = "L’assistant, côté \(agent.nom),"
+        switch etatAffiche(agent) {
+        case .occupe: morceaux.append(agent.tache.map { "\(cote) est au travail : \(Self.minuscule($0))" } ?? "\(cote) est au travail")
+        case .libre: morceaux.append("\(cote) est disponible")
+        case .pause: morceaux.append("\(cote) est en pause")
+        case .erreur: morceaux.append("\(cote) est bloqué et attend une intervention")
+        case .horsHoraires: morceaux.append("\(cote) est hors horaires ; il repasse \(repasse() ?? "à son prochain passage")")
         }
         if agent.file > 0 { morceaux.append("\(agent.file) demande\(agent.file > 1 ? "s" : "") en attente") }
         if let jour = agent.resumeJour { morceaux.append("Aujourd’hui : \(Self.minuscule(Self.sansPoint(jour)))") }
@@ -194,11 +225,11 @@ public struct BureauClaude: Sendable {
     public func etat() async -> EtatBureau? {
         async let etat = try? api.etatAssistant()
         async let saisies = try? api.saisies()
-        async let agents = try? api.agentsPC()
+        async let agents = try? api.agentsEtAssistant()
         async let journal = try? api.journal(limite: 12)
         let (e, s, a, j) = await (etat, saisies, agents, journal)
         guard e != nil || s != nil || a != nil else { return nil }
-        return EtatBureau(etat: e, saisies: s ?? [], agents: a ?? [], journal: j ?? [])
+        return EtatBureau(etat: e ?? a?.assistant, saisies: s ?? [], agents: a?.agents ?? [], journal: j ?? [])
     }
 
     /// Agent du PC visé : nommé par le modèle vocal, cité dans la question, ou déduit du sujet.

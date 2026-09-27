@@ -88,3 +88,28 @@ final class ServeurV10: EndryAPI {
         throw .serveur(statut: 404, message: nil)
     }
 }
+
+final class HorairesTests: XCTestCase {
+    private func date(_ texte: String) -> Date {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "Europe/Zurich")!
+        let f = DateFormatter()
+        f.calendar = c
+        f.timeZone = c.timeZone
+        f.dateFormat = "yyyy-MM-dd HH:mm"
+        return f.date(from: texte)!
+    }
+
+    func testLectureEtProchainPassage() throws {
+        let h = try XCTUnwrap(HorairesAssistant(texte: "du lundi au vendredi, de 7 h à 18 h"))
+        XCTAssertEqual(h, HorairesAssistant(jours: Set(1...5), debut: 7, fin: 18))
+        // 27.09.2026 est un dimanche.
+        XCTAssertFalse(h.enService(date("2026-09-27 12:00")))
+        XCTAssertEqual(h.prochainPassage(apres: date("2026-09-27 12:00")), "demain à 7 h")
+        XCTAssertEqual(h.prochainPassage(apres: date("2026-09-25 19:00")), "lundi à 7 h", "vendredi soir")
+        XCTAssertEqual(h.prochainPassage(apres: date("2026-09-28 06:10")), "aujourd’hui à 7 h")
+        XCTAssertTrue(h.enService(date("2026-09-28 09:00")))
+        XCTAssertNil(HorairesAssistant(texte: "selon disponibilité"))
+        XCTAssertEqual(HorairesAssistant(texte: "Du lundi au samedi, 07:00 – 17:30")?.fin, 17)
+    }
+}

@@ -163,6 +163,7 @@ struct CarteHeros: View {
     var encaisser: Encaisser
     var offres: Offres
     var payer: Payer
+    @AppStorage(ModeDevantClient.cle) private var devantClient = false
     var ouvrirFinances: () -> Void
 
     var body: some View {
@@ -195,7 +196,9 @@ struct CarteHeros: View {
 
             HStack(spacing: Espace.s) {
                 TuileVerre(titre: "Offres en attente", montant: offres.total, detail: "\(offres.offres.count) offres", icone: "doc.richtext")
-                TuileVerre(titre: "À payer · 7 jours", montant: payer.totalSemaine, detail: "\(payer.cetteSemaine.count) échéances", icone: "calendar.badge.clock")
+                if !devantClient {
+                    TuileVerre(titre: "À payer · 7 jours", montant: payer.totalSemaine, detail: "\(payer.cetteSemaine.count) échéances", icone: "calendar.badge.clock")
+                }
             }
         }
         .padding(Espace.l)

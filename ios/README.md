@@ -33,9 +33,10 @@ Réglages (pastille « E » en haut de Décisions) : serveur actuel, nouveau lie
 ## Design et performance
 
 **Identité : la maison Endry SA (style « Galerie »).** Couleurs du logo et du site : brun `#211A13`, crème dorée
-`#F9DBA3`, bronze `#9F722A`, papier `#F6F5F2`. Monogramme EY et logo détourés (`Assets.xcassets`), photos de
-réalisations du site en plein écran (`PhotosMarque`). L'écran Aujourd'hui est une photo vivante sous une feuille
-brune ; les décisions sont des cartes papier dans un carrousel, et toucher une carte ouvre sa fiche complète
+`#F9DBA3`, bronze `#9F722A`, papier `#F6F5F2`. Monogramme EY et logo détourés (`Assets.xcassets`). Aucune photo :
+les ambiances sont des compositions générées aux couleurs de la maison (laiton brossé, chaleur, réseaux, eau, ondes,
+marbre ; shader `compositionMaison`, voir `CREDITS.md`). L'écran Aujourd'hui est une composition plein écran sous
+une feuille brune ; les décisions sont des cartes papier dans un carrousel, et toucher une carte ouvre sa fiche complète
 (texte intégral, destinataires, contrôle, pièces jointes, chantier lié, tous les gestes). Thème clair : papier et
 encre brune ; choix Système / Clair / Sombre dans Réglages › Affichage. Jetons dans `EndryPilotage/Design/Palette.swift`.
 
@@ -109,6 +110,11 @@ Toucher court du micro central : dictée d'une saisie terrain. **Toucher long** 
   (« Parler à Endry », raccourci App Intents ; l'assistant ne s'ouvre qu'après Face ID).
 - **La voix ne valide jamais un envoi** : `proposer_decision` affiche la carte, le patron fait le geste
   (« Oui » ou « Glisser pour envoyer »).
+
+## Crédits
+
+Images, polices et licences : [`CREDITS.md`](CREDITS.md). Aucune photographie intégrée ; les ambiances sont des
+compositions générées (shaders Metal) aux couleurs de la maison.
 
 ## Sécurité
 

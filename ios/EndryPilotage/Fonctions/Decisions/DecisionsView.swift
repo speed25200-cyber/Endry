@@ -1,10 +1,12 @@
 import EndryKit
 import SwiftUI
 
-/// Écran « Aujourd'hui », style Galerie : photo de réalisation Endry en plein écran, logo, salutation,
+/// Écran « Aujourd'hui », style Galerie : composition aux couleurs de la maison en plein écran, logo, salutation,
 /// puis une feuille brune qui monte avec le carrousel des décisions (cartes papier), l'argent de la semaine
 /// et les chantiers. Toucher une carte ouvre sa fiche complète.
 struct DecisionsView: View {
+    @AppStorage(ModeDevantClient.cle) private var devantClient = false
+    @AppStorage(Salutation.clePrenom) private var prenomPatron = ""
     @Environment(ModeleApp.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
     var modele: ModeleDecisions
@@ -108,14 +110,16 @@ struct DecisionsView: View {
                 .styleTitre(34, relativeTo: .largeTitle, graisse: .medium)
                 .foregroundStyle(Color(hex: 0xF7F2E9))
                 .apparitionEnCascade(index: 1, visible: visible)
-            Text(salutation.fin)
-                .styleTitre(34, relativeTo: .largeTitle, graisse: .italique)
-                .foregroundStyle(Color.or)
-                .fixedSize(horizontal: false, vertical: true)
-                .apparitionEnCascade(index: 2, visible: visible)
-                .accessibilityAddTraits(.isHeader)
+            if !salutation.fin.isEmpty {
+                Text(salutation.fin)
+                    .styleTitre(34, relativeTo: .largeTitle, graisse: .italique)
+                    .foregroundStyle(Color.or)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .apparitionEnCascade(index: 2, visible: visible)
+                    .accessibilityAddTraits(.isHeader)
+            }
             if let accueil = modele.accueil {
-                Text(ResumeDuJour.phrase(accueil: accueil, decisions: modele.nombreDecisions))
+                Text(ResumeDuJour.phrase(accueil: accueil, decisions: modele.nombreDecisions, devantClient: devantClient))
                     .styleTexte(15, relativeTo: .subheadline)
                     .foregroundStyle(Color(hex: 0xE9DFCF))
                     .fixedSize(horizontal: false, vertical: true)
@@ -133,13 +137,17 @@ struct DecisionsView: View {
         .environment(\.colorScheme, .dark)
     }
 
-    /// « Bonjour, » puis le nom en italique doré (le serveur envoie « Bonjour Monsieur Endry »).
+    /// Le PC envoie seulement « Bonjour » ou « Bonsoir » ; le prénom (facultatif, Réglages) vient de l'iPhone.
+    /// « Bonjour, » puis le prénom en italique doré ; sans prénom : « Bonjour. »
     private var salutation: (debut: String, fin: String) {
-        let brut = modele.accueil?.salut ?? "Bonjour"
-        let mots = brut.split(separator: " ", maxSplits: 1).map(String.init)
-        guard mots.count == 2 else { return (brut, "") }
-        let debut = mots[0].hasSuffix(",") ? mots[0] : mots[0] + ","
-        return (debut, mots[1])
+        Salutation.lignes(salut: modele.accueil?.salut, prenom: prenom)
+    }
+
+    /// Prénom saisi dans Réglages ; en démo, un prénom fictif.
+    private var prenom: String {
+        let saisi = prenomPatron.trimmingCharacters(in: .whitespacesAndNewlines)
+        if saisi.isEmpty, app.session.estDemo { return Salutation.prenomDemo }
+        return saisi
     }
 
     // MARK: - Feuille
@@ -259,7 +267,7 @@ final class SuiviDefilement {
     var y: CGFloat = 0
 }
 
-/// Photo de l'accueil : s'étire quand on tire, glisse en parallaxe quand on défile.
+/// Ambiance de l'accueil (composition générée) : s'étire quand on tire, glisse en parallaxe quand on défile.
 private struct PhotoAccueil: View {
     var suivi: SuiviDefilement
     var hauteur: CGFloat
@@ -319,6 +327,7 @@ struct BoutonParlerEndry: View {
 struct ResumeArgent: View {
     var accueil: Accueil
     var ouvrir: () -> Void
+    @AppStorage(ModeDevantClient.cle) private var devantClient = false
 
     var body: some View {
         Button(action: ouvrir) {
@@ -333,8 +342,10 @@ struct ResumeArgent: View {
                     MontantAnime(montant: accueil.encaisser.total, taille: 34, afficherCentimes: false)
                 }
                 HStack(spacing: Espace.s) {
-                    chiffre("À payer · 7 jours", accueil.payer.totalSemaine)
-                    Rectangle().fill(Color.filet).frame(width: Espace.filet, height: 34)
+                    if !devantClient {
+                        chiffre("À payer · 7 jours", accueil.payer.totalSemaine)
+                        Rectangle().fill(Color.filet).frame(width: Espace.filet, height: 34)
+                    }
                     chiffre("Offres en attente", accueil.offres.total)
                 }
             }
@@ -357,7 +368,7 @@ struct ResumeArgent: View {
     }
 }
 
-/// Chantiers de la semaine : cartes avec la photo de la réalisation ; ouvre le Planning.
+/// Chantiers de la semaine : cartes avec leur motif ; ouvre le Planning.
 struct ChantiersSemaine: View {
     var semaine: [Semaine]
     var ouvrir: () -> Void
@@ -377,9 +388,7 @@ struct ChantiersSemaine: View {
                     ForEach(semaine) { item in
                         Button(action: ouvrir) {
                             HStack(spacing: Espace.s) {
-                                Image(PhotosMarque.pour(id: item.id))
-                                    .resizable()
-                                    .scaledToFill()
+                                CompositionMaison(motif: PhotosMarque.pour(id: item.id), graine: PhotosMarque.graine(item.id))
                                     .frame(width: 64, height: 64)
                                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                                     .accessibilityHidden(true)
@@ -418,9 +427,23 @@ struct ChantiersSemaine: View {
     }
 }
 
+/// Salutation : « Bonjour » / « Bonsoir » du PC, et le prénom gardé sur l'iPhone (jamais inventé).
+enum Salutation {
+    static let clePrenom = "prenom-patron"
+    /// Prénom fictif du mode démo.
+    static let prenomDemo = "Luc"
+
+    static func lignes(salut: String?, prenom: String) -> (debut: String, fin: String) {
+        // Seul le premier mot du PC compte (« Bonjour », « Bonsoir ») : aucun nom n'est repris du serveur.
+        let mot = (salut ?? "Bonjour").split(separator: " ").first.map { String($0).trimmingCharacters(in: CharacterSet(charactersIn: ",.")) }
+        let bonjour = (mot?.isEmpty ?? true) ? "Bonjour" : mot!
+        return prenom.isEmpty ? (bonjour + ".", "") : (bonjour + ",", prenom)
+    }
+}
+
 /// Résumé du jour en une phrase, calculé à partir de l'accueil.
 enum ResumeDuJour {
-    static func phrase(accueil: Accueil, decisions: Int) -> String {
+    static func phrase(accueil: Accueil, decisions: Int, devantClient: Bool = false) -> String {
         var morceaux: [String] = []
         switch decisions {
         case 0: morceaux.append("Aucune décision en attente")
@@ -431,7 +454,7 @@ enum ResumeDuJour {
         if chantiers > 0 {
             morceaux.append(chantiers == 1 ? "un chantier cette semaine" : "\(chantiers) chantiers cette semaine")
         }
-        if accueil.payer.totalSemaine > 0 {
+        if accueil.payer.totalSemaine > 0, !devantClient {
             morceaux.append("\(FormatSuisse.chfArrondi(accueil.payer.totalSemaine)) à payer sous 7 jours")
         }
         guard morceaux.count > 1 else { return morceaux[0] + "." }

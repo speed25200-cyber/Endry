@@ -4,6 +4,8 @@ import Foundation
 
 public enum EtatAgent: String, Sendable, Hashable {
     case libre, occupe, pause, erreur
+    /// Hors des horaires de passage de l'assistant : jamais présenté comme « Disponible ».
+    case horsHoraires = "hors_horaires"
 
     public var libelle: String {
         switch self {
@@ -11,6 +13,7 @@ public enum EtatAgent: String, Sendable, Hashable {
         case .occupe: "Au travail"
         case .pause: "En pause"
         case .erreur: "Bloqué"
+        case .horsHoraires: "Hors horaires"
         }
     }
 }
@@ -28,9 +31,13 @@ public struct AgentPC: Decodable, Sendable, Hashable, Identifiable {
     public var traiteesJour: Int
     public var derniereActivite: String?
     public var resumeJour: String?
+    /// Horaires de passage de l'assistant pour ce domaine (« du lundi au vendredi, de 7 h à 18 h »).
+    public var horaires: String?
 
     public init(id: String, nom: String, role: String? = nil, icone: String? = nil, etat: EtatAgent = .libre, tache: String? = nil,
-                depuis: String? = nil, file: Int = 0, traiteesJour: Int = 0, derniereActivite: String? = nil, resumeJour: String? = nil) {
+                depuis: String? = nil, file: Int = 0, traiteesJour: Int = 0, derniereActivite: String? = nil, resumeJour: String? = nil,
+                horaires: String? = nil) {
+        self.horaires = horaires
         self.id = id
         self.nom = nom
         self.role = role
@@ -60,6 +67,7 @@ public struct AgentPC: Decodable, Sendable, Hashable, Identifiable {
         traiteesJour = c.entier("traitees_jour") ?? 0
         derniereActivite = c.texte("derniere_activite")
         resumeJour = c.texte("resume_jour").flatMap { $0.isEmpty ? nil : $0 }
+        horaires = c.texte("horaires").flatMap { $0.isEmpty ? nil : $0 }
     }
 
     /// Agent connu de l'app (détection dans les questions, icône, domaine), s'il correspond.
@@ -74,14 +82,18 @@ public struct AgentPC: Decodable, Sendable, Hashable, Identifiable {
     }
 }
 
+/// `GET /agents` → `{agents: [Agent], assistant: {…etat}}` (ou tableau nu).
 struct ListeAgentsPC: Decodable {
     var agents: [AgentPC]
+    var assistant: EtatAssistant?
 
     init(from decoder: Decoder) throws {
         if let liste = try? [ElementTolerantPublic<AgentPC>](from: decoder) {
             agents = liste.compactMap(\.valeur)
         } else {
-            agents = try decoder.champs().liste("agents")
+            let c = try decoder.champs()
+            agents = c.liste("agents")
+            assistant = c.objet("assistant")
         }
     }
 }
@@ -238,6 +250,12 @@ extension Requete {
 
 extension EndryAPI {
     public func agentsPC() async throws(ErreurAPI) -> [AgentPC] { try await charger(ListeAgentsPC.self, .agents).agents }
+
+    /// Agents et état de l'assistant en une requête (v1.2).
+    public func agentsEtAssistant() async throws(ErreurAPI) -> (agents: [AgentPC], assistant: EtatAssistant?) {
+        let liste = try await charger(ListeAgentsPC.self, .agents)
+        return (liste.agents, liste.assistant)
+    }
 
     public func journal(agent: String? = nil, limite: Int = 30) async throws(ErreurAPI) -> [EntreeJournal] {
         try await charger(JournalPC.self, .journal(agent: agent, limite: limite)).entrees

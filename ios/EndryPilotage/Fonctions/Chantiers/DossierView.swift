@@ -3,6 +3,7 @@ import SwiftUI
 
 /// Détail d'un chantier : avancement, documents, achats fournisseurs, notes, dictée.
 struct DossierView: View {
+    @AppStorage(ModeDevantClient.cle) private var devantClient = false
     @Environment(ModeleApp.self) private var app
     @State var modele: ModeleDossier
     @State private var visible = false
@@ -12,7 +13,7 @@ struct DossierView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Espace.l) {
                 ZStack(alignment: .bottomLeading) {
-                    PhotoVivante(nom: PhotosMarque.pour(id: dossier.id))
+                    PhotoVivante(nom: PhotosMarque.pour(id: dossier.id), graine: PhotosMarque.graine(dossier.id))
                         .frame(height: 300)
                         .overlay(VoilePhoto(haut: 0.55, bas: 1))
                     VStack(alignment: .leading, spacing: Espace.xs) {
@@ -96,7 +97,10 @@ struct DossierView: View {
                     .apparitionEnCascade(index: 3, visible: visible)
                 }
 
-                if !dossier.achats.isEmpty || !dossier.facturesFournisseurs.isEmpty {
+                if devantClient, !dossier.achats.isEmpty || !dossier.facturesFournisseurs.isEmpty {
+                    BlocMasqueClient(titre: "Achats fournisseurs")
+                        .apparitionEnCascade(index: 4, visible: visible)
+                } else if !dossier.achats.isEmpty || !dossier.facturesFournisseurs.isEmpty {
                     section("Achats fournisseurs") {
                         ForEach(dossier.achats) { element in
                             LigneElement(element: element, chargement: false, action: nil)

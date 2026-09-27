@@ -35,7 +35,8 @@ public struct ExecuteurOutils: Sendable {
                     "salut": a.salut, "date": a.date, "pause": a.pause,
                     "decisions": a.decisions.map { ["reference": $0.reference, "genre": $0.genre, "titre": $0.titre, "envoi_tiers": $0.exigeGlisser] },
                     "a_encaisser": a.encaisser.total, "en_retard_plus_30_jours": a.encaisser.anciennete.plus30,
-                    "a_payer_7_jours": a.payer.totalSemaine,
+                    // Achats fournisseurs : nombre seulement, jamais de montant (à ne pas dire à voix haute).
+                    "factures_fournisseurs_7_jours": a.payer.cetteSemaine.count,
                     "chantiers_7_jours": a.chantiers7Jours.map { ["titre": $0.titre, "client": $0.client ?? "", "lieu": $0.lieu ?? "", "dates": $0.dates ?? ""] },
                 ]), .aucun)
             case "decisions":
@@ -48,14 +49,21 @@ public struct ExecuteurOutils: Sendable {
                 let id = (args["id"] as? String) ?? (args["id"] as? Int).map(String.init) ?? ""
                 let d = try await api.chantier(id: id)
                 var r = chantierResume(d)
-                r["documents"] = d.elements.map { ["type": $0.type.rawValue, "numero": $0.numeroAffiche ?? "", "libelle": $0.libelle, "montant": $0.montant ?? 0, "statut": $0.statut ?? ""] }
+                // Achats fournisseurs : sans montant (prix d'achat jamais dits à voix haute).
+                r["documents"] = d.elements.map { e -> [String: Any] in
+                    var o: [String: Any] = ["type": e.type.rawValue, "numero": e.numeroAffiche ?? "", "libelle": e.libelle, "statut": e.statut ?? ""]
+                    if e.type != .achat { o["montant"] = e.montant ?? 0 }
+                    return o
+                }
                 return (json(r), .afficherChantier(d.id))
             case "argent":
                 let a = try await api.argent()
                 return (json([
                     "a_encaisser": a.encaisser.total,
                     "par_client": a.encaisser.parClient.map { ["client": $0.client, "montant": $0.montant, "retard_max_jours": $0.retardMax] },
-                    "a_payer": a.payer.total, "offres_en_attente": a.offres.total, "a_refacturer": a.aRefacturer.total,
+                    "factures_fournisseurs_a_payer": a.payer.factures.count, "offres_en_attente": a.offres.total,
+                    "achats_a_refacturer": a.aRefacturer.achats.count,
+                    "prix_achat": "Montants d’achat fournisseurs masqués : ne jamais les dire à voix haute ; le détail est dans Finances.",
                     "suivi": "Suivi seulement : aucune relance sans demande du patron.",
                 ]), .aucun)
             case "saisie":

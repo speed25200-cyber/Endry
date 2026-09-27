@@ -37,6 +37,9 @@ struct ContenuPrincipal: View {
                     app.connexionPresentee = true
                 }
                 .transition(.move(edge: .top).combined(with: .opacity))
+            } else {
+                RappelModeClient()
+                    .padding(.top, 2)
             }
         }
         .animation(.endry, value: app.session.connexionPerdue)

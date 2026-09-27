@@ -5,7 +5,7 @@ import XCTest
 final class ContratV10Tests: XCTestCase {
     func testAccueilV10() throws {
         let a = try Fixtures.decoder(Accueil.self, .accueilV10)
-        XCTAssertEqual(a.salut, "Bonjour Monsieur Endry")
+        XCTAssertEqual(a.salut, "Bonjour", "le PC n'envoie que « Bonjour » ou « Bonsoir »")
         XCTAssertFalse(a.pause)
         XCTAssertEqual(a.decisions.count, 5)
         XCTAssertEqual(a.encaisser.factures.count, 6)
@@ -127,7 +127,8 @@ final class ContratV11Tests: XCTestCase {
         XCTAssertTrue(saisies[1].decisionPrete)
         XCTAssertFalse(saisies[0].decisionPrete)
         let etat = try Fixtures.decoder(EtatAssistant.self, .etatAssistant)
-        XCTAssertEqual(etat, EtatAssistant(pause: false, file: 2, derniereActivite: "2026-09-27T12:40:00"))
+        XCTAssertEqual(etat, EtatAssistant(pause: false, file: 2, derniereActivite: "2026-09-27T12:40:00", enCours: "Réponse à Mme Rey",
+                                            enService: true, horaires: "du lundi au vendredi, de 7 h à 18 h"))
         let voix = try Fixtures.decoder(SessionVoix.self, .sessionVoix)
         XCTAssertFalse(voix.disponible)
     }

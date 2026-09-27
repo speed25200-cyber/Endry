@@ -8,6 +8,7 @@ struct ReglagesView: View {
     @State private var confirmationDeconnexion = false
     @State private var notificationsActives = false
     @AppStorage(ThemeApparence.cle) private var apparence: ThemeApparence = .systeme
+    @AppStorage(Salutation.clePrenom) private var prenom = ""
 
     var body: some View {
         @Bindable var verrou = app.verrou
@@ -50,6 +51,23 @@ struct ReglagesView: View {
                     } footer: {
                         Text("Chaque appareil a son propre jeton, révocable à distance.")
                     }
+                }
+
+                Section {
+                    TextField("Votre prénom (facultatif)", text: $prenom)
+                        .textContentType(.givenName)
+                        .autocorrectionDisabled()
+                        .accessibilityIdentifier("champ-prenom")
+                } header: {
+                    Text("Salutation")
+                } footer: {
+                    Text("Gardé sur cet iPhone. Exemple : « Bonjour, Luc ». Sans prénom : « Bonjour. »")
+                }
+
+                Section {
+                    BasculeModeClient()
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
                 }
 
                 Section {

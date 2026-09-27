@@ -8,6 +8,7 @@ extension EtatAgent {
         case .occupe: .bronze
         case .pause: .ambre
         case .erreur: .rouille
+        case .horsHoraires: .encrePale
         }
     }
 }
@@ -28,17 +29,23 @@ struct PointEtat: View {
 
 // MARK: - Entreprise › Le bureau
 
-/// « Le bureau » : les agents de Claude sur le PC, ce que chacun fait, et le journal de la journée.
+/// « Le bureau » : l'assistant du PC, domaine par domaine (un seul assistant), ce qu'il fait, et le journal du jour.
 struct SectionBureau: View {
     var modele: ModeleAgents
 
     var body: some View {
         VStack(alignment: .leading, spacing: Espace.s) {
             EnTeteSection(titre: "Le bureau", detail: modele.libelle)
+            if let service = modele.service {
+                Label(service, systemImage: service.hasPrefix("Hors") ? "moon.zzz.fill" : "clock")
+                    .styleTexte(12, relativeTo: .caption, graisse: .medium)
+                    .foregroundStyle(service.hasPrefix("Hors") ? Color.ambre : Color.encreDouce)
+                    .accessibilityIdentifier("service-assistant")
+            }
             LazyVGrid(columns: [GridItem(.flexible(), spacing: Espace.s), GridItem(.flexible(), spacing: Espace.s)], spacing: Espace.s) {
                 ForEach(modele.agents) { agent in
                     NavigationLink(value: agent) {
-                        TuileAgent(agent: agent, enDirect: modele.enDirect)
+                        TuileAgent(agent: agent, etat: modele.etatAffiche(agent), repasse: modele.etat?.repasse(), enDirect: modele.enDirect)
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("agent-\(agent.id)")
@@ -58,7 +65,7 @@ struct SectionBureau: View {
                 .padding(Espace.m)
                 .surfaceCarte(rayon: 22)
             } else if !modele.enDirect, modele.charge {
-                Text("Chaque agent répond à vos questions par Claude. L’activité en direct s’affichera dès la mise à jour v1.2 du PC.")
+                Text("L’assistant du PC répond par domaine. L’activité en direct s’affichera dès que le PC la publiera.")
                     .styleTexte(13, relativeTo: .footnote)
                     .foregroundStyle(Color.encrePale)
                     .fixedSize(horizontal: false, vertical: true)
@@ -79,6 +86,9 @@ struct SectionBureau: View {
 
 struct TuileAgent: View {
     var agent: AgentPC
+    /// État affiché (hors horaires plutôt que « Disponible » en dehors des heures de passage).
+    var etat: EtatAgent
+    var repasse: String?
     var enDirect: Bool
 
     var body: some View {
@@ -89,9 +99,9 @@ struct TuileAgent: View {
                     .foregroundStyle(Color.or)
                     .frame(width: 38, height: 38)
                     .background(Color.espresso, in: Circle())
-                    .overlay(Circle().stroke(Color.or.opacity(agent.etat == .occupe && enDirect ? 0.8 : 0.25), lineWidth: 1))
+                    .overlay(Circle().stroke(Color.or.opacity(etat == .occupe && enDirect ? 0.8 : 0.25), lineWidth: 1))
                 Spacer()
-                if enDirect { PointEtat(etat: agent.etat) }
+                if enDirect { PointEtat(etat: etat) }
             }
             Text(agent.nom)
                 .styleTitre(19, relativeTo: .headline)
@@ -111,12 +121,13 @@ struct TuileAgent: View {
     }
 
     private var sousTitre: String {
-        guard enDirect else { return agent.role ?? "Relié par Claude" }
-        switch agent.etat {
+        guard enDirect else { return agent.role ?? "Domaine de l’assistant" }
+        switch etat {
         case .occupe: return agent.tache ?? "Au travail"
         case .libre: return agent.resumeJour ?? "Disponible"
         case .pause: return "En pause"
         case .erreur: return "Bloqué : attend une intervention"
+        case .horsHoraires: return repasse.map { "Repasse \($0)" } ?? "Hors horaires"
         }
     }
 }
@@ -215,7 +226,7 @@ struct FicheAgentView: View {
                 .background(Color.espresso, in: Circle())
                 .overlay(Circle().stroke(Color.or.opacity(0.5), lineWidth: 1))
             VStack(alignment: .leading, spacing: 4) {
-                Text("Agent de Claude").styleSurtitre()
+                Text("L’assistant, côté").styleSurtitre()
                 Text(agent.nom).styleTitre(30, relativeTo: .largeTitle).foregroundStyle(Color.encre)
                 if let role = agent.role {
                     Text(role).styleTexte(13, relativeTo: .footnote).foregroundStyle(Color.encreDouce)
@@ -228,10 +239,12 @@ struct FicheAgentView: View {
     }
 
     private func maintenant(_ agent: AgentPC) -> some View {
-        VStack(alignment: .leading, spacing: Espace.s) {
+        let etat = modele.etatAffiche(agent)
+        return VStack(alignment: .leading, spacing: Espace.s) {
             HStack(spacing: 6) {
-                PointEtat(etat: agent.etat)
-                Text(agent.etat.libelle).styleTexte(13, relativeTo: .footnote, graisse: .semibold).foregroundStyle(agent.etat.couleur)
+                PointEtat(etat: etat)
+                Text(etat == .horsHoraires ? (modele.etat?.repasse().map { "Hors horaires · repasse \($0)" } ?? "Hors horaires") : etat.libelle)
+                    .styleTexte(13, relativeTo: .footnote, graisse: .semibold).foregroundStyle(etat.couleur)
                 Spacer()
                 if agent.file > 0 { Pastille(texte: "\(agent.file) en attente", couleur: .ambre, icone: "tray.full.fill") }
             }
@@ -250,7 +263,7 @@ struct FicheAgentView: View {
 
     private func conversation(_ agent: AgentPC) -> some View {
         VStack(alignment: .leading, spacing: Espace.s) {
-            Text("Lui demander").styleSurtitre()
+            Text("Lui demander (lecture seule)").styleSurtitre()
             ForEach(modele.echanges[agent.id] ?? []) { echange in
                 VStack(alignment: .leading, spacing: 6) {
                     Text(echange.question)
@@ -294,7 +307,7 @@ struct FicheAgentView: View {
                 .transition(.opacity.combined(with: .offset(y: 8)))
             }
             HStack(spacing: Espace.xs) {
-                TextField("", text: $question, prompt: Text("Poser une question à l’agent \(agent.nom)…"))
+                TextField("", text: $question, prompt: Text("Une question pour l’assistant, côté \(agent.nom)…"))
                     .styleTexte(16)
                     .focused($champActif)
                     .submitLabel(.send)
@@ -352,7 +365,7 @@ struct FicheAgentView: View {
                     Task {
                         let resultat = await modele.confier(demande, a: agent)
                         switch resultat {
-                        case .transmise: retour = Toast("Confié à l’agent \(agent.nom).")
+                        case .transmise: retour = Toast("Confié à l’assistant, côté \(agent.nom).")
                         case .gardee: retour = Toast("Pas de réseau : la demande partira toute seule.", style: .info)
                         case .refusee(let raison): retour = Toast(raison, style: .erreur)
                         }
@@ -360,7 +373,7 @@ struct FicheAgentView: View {
                         confierOuvert = false
                     }
                 } label: {
-                    Text("Confier à l’agent \(agent?.nom ?? "")")
+                    Text("Confier (côté \(agent?.nom ?? ""))")
                 }
                 .buttonStyle(BoutonPrincipal())
                 .disabled(travail.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -397,9 +410,9 @@ struct BandeauBureau: View {
                     ForEach(modele.agents.prefix(5)) { agent in
                         Image(systemName: agent.symbole)
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(agent.etat == .occupe ? Color.espresso : Color.or)
+                            .foregroundStyle(modele.etatAffiche(agent) == .occupe ? Color.espresso : Color.or)
                             .frame(width: 28, height: 28)
-                            .background(agent.etat == .occupe && modele.enDirect ? AnyShapeStyle(.degradeOr) : AnyShapeStyle(Color.espresso), in: Circle())
+                            .background(modele.etatAffiche(agent) == .occupe && modele.enDirect ? AnyShapeStyle(.degradeOr) : AnyShapeStyle(Color.espresso), in: Circle())
                             .overlay(Circle().stroke(Color.fond, lineWidth: 2))
                     }
                 }
@@ -425,8 +438,9 @@ struct BandeauBureau: View {
 
     private var detail: String {
         if let actif = modele.agents.first(where: { $0.etat == .occupe && $0.tache != nil }), modele.enDirect {
-            return "\(actif.nom) : \(actif.tache ?? "")"
+            return "Côté \(actif.nom) : \(actif.tache ?? "")"
         }
+        if let service = modele.service, service.hasPrefix("Hors") { return service }
         if let derniere = modele.journal.first { return derniere.titre }
         return "Secrétariat, comptabilité, chantiers, offres, achats"
     }

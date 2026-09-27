@@ -122,9 +122,7 @@ struct LigneChantier: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack(alignment: .bottomLeading) {
-                Image(PhotosMarque.pour(id: dossier.id))
-                    .resizable()
-                    .scaledToFill()
+                CompositionMaison(motif: PhotosMarque.pour(id: dossier.id), graine: PhotosMarque.graine(dossier.id))
                     .frame(height: 118)
                     .frame(maxWidth: .infinity)
                     .clipped()

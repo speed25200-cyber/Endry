@@ -44,6 +44,16 @@ final class ModeleAgents {
 
     func agent(_ id: String) -> AgentPC? { agents.first { $0.id == id } }
 
+    /// État affiché : jamais « Disponible » hors des horaires de l'assistant.
+    func etatAffiche(_ agent: AgentPC) -> EtatAgent { etat?.etatAffiche(agent) ?? agent.etat }
+
+    /// « En service · du lundi au vendredi, de 7 h à 18 h » ou « Hors horaires · repasse lundi à 7 h ».
+    var service: String? {
+        guard let etat else { return nil }
+        if let quand = etat.repasse() { return "Hors horaires · repasse \(quand)" }
+        return etat.horaires.map { "En service · \($0)" }
+    }
+
     func charger() async {
         if let nouveau = await bureau.etat() { etat = nouveau }
         charge = true
@@ -133,7 +143,8 @@ final class ModeleAgents {
     func confier(_ travail: String, a agent: AgentPC) async -> ModeleSaisie.ResultatDemande {
         let texte = travail.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !texte.isEmpty else { return .refusee("La demande est vide.") }
-        let resultat = await transmettre("Pour l’agent \(agent.nom) : \(texte)")
+        // « [Pour l'agent X] » oriente la demande vers ce domaine de l'assistant (convention du PC).
+        let resultat = await transmettre("[Pour l’agent \(agent.nom)] \(texte)")
         await charger()
         return resultat
     }

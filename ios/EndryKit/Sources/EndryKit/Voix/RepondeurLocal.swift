@@ -76,13 +76,17 @@ public enum RepondeurLocal {
                                 a.chantiers7Jours.prefix(3).map { $0.client ?? $0.titre }.joined(separator: ", "))
             }
             morceaux.append("\(FormatSuisse.parle(a.encaisser.total)) à encaisser")
-            if a.payer.totalSemaine > 0 { morceaux.append("\(FormatSuisse.parle(a.payer.totalSemaine)) à payer dans les 7 jours") }
+            // Achats fournisseurs : jamais de montant à voix haute (le patron peut être devant un client).
+            let echeances = a.payer.cetteSemaine.count
+            if echeances > 0 { morceaux.append("\(echeances) facture\(echeances > 1 ? "s" : "") fournisseur à payer dans les 7 jours, détail dans Finances") }
             return .dire(morceaux.joined(separator: ". ") + ".", carte: a.decisions.first.map { .afficherDecision($0.reference) } ?? .aucun)
         }
 
         if q.contains("payer") || q.contains("paiement") {
-            guard let p = d.argent?.payer ?? d.accueil?.payer else { return .transmettre(question) }
-            return .dire("\(FormatSuisse.parle(p.totalSemaine)) à payer cette semaine, \(FormatSuisse.parle(p.total)) au total. Les paiements se signent dans l’e-banking.", carte: .aucun)
+            guard let p = d.argent?.payer ?? d.accueil?.payer else { return .demanderClaude(question) }
+            // Montants d'achat fournisseurs : jamais à voix haute ; ils restent à l'écran, dans Finances.
+            let n = p.cetteSemaine.count, total = p.factures.count
+            return .dire("\(n) facture\(n > 1 ? "s" : "") fournisseur à payer cette semaine, \(total) en tout. Les montants sont dans Finances ; les paiements se signent dans l’e-banking.", carte: .aucun)
         }
 
         if q.contains("decision") || q.contains("a decider") || q.contains("valider") {

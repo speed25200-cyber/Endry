@@ -171,31 +171,31 @@ final class BureauClaudeTests: XCTestCase {
     func testEtatDuBureauV12() async {
         let etat = await BureauClaude(api: APIDemo(latence: .zero)).etat()
         XCTAssertEqual(etat?.agents.count, 5)
-        XCTAssertEqual(etat?.libelleCourt, "2 agents au travail")
+        XCTAssertEqual(etat?.libelleCourt, "Assistant au travail · Secrétariat, Comptabilité")
         let phrase = etat?.phrase ?? ""
-        XCTAssertTrue(phrase.contains("Secrétariat : répond à Mme Rey"), phrase)
-        XCTAssertTrue(phrase.contains("Achats en pause"), phrase)
-        XCTAssertTrue(phrase.contains("Dernières actions : Secrétariat, réponse préparée pour Mme Rey"), phrase)
+        XCTAssertTrue(phrase.contains("L’assistant travaille côté Secrétariat : répond à Mme Rey"), phrase)
+        XCTAssertTrue(phrase.contains("En pause : Achats"), phrase)
+        XCTAssertTrue(phrase.contains("Dernières actions : côté Secrétariat, réponse préparée pour Mme Rey"), phrase)
         let secretariat = etat?.agent(cite: "Que fait le secrétariat ?")
         XCTAssertEqual(secretariat?.id, "secretariat")
         let detail = secretariat.flatMap { etat?.phrase(agent: $0) } ?? ""
-        XCTAssertTrue(detail.contains("Secrétariat est au travail"), detail)
+        XCTAssertTrue(detail.contains("L’assistant, côté Secrétariat, est au travail"), detail)
         XCTAssertTrue(detail.contains("14 e-mails triés"), detail)
     }
 
     func testEtatDuBureauV11() async {
         let etat = await BureauClaude(api: APISansV12(APIDemo(latence: .zero))).etat()
         XCTAssertEqual(etat?.agents.isEmpty, true)
-        XCTAssertEqual(etat?.libelleCourt, "Claude travaille · 2 en cours")
+        XCTAssertEqual(etat?.libelleCourt, "Assistant au travail · 2 en cours")
         let phrase = etat?.phrase ?? ""
-        XCTAssertTrue(phrase.contains("Claude travaille sur le PC"), phrase)
+        XCTAssertTrue(phrase.contains("L’assistant travaille sur le PC"), phrase)
         XCTAssertTrue(phrase.contains("Facture RE-00416 préparée, à valider"), phrase)
     }
 
     func testOutilsExecutes() async {
         let executeur = ExecuteurOutils(api: APIDemo(latence: .zero))
         let bureau = await executeur.executer(nom: "bureau", arguments: #"{"agent":"compta"}"#)
-        XCTAssertTrue(bureau.sortie.contains("Comptabilité est au travail"), bureau.sortie)
+        XCTAssertTrue(bureau.sortie.contains("côté Comptabilité, est au travail"), bureau.sortie)
         // La voix prépare, le patron confirme : rien ne part d'ici.
         let question = await executeur.executer(nom: "demander_claude", arguments: #"{"question":"Des e-mails urgents ?"}"#)
         guard case .questionAConfirmer(let q, let agent, let agentId) = question.effet else { return XCTFail("\(question.effet)") }
@@ -267,5 +267,43 @@ final class EvenementsV12Tests: XCTestCase {
         XCTAssertEqual(EvenementSSE(nom: "journal", donnees: "{}").sujet, .agents)
         XCTAssertEqual(EvenementSSE(nom: "maj", donnees: #"{"quoi":"agents"}"#).sujet, .agents)
         XCTAssertNil(EvenementSSE(nom: "ping", donnees: "{}").sujet)
+    }
+}
+
+final class HorsHorairesTests: XCTestCase {
+    func testJamaisDisponibleHorsHoraires() throws {
+        let agents = try JSONDecoder().decode(ListeAgentsPC.self, from: Data(#"""
+        {"agents":[{"id":"secretariat","nom":"Secrétariat","etat":"hors_horaires","horaires":"du lundi au vendredi, de 7 h à 18 h"},
+                   {"id":"offres","nom":"Offres","etat":"libre"}],
+         "assistant":{"pause":false,"file":0,"en_cours":null,"en_service":false,"horaires":"du lundi au vendredi, de 7 h à 18 h"}}
+        """#.utf8))
+        XCTAssertEqual(agents.agents[0].etat, .horsHoraires)
+        XCTAssertEqual(agents.assistant?.enService, false)
+        let etat = EtatBureau(etat: agents.assistant, saisies: [], agents: agents.agents)
+        XCTAssertEqual(etat.etatAffiche(agents.agents[1]), .horsHoraires, "« libre » hors horaires n'est jamais « Disponible »")
+        XCTAssertTrue(etat.libelleCourt.hasPrefix("Hors horaires · repasse "), etat.libelleCourt)
+        XCTAssertTrue(etat.phrase.contains("hors horaires (du lundi au vendredi, de 7 h à 18 h), il repasse"), etat.phrase)
+        XCTAssertTrue(etat.phrase(agent: agents.agents[1]).contains("est hors horaires"))
+    }
+
+    func testReponseAvecMessageHorsHoraires() throws {
+        let r = try JSONDecoder().decode(ReponseAgent.self, from: Data(#"""
+        {"statut":"en_cours","question_id":"Q-12","agent":"comptabilite",
+         "message":"L’assistant répondra à son prochain passage (du lundi au vendredi, de 7 h à 18 h)."}
+        """#.utf8))
+        XCTAssertEqual(r.statut, .enCours)
+        XCTAssertEqual(r.questionId, "Q-12")
+        XCTAssertTrue(r.message?.contains("prochain passage") ?? false)
+    }
+
+    func testSaisiesV12() throws {
+        let data = Data(#"""
+        [{"id":"S-201","cree":"2026-09-27T18:10:00","texte":"Question du patron : des e-mails ?","photos":0,"statut":"en_cours",
+          "resume":null,"decision_reference":null,"question":true,"agent":"secretariat","tache_id":"T-88"}]
+        """#.utf8)
+        let s = try XCTUnwrap(try JSONDecoder().decode(ListeSaisies.self, from: data).saisies.first)
+        XCTAssertTrue(s.question)
+        XCTAssertEqual(s.agent, "secretariat")
+        XCTAssertEqual(s.tacheId, "T-88")
     }
 }

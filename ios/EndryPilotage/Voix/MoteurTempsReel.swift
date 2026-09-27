@@ -157,6 +157,20 @@ final class MoteurTempsReel: MoteurVoix {
         surEvenement?(.effet(resultat.effet))
     }
 
+    func poser(_ question: String) async {
+        interrompreAssistant()
+        surEvenement?(.nouveauTour)
+        surEvenement?(.patron(definitif: question, provisoire: ""))
+        envoyer(CommandeRealtime.messageTexte(question))
+        envoyer(CommandeRealtime.creerReponse)
+        changerPhase(.reflexion)
+    }
+
+    func interrompre() {
+        interrompreAssistant()
+        changerPhase(.ecoute)
+    }
+
     /// Barge-in : la voix s'arrête net, la réponse est tronquée à ce qui a été entendu.
     private func interrompreAssistant() {
         guard let audio, audio.lectureEnCours || !reponseTerminee else { return }

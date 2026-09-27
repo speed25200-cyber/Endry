@@ -6,6 +6,13 @@ import SwiftUI
 struct ContenuPrincipal: View {
     @Environment(ModeleApp.self) private var app
 
+    private func ouvrirAssistantDemande() {
+        guard DemandesRaccourcis.partage.assistantDemande, !app.verrou.doitAfficherEcran else { return }
+        DemandesRaccourcis.partage.assistantDemande = false
+        app.reglagesPresentes = false
+        app.assistantPresente = true
+    }
+
     var body: some View {
         @Bindable var app = app
         @Bindable var documents = app.documents
@@ -49,6 +56,9 @@ struct ContenuPrincipal: View {
         .fullScreenCover(isPresented: $app.assistantPresente) {
             VueAssistantVocal()
         }
+        // « Dis Siri, parler à Endry » : l'assistant s'ouvre une fois l'app déverrouillée.
+        .onChange(of: DemandesRaccourcis.partage.assistantDemande, initial: true) { ouvrirAssistantDemande() }
+        .onChange(of: app.verrou.doitAfficherEcran) { ouvrirAssistantDemande() }
         .overlay {
             if app.documents.chargement != nil {
                 ProgressView()

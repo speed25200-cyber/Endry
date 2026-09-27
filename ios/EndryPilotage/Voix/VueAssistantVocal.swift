@@ -1,16 +1,27 @@
 import EndryKit
 import SwiftUI
 
-/// Assistant vocal plein écran (toucher long du micro central).
+/// Assistant vocal plein écran (toucher long du micro central, bouton « Parler à Endry », raccourci Siri).
 ///
 /// Sphère d'or liquide au centre, transcription en direct (mots provisoires plus pâles),
-/// cartes contextuelles qui surgissent. Une décision proposée par la voix n'est jamais validée
+/// cartes contextuelles qui surgissent, suggestions et champ pour écrire plutôt que parler.
+/// Toucher la sphère pendant qu'Endry parle l'interrompt. Une décision proposée par la voix n'est jamais validée
 /// par la voix : elle apparaît avec son geste (bouton « Oui » ou curseur « Glisser pour envoyer »).
 struct VueAssistantVocal: View {
     @Environment(ModeleApp.self) private var app
     @Environment(\.dismiss) private var fermer
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
     @State private var assistant: AssistantVocal?
+    @State private var question = ""
+    @FocusState private var clavier: Bool
+
+    /// Questions du quotidien, à toucher plutôt qu'à dire.
+    private static let suggestions = [
+        "Qu’est-ce qui m’attend aujourd’hui ?",
+        "Qui me doit de l’argent ?",
+        "Quels chantiers cette semaine ?",
+        "Qu’est-ce que je dois décider ?",
+    ]
 
     var body: some View {
         ZStack {
@@ -23,6 +34,11 @@ struct VueAssistantVocal: View {
                 transcription
                 Spacer(minLength: 0)
                 cartes
+                if assistant?.cartes.isEmpty ?? true, assistant?.reponse.isEmpty ?? true, !clavier {
+                    suggestions
+                        .transition(.opacity)
+                }
+                champQuestion
             }
             .padding(.horizontal, Espace.bord)
             .padding(.bottom, Espace.m)
@@ -70,11 +86,18 @@ struct VueAssistantVocal: View {
             .frame(maxWidth: 300, maxHeight: 300)
             .contentShape(Circle())
             .onTapGesture {
-                // Après une erreur, toucher la sphère relance la conversation.
-                if case .erreur = assistant?.phase {
+                switch assistant?.phase ?? .preparation {
+                case .erreur:
+                    // Après une erreur, toucher la sphère relance la conversation.
                     Task { await assistant?.demarrer() }
+                case .parole:
+                    // Endry se tait et rend la parole.
+                    assistant?.interrompre()
+                default:
+                    clavier = false
                 }
             }
+            .accessibilityAction(named: Text("Interrompre")) { assistant?.interrompre() }
             .accessibilityElement()
             .accessibilityLabel(Text(libellePhase))
             .accessibilityAddTraits(.updatesFrequently)
@@ -125,6 +148,68 @@ struct VueAssistantVocal: View {
         }
         .frame(maxWidth: .infinity)
         .animation(.endry(reduire: reduireAnimations), value: assistant?.reponse)
+    }
+
+    private var suggestions: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: Espace.xs) {
+                ForEach(Array(Self.suggestions.enumerated()), id: \.offset) { index, texte in
+                    Button {
+                        Task { await assistant?.poser(texte) }
+                    } label: {
+                        Text(texte)
+                            .styleTexte(14, relativeTo: .subheadline, graisse: .medium)
+                            .foregroundStyle(Color.orClair)
+                            .padding(.horizontal, Espace.m)
+                            .frame(minHeight: 40)
+                            .background(Color.or.opacity(0.1), in: Capsule())
+                            .overlay(Capsule().stroke(Color.or.opacity(0.3), lineWidth: Espace.filet))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("suggestion-\(index)")
+                }
+            }
+        }
+        .scrollIndicators(.hidden)
+        .scrollClipDisabled()
+        .disabled(!(assistant?.pret ?? false))
+    }
+
+    /// Écrire plutôt que parler : même conversation, mêmes outils, mêmes règles.
+    private var champQuestion: some View {
+        HStack(spacing: Espace.xs) {
+            TextField("", text: $question, prompt: Text("Écrire à Endry…").foregroundStyle(Color.encrePale))
+                .styleTexte(16, relativeTo: .body)
+                .foregroundStyle(Color.encre)
+                .focused($clavier)
+                .submitLabel(.send)
+                .onSubmit(envoyerQuestion)
+                .padding(.leading, Espace.m)
+                .padding(.vertical, 12)
+                .accessibilityIdentifier("champ-assistant")
+            Button(action: envoyerQuestion) {
+                Image(systemName: "arrow.up")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Color.espresso)
+                    .frame(width: 36, height: 36)
+                    .background(Color.or, in: Circle())
+            }
+            .disabled(question.trimmingCharacters(in: .whitespaces).isEmpty)
+            .opacity(question.trimmingCharacters(in: .whitespaces).isEmpty ? 0.4 : 1)
+            .padding(.trailing, 6)
+            .accessibilityLabel(Text("Envoyer la question"))
+            .accessibilityIdentifier("envoyer-question")
+        }
+        .background(Color.espresso.opacity(0.55), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Color.or.opacity(0.25), lineWidth: Espace.filet))
+    }
+
+    private func envoyerQuestion() {
+        let texte = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !texte.isEmpty else { return }
+        question = ""
+        clavier = false
+        Task { await assistant?.poser(texte) }
     }
 
     private var cartes: some View {

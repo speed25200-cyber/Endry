@@ -13,6 +13,7 @@ struct DecisionsView: View {
     @State private var defilement: CGFloat = 0
     @State private var carteVisible: String?
     @State private var fiche: Carte?
+    @Namespace private var zoom
 
     private let hauteurPhoto: CGFloat = 520
 
@@ -49,7 +50,9 @@ struct DecisionsView: View {
         .toast(Binding(get: { modele.toast }, set: { modele.toast = $0 }))
         .sensoryFeedback(.success, trigger: modele.nombreDecisions) { ancien, nouveau in nouveau < ancien }
         .sheet(item: $fiche) { carte in
+            // La carte du carrousel grandit jusqu'à devenir la fiche.
             FicheDecision(carte: carte, modele: modele)
+                .navigationTransition(.zoom(sourceID: carte.reference, in: zoom))
         }
         .onChange(of: app.referenceCiblee) { _, reference in
             guard let reference else { return }
@@ -114,6 +117,9 @@ struct DecisionsView: View {
                     .apparitionEnCascade(index: 3, visible: visible)
                     .accessibilityIdentifier("resume-du-jour")
             }
+            BoutonParlerEndry { app.assistantPresente = true }
+                .padding(.top, Espace.s)
+                .apparitionEnCascade(index: 4, visible: visible)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Espace.bord + 4)
@@ -209,6 +215,7 @@ struct DecisionsView: View {
                                 agir: { action in await modele.agir(action, sur: carte) }
                             )
                             .containerRelativeFrame(.horizontal) { largeur, _ in largeur * 0.82 }
+                            .matchedTransitionSource(id: carte.reference, in: zoom)
                             .scrollTransition(.interactive, axis: .horizontal) { contenu, phase in
                                 contenu
                                     .scaleEffect(phase.isIdentity ? 1 : 0.94)
@@ -230,6 +237,33 @@ struct DecisionsView: View {
                 .accessibilityIdentifier("carrousel-decisions")
             }
         }
+    }
+}
+
+/// « Parler à Endry » : l'assistant vocal à portée de pouce, avec une onde d'or qui respire.
+struct BoutonParlerEndry: View {
+    var action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: Espace.xs) {
+                Image(systemName: "waveform")
+                    .font(.system(size: 15, weight: .semibold))
+                    .symbolEffect(.variableColor.iterative.dimInactiveLayers, options: .repeating,
+                                  isActive: !reduireAnimations && !Configuration.testsUI)
+                Text("Parler à Endry")
+                    .styleTexte(15, relativeTo: .subheadline, graisse: .semibold)
+            }
+            .foregroundStyle(Color.espresso)
+            .padding(.horizontal, Espace.m)
+            .frame(minHeight: 44)
+            .background(.degradeOr, in: Capsule())
+            .shadow(color: Color.or.opacity(0.35), radius: 14, y: 4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(Text("Ouvre l’assistant vocal : posez une question ou dictez une demande"))
+        .accessibilityIdentifier("parler-endry")
     }
 }
 

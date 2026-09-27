@@ -60,7 +60,7 @@ Polices embarquées sous licence OFL (instances statiques tirées des polices va
 
 ## Assistant vocal
 
-Toucher court du micro central : dictée d'une saisie terrain. **Toucher long** : assistant vocal plein écran
+Toucher court du micro central : dictée d'une saisie terrain. **Toucher long** (ou « Parler à Endry ») : assistant vocal plein écran
 (sphère d'or liquide en Metal, transcription en direct, cartes contextuelles).
 
 - **Moteur temps réel** (`Voix/MoteurTempsReel.swift`) : API Realtime parole-à-parole en **WebSocket natif**
@@ -68,10 +68,20 @@ Toucher court du micro central : dictée d'une saisie terrain. **Toucher long** 
   jamais de clé : elle demande une session éphémère au PC (`POST /app/api/v1/voix/session`) et utilise le
   `client_secret` de courte durée. Audio en `.voiceChat` (annulation d'écho, haut-parleur, AirPods, CarPlay),
   PCM 16 bits 24 kHz, barge-in (la voix s'arrête net, la réponse est tronquée à ce qui a été entendu).
-- **Moteur local** (`Voix/MoteurLocal.swift`), repli automatique si le PC répond `disponible: false` :
-  SpeechAnalyzer / SpeechTranscriber sur iOS 26, SFSpeechRecognizer fr-CH sinon (vocabulaire métier en
-  `contextualStrings`), réponses locales (qui doit quoi, chantiers, décisions), synthèse avec la meilleure voix
-  française installée ; tout le reste part en saisie vers l'assistant du PC (gardée hors ligne).
+- **Moteur sur l'iPhone** (`Voix/MoteurLocal.swift`), utilisé si le PC répond `disponible: false` ou n'est
+  pas joignable : SpeechAnalyzer / SpeechTranscriber sur iOS 26, SFSpeechRecognizer fr-CH sinon (vocabulaire
+  métier en `contextualStrings`), synthèse avec la meilleure voix française installée.
+  - **Apple Intelligence** (`Voix/CerveauEndry.swift`, framework FoundationModels, iOS 26, iPhone 15 Pro et
+    suivants) : le modèle d'Apple, **entièrement sur l'iPhone**, comprend les questions libres et lit les
+    données par les mêmes outils que le moteur temps réel (`accueil`, `decisions`, `chantiers`, `chantier`,
+    `argent`, `saisie`, `proposer_decision`). Aucune clé, aucun coût, rien n'est envoyé ailleurs.
+    Consignes : `EndryKit/Voix/ConsignesCerveau.swift`.
+  - Sans Apple Intelligence : réponses locales aux questions simples (qui doit quoi, chantiers, décisions),
+    le reste part en saisie vers l'assistant du PC (gardée hors ligne).
+- **Écrire plutôt que parler** : suggestions à toucher et champ « Écrire à Endry… » dans l'assistant
+  (mêmes outils, mêmes règles). Toucher la sphère pendant qu'Endry parle l'interrompt.
+- **Entrées** : bouton « Parler à Endry » sur Aujourd'hui, toucher long du micro central, et Siri
+  (« Parler à Endry », raccourci App Intents ; l'assistant ne s'ouvre qu'après Face ID).
 - **La voix ne valide jamais un envoi** : `proposer_decision` affiche la carte, le patron fait le geste
   (« Oui » ou « Glisser pour envoyer »).
 
@@ -146,13 +156,9 @@ Codemagic n’a pas besoin de fastlane : sa CLI (`app-store-connect`, `xcode-pro
 ### À faire une seule fois (vous)
 
 > **Configuration actuelle** : le workflow `ios-testflight` utilise l’intégration App Store Connect
-> **« Endry ASC API »**, propre à Endry SA, et la signature automatique de Codemagic (`ios_signing`, bundle
-> `com.endrysa.endry`). Il lance **tous** les tests (EndryKit, app, UI) avant de construire l’IPA.
->
-> **Créer l’intégration (une fois)** : App Store Connect › Utilisateurs et accès › Intégrations › API App Store Connect ›
-> Clés d’équipe › « + » (accès *Gestionnaire d’app*), téléchargez le `.p8`. Puis Codemagic › Teams › votre équipe ›
-> **Integrations** › **Developer Portal** › *Manage keys* › **Add key** : nom exact **`Endry ASC API`**, Issuer ID,
-> Key ID et fichier `.p8`. Rien n’est stocké dans le dépôt.
+> **« PetMind ASC API »** (la clé d’équipe App Store Connect déjà configurée dans Codemagic) et la signature
+> automatique de Codemagic (`ios_signing`, bundle `com.endrysa.endry`). Il lance **tous** les tests
+> (EndryKit, app, UI) avant de construire l’IPA. Rien n’est stocké dans le dépôt.
 >
 > Signature : Codemagic › Code signing identities › *iOS certificates* doit contenir un certificat **Apple Distribution**
 > avec sa clé (sinon *Generate certificate*), et *iOS provisioning profiles* le profil App Store de `com.endrysa.endry`

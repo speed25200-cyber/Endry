@@ -162,6 +162,25 @@ final class EndryPilotageUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Transmis"].waitForExistence(timeout: 5))
     }
 
+    /// Assistant : ouvert depuis « Parler à Endry », une suggestion touchée reçoit une réponse dite et affichée.
+    @MainActor
+    func testAssistantRepond() {
+        let app = lancer()
+        let bouton = app.buttons["parler-endry"]
+        XCTAssertTrue(bouton.waitForExistence(timeout: 8))
+        toucher(bouton)
+        let suggestion = app.buttons["suggestion-0"]
+        XCTAssertTrue(suggestion.waitForExistence(timeout: 8))
+        let limite = Date().addingTimeInterval(8)
+        while !suggestion.isEnabled && Date() < limite { usleep(200_000) }
+        suggestion.tap()
+        let reponse = app.descendants(matching: .any)["reponse-assistant"].firstMatch
+        XCTAssertTrue(reponse.waitForExistence(timeout: 40), "L’assistant n’a pas répondu.")
+        capturer(app, "7-assistant")
+        app.buttons["fermer-assistant"].tap()
+        XCTAssertTrue(bouton.waitForExistence(timeout: 5))
+    }
+
     /// Captures relues à chaque lot : clair / sombre. La CI relance ce test sur iPhone SE en taille XXL
     /// et sur un Pro Max (variables `CAPTURE_APPAREIL` et `CAPTURE_TAILLE`, passées via `TEST_RUNNER_…`).
     @MainActor

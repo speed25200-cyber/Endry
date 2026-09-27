@@ -83,3 +83,28 @@ final class RepondeurLocalTests: XCTestCase {
         XCTAssertEqual(FormatSuisse.parle(15_640), "15 640 francs")
     }
 }
+
+final class CerveauTests: XCTestCase {
+    func testConsignesPortentLesRegles() {
+        let date = DateEndry.lire("2026-09-27")!
+        let t = ConsignesCerveau.texte(date: date)
+        XCTAssertTrue(t.contains("27.09.2026"))
+        XCTAssertTrue(t.contains("aucune relance sans sa demande"))
+        XCTAssertTrue(t.contains("proposer_decision"))
+        XCTAssertTrue(t.contains("rien ne part"))
+    }
+
+    func testTexteParleSansBalises() {
+        XCTAssertEqual(TexteParle.nettoyer("**Muller SA** vous doit 1'390 francs."), "Muller SA vous doit 1'390 francs.")
+        XCTAssertEqual(TexteParle.nettoyer("Deux chantiers :\n- Rossi\n- Favre 😀"), "Deux chantiers : Rossi. Favre.")
+        XCTAssertEqual(TexteParle.nettoyer("  Tout roule.  "), "Tout roule.")
+    }
+
+    func testMessageTexteRealtime() throws {
+        let data = CommandeRealtime.messageTexte("Qui me doit ?")
+        let objet = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        XCTAssertEqual(objet["type"] as? String, "conversation.item.create")
+        let item = try XCTUnwrap(objet["item"] as? [String: Any])
+        XCTAssertEqual(item["role"] as? String, "user")
+    }
+}

@@ -35,6 +35,10 @@ protocol MoteurVoix: AnyObject {
     var nom: String { get }
     func demarrer(surEvenement: @escaping @MainActor (EvenementVoix) -> Void) async throws
     func arreter()
+    /// Question tapée au clavier, traitée comme une question dite.
+    func poser(_ question: String) async
+    /// L'assistant se tait et rend la parole au patron.
+    func interrompre()
 }
 
 enum ErreurVoix: Error {
@@ -59,6 +63,8 @@ final class AssistantVocal {
     /// Cartes contextuelles, de la plus récente à la plus ancienne.
     private(set) var cartes: [ExecuteurOutils.Effet] = []
     private(set) var nomMoteur = ""
+    /// Le moteur accepte les questions (dites ou tapées).
+    private(set) var pret = false
 
     @ObservationIgnored private var moteur: (any MoteurVoix)?
     @ObservationIgnored private let fabrique: @MainActor () async -> any MoteurVoix
@@ -71,11 +77,14 @@ final class AssistantVocal {
 
     func demarrer() async {
         phase = .preparation
+        pret = false
         let premier = await fabrique()
         do {
             try await lancer(premier)
         } catch ErreurVoix.autorisationRefusee {
-            phase = .erreur("Autorisez le micro et la reconnaissance vocale dans Réglages › Endry.")
+            // Sans micro, on peut encore écrire à Endry.
+            pret = true
+            phase = .erreur("Micro non autorisé (Réglages › Endry). Vous pouvez écrire votre question.")
         } catch {
             // Repli silencieux sur le moteur local.
             premier.arreter()
@@ -90,9 +99,22 @@ final class AssistantVocal {
     func arreter() {
         moteur?.arreter()
         moteur = nil
+        pret = false
         niveauMicro = 0
         niveauVoix = 0
     }
+
+    /// Question tapée ou suggestion touchée.
+    func poser(_ question: String) async {
+        let texte = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !texte.isEmpty, let moteur else { return }
+        await moteur.poser(texte)
+    }
+
+    func interrompre() {
+        moteur?.interrompre()
+    }
+
 
     func retirer(_ carte: ExecuteurOutils.Effet) {
         cartes.removeAll { $0 == carte }
@@ -104,6 +126,7 @@ final class AssistantVocal {
         try await m.demarrer { [weak self] evenement in
             self?.recevoir(evenement)
         }
+        pret = true
     }
 
     private func recevoir(_ evenement: EvenementVoix) {

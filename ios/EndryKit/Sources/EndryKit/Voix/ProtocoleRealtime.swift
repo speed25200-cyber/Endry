@@ -97,6 +97,12 @@ public enum CommandeRealtime {
         json(["type": "conversation.item.create", "item": ["type": "function_call_output", "call_id": callId, "output": sortie]])
     }
 
+    /// Question tapée au clavier pendant une conversation vocale.
+    public static func messageTexte(_ texte: String) -> Data {
+        json(["type": "conversation.item.create",
+              "item": ["type": "message", "role": "user", "content": [["type": "input_text", "text": texte]]]])
+    }
+
     public static let creerReponse = json(["type": "response.create"])
     public static let annulerReponse = json(["type": "response.cancel"])
 

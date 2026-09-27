@@ -84,6 +84,8 @@ targets:
         ENABLE_PREVIEWS: YES
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: EndryPilotage/Info.plist
+        # Apple Intelligence (iOS 26) : lié faiblement, l'app reste lançable sur iOS 18.
+        OTHER_LDFLAGS: ["$(inherited)", "-weak_framework", "FoundationModels"]
 
   EndryPilotageTests:
     type: bundle.unit-test

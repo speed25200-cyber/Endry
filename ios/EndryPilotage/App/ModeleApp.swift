@@ -58,14 +58,17 @@ final class ModeleApp {
     }
 
     private func moteurLocal() -> any MoteurVoix {
-        MoteurLocal(
+        let transmettre: @MainActor @Sendable (String) async -> ModeleSaisie.ResultatDemande = { [weak self] demande in
+            guard let saisie = self?.saisie else { return .refusee("Connectez d’abord l’app au bureau.") }
+            return await saisie.transmettre(demande: demande)
+        }
+        return MoteurLocal(
             donnees: {
                 RepondeurLocal.Donnees(accueil: self.decisions?.accueil, argent: self.argent?.argent, chantiers: self.chantiers?.tous ?? [])
             },
-            transmettre: { demande in
-                guard let saisie = self.saisie else { return .refusee("Connectez d’abord l’app au bureau.") }
-                return await saisie.transmettre(demande: demande)
-            }
+            transmettre: transmettre,
+            // Apple Intelligence sur l'iPhone : comprend les questions libres et lit les données par les outils.
+            cerveau: FabriqueCerveau.creer(executeur: session.api.map { ExecuteurOutils(api: $0) }, transmettre: transmettre)
         )
     }
 

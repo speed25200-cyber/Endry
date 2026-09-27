@@ -65,6 +65,7 @@ struct EndryPilotageApp: App {
 struct RacineView: View {
     @Environment(ModeleApp.self) private var modele
     @Environment(\.scenePhase) private var phase
+    @State private var intro = !Configuration.testsUI
 
     var body: some View {
         @Bindable var modele = modele
@@ -83,6 +84,11 @@ struct RacineView: View {
                 EcranVerrou()
                     .transition(.opacity)
                     .zIndex(2)
+            }
+
+            if intro {
+                IntroMaison { intro = false }
+                    .zIndex(4)
             }
 
             // Masquage du contenu dans le sélecteur d'apps.

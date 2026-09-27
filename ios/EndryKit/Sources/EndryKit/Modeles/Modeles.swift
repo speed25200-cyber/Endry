@@ -582,9 +582,12 @@ public struct Semaine: Decodable, Sendable, Hashable, Identifiable {
     public var dates: String?
     public var debut: String?
     public var fin: String?
+    /// Étape du chantier (`planifie`…), fournie par le PC.
+    public var etape: String?
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.champs()
+        etape = c.texte("etape").flatMap(Dossier.nonVide)
         titre = c.texte("titre", defaut: "Chantier")
         id = c.texte("id") ?? titre
         client = c.texte("client").flatMap(Dossier.nonVide)

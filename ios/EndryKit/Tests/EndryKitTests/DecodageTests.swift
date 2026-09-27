@@ -99,7 +99,7 @@ final class ContratV11Tests: XCTestCase {
         XCTAssertEqual(mail.envoiTiers, true)
 
         let argent = try Fixtures.decoder(Argent.self, .argent)
-        XCTAssertEqual(argent.aRefacturer.achats.first?.id, "AR-12")
+        XCTAssertEqual(argent.aRefacturer.achats.first?.id, "achat:12")
         XCTAssertEqual(argent.aRefacturer.achats.first?.fournisseur, "Sanipex SA")
         XCTAssertEqual(argent.heuresSecretariat?.heures, 31.5)
 
@@ -123,7 +123,7 @@ final class ContratV11Tests: XCTestCase {
         XCTAssertEqual(appareils.count, 2)
         XCTAssertEqual(appareils.filter(\.actuel).count, 1)
         let saisies = try Fixtures.decoder(ListeSaisies.self, .saisies).saisies
-        XCTAssertEqual(saisies.map(\.statut), [.traite, .traite, .enCours])
+        XCTAssertEqual(saisies.map(\.statut), [.traite, .traite, .enCours, .traite])
         XCTAssertTrue(saisies[1].decisionPrete)
         XCTAssertFalse(saisies[0].decisionPrete)
         let etat = try Fixtures.decoder(EtatAssistant.self, .etatAssistant)

@@ -9,6 +9,84 @@ avec le serveur **v1.0** (production) et **v1.1** (champs et routes ajoutés, to
 Fixtures fictives : `EndryKit/Sources/EndryKit/Resources/Fixtures/` — `*-v10.json` = réponses v1.0 exactes,
 les autres = v1.1 (mode démo). Tests : `EndryKitTests/DecodageTests.swift` (`ContratV10Tests`, `ContratV11Tests`).
 
+## Implémenté sur le PC (27.09.2026) — contrat réel, fait foi
+
+Préfixe `/app/api/v1`, `Authorization: Bearer <jeton>`. Ce qui suit est ce que le PC du bureau fait en production depuis
+le 27.09.2026 au soir ; l'app s'y conforme exactement (fixtures fictives au même format dans `Resources/Fixtures`).
+
+**Session et appareils**
+- `POST /session {acces, appareil: {nom, modele}}` → `{jeton, appareil_id, valable_jours, entreprise}` : jeton propre à
+  l'appareil ; sans `appareil`, l'ancien jeton commun.
+- `POST /session/appareil {appareil: {nom, modele}}` (appelé avec l'ancien jeton commun) → `{jeton, appareil_id, …}` :
+  migration sans nouveau lien. **App** : au lancement, si le jeton n'a pas d'`appareil_id`, une seule fois ; le jeton
+  est remplacé dans le trousseau. `409 deja_par_appareil` si c'est déjà fait (l'app ne réessaie plus).
+- `GET /appareils` → `[{id, nom, modele, cree, vu, actuel}]` ; `DELETE /appareils/{id}` → `{ok}` : jeton révoqué
+  immédiatement, 401 ensuite sur cet appareil. **App** : « Déconnecter cet iPhone » ; 405 (serveur trop ancien) :
+  l'app explique que la révocation à distance n'est pas encore possible.
+- `POST /appareils {jeton_apns, nom, environnement}` : jeton APNs rattaché à l'appareil connecté.
+
+**Décisions**
+- `Decision.envoi_tiers: bool` (fait foi) ; `true` pour `mail_envoyer`, `mail_repondre`, `mail_transferer`,
+  `envoyer_facture`, `envoyer_offre`, `envoyer_rappel`, `rappel_courrier`, `relances_reactiver` (liste de repli de
+  l'app identique). Les questions `Q-…` ont `envoi_tiers: false`. `Decision.chantier_id: number|null`.
+- Un « Oui » est exécuté **même quand l'assistant est en pause** (la pause n'arrête que son travail). **App** : Oui,
+  Non, Corriger restent possibles en pause ; bandeau « Assistant en pause : vos décisions s'exécutent, il ne prépare
+  rien de nouveau » avec « Reprendre ». Jamais de « Oui » dans une notification `DECISION_ENVOI` ni pour une carte
+  `envoi_tiers`. « Corriger » sur toute validation (`modifiable` pré-remplit seulement le texte).
+- « Oui » plus long que le délai : l'app affiche « L'envoi prend plus de temps que prévu : vérifiez dans un instant »
+  et relit `/decisions` (le PC refuse un double traitement).
+
+**Argent et chantiers**
+- `a_refacturer.achats[]` : `id` unique (`achat:12`), `libelle`, `fournisseur`, `chantier`, en plus des anciens champs.
+- `heures_secretariat.heures_decimal: number`. `elements[].numero` (« RE-00036 », vide pour les achats).
+- `semaine[]` et `chantiers_7_jours[]` : `client`, `date_debut`, `date_fin`, `etape`.
+- `POST /actualiser` en échec → `503 {ok:false, erreur:"bexio_indisponible", message}`.
+- `GET /app/doc/offre/{id}` en échec → `503 {erreur:"pdf_indisponible", message}` en JSON (pas un PDF) ; l'aperçu
+  affiche ce message. **App** : un 503 avec corps JSON n'est jamais pris pour un tunnel mort ; l'extension réelle des
+  fichiers est gardée. Délais : 45 s pour `/accueil` et `/argent`.
+
+**Saisies et questions**
+- `POST /saisie` (multipart `texte`, `photos[]`, champ facultatif `agent`) → `{ok, message, saisie_id}`. Renvoi
+  identique dans les 15 minutes (file hors ligne) → **le même** `saisie_id`, « Déjà transmis. ». Un texte qui commence
+  par « Question du patron » est une question (lecture seule) ; `[Pour l'agent X]` oriente vers le domaine.
+  **App** : photos toujours en JPEG (qualité 0,85, grand côté 2560 px).
+- `GET /saisies?limite=30` → `[{id, cree, texte, photos, statut: transmis|en_cours|traite|erreur, resume,
+  decision_reference, question: bool, agent, tache_id}]`, la plus récente d'abord.
+- `POST /assistant/question {question, agent?, contexte?}` et `POST /agents/{id}/question {question}` →
+  `202 {statut:"en_cours", question_id, agent, message?}` ; `message` hors des horaires de l'assistant (« L'assistant
+  répondra à son prochain passage (du lundi au vendredi, de 7 h à 18 h). »).
+- `GET /questions/{question_id}` → `{statut: en_cours|repondu|erreur, question_id, agent, reponse?, message?,
+  decision_reference?}`.
+- Une question est exécutée **en lecture seule** (outils d'écriture bloqués par le PC). La réponse arrive quand
+  l'assistant passe : du lundi au vendredi, de 7 h à 18 h, toutes les 20 min environ — **pas instantané**.
+  **App** : la voix ne transmet rien sans geste (question ou demande affichée, « Envoyer » / « Transmettre ») ;
+  `GET /questions/{id}` toutes les 2 s pendant 60 s, puis à chaque `maj saisies` ; avec `message`, l'app l'affiche,
+  le dit, et n'interroge plus (la réponse arrivera par notification `SAISIE_TRAITEE` et dans l'historique).
+
+**Assistant et bureau**
+- `GET /assistant/etat` → `{pause, file, en_cours, derniere_activite, en_service: bool, horaires: "du lundi au
+  vendredi, de 7 h à 18 h"}` ; `POST /assistant/pause`, `/assistant/reprise` → `{ok, …etat}`.
+- `GET /agents` → `{agents: [Agent], assistant: {…etat}}`, `Agent = {id, nom, role, icone, etat: libre|occupe|pause|
+  erreur|hors_horaires, tache, depuis, file, traitees_jour, derniere_activite, resume_jour, horaires}`. Ids fixes :
+  `secretariat`, `comptabilite`, `offres`, `chantiers`, `achats` — **domaines d'un seul assistant**, présentés ainsi
+  (« L'assistant, côté Comptabilité »). **App** : jamais « Disponible » hors des horaires (« Repasse lundi à 7 h »).
+- `GET /journal?limite=30`, `GET /agents/{id}/journal` → `{entrees: [{id, horodatage, agent, type: action|decision|
+  erreur|email_prepare|question|info, titre, detail, decision_reference}]}` ; agent inconnu → 404.
+
+**Événements et voix**
+- `GET /evenements` (SSE) : `retry: 5000`, puis `event: maj` avec `data: {"quoi": "decisions"|"saisies"|"chantiers"|
+  "argent"|"agents"}` ; commentaire `: ping` toutes les 15 s. **Pas encore** d'événements `agent`, `journal`,
+  `reponse` : sur `maj saisies`, l'app recharge `/saisies` et vérifie les questions en attente.
+- `POST /voix/session` → `{disponible: false, message}` : le moteur local reste le moteur par défaut (pas de voix
+  temps réel payante tant que la direction ne l'a pas activée).
+
+**Push APNs** (prêt côté PC, actif dès que la clé Apple .p8 y est déposée)
+- Catégories `DECISION`, `DECISION_ENVOI`, `INFO` (question de l'assistant, `reference` = `Q-…`), `SAISIE_TRAITEE`
+  (`reference` = décision préparée, sinon id de la saisie) ; `thread-id` : `decisions`, `chantier-<id>` ou `saisies`.
+
+**Routes facultatives** : après un 404 ou un 405, l'app ne rappelle plus la route pendant la session (mémoire par hôte,
+remise à zéro au lancement).
+
 ## v1.0 — en production
 
 ```
@@ -121,6 +199,8 @@ contexte = {ecran?: "aujourdhui"|"chantier"|"facture"|"decision", reference?: st
   L’app reconnaît aussi un agent à son `nom` quand le patron le cite (« demande au secrétariat »).
 
 ### Événements en direct (`GET /evenements`, SSE)
+
+Proposés ; **pas encore émis par le PC au 27.09.2026** (seul `maj` l'est). L'app les accepte déjà.
 
 ```
 event: agent     data: Agent            (changement d’état ou de tâche)

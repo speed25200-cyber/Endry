@@ -20,6 +20,11 @@ public enum Fixtures {
         case sessionV10 = "session-v10"
         // v1.2
         case agents, journal
+        case questionEnCours = "question-en-cours"
+        case questionHorsHoraires = "question-hors-horaires"
+        case questionRepondu = "question-repondu"
+        case erreurPdf = "erreur-pdf"
+        case erreurDejaParAppareil = "erreur-deja-par-appareil"
     }
 
     public static func donnees(_ nom: Nom) -> Data {

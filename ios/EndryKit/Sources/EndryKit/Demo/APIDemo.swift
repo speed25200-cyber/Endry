@@ -174,8 +174,15 @@ public actor APIDemo: EndryAPI {
             texte = formulaire.champs.first { $0.nom == "texte" }?.valeur ?? ""
             photos = formulaire.fichiers.count
         }
+        // Comme le PC : un renvoi identique (file hors ligne) rend le même identifiant.
+        if let deja = saisies.first(where: { ($0["texte"] as? String) == texte && ($0["demo_nouvelle"] as? Bool) == true }),
+           let idDeja = deja["id"] as? String {
+            return json(["ok": true, "message": "Déjà transmis.", "saisie_id": idDeja])
+        }
         let id = "S-\(143 + saisies.count)"
-        saisies.insert(["id": id, "cree": "2026-09-27T12:45:00", "texte": texte, "photos": photos, "statut": "transmis"], at: 0)
+        let question = BureauClaude.estQuestion(texte)
+        saisies.insert(["id": id, "cree": "2026-09-27T12:45:00", "texte": texte, "photos": photos, "statut": "transmis",
+                        "question": question, "agent": BureauClaude.agent(texte)?.rawValue ?? NSNull(), "demo_nouvelle": true], at: 0)
         if BureauClaude.estQuestion(texte) { questions[id] = .now }
         return json(["ok": true, "message": "Transmis au bureau. L’assistant préparera la suite.", "saisie_id": id])
     }
@@ -233,7 +240,7 @@ public actor APIDemo: EndryAPI {
         for (id, q) in questionsAgents where ContinuousClock.now - q.depot >= delaiClaude {
             questionsAgents[id] = nil
             journalDemo.insert(["id": "J-\(3000 + journalDemo.count)", "horodatage": "2026-09-27T12:47:00", "agent": q.agent,
-                                "type": "reponse", "titre": "Réponse au patron", "detail": Self.reponseClaude(q.question),
+                                "type": "info", "titre": "Réponse au patron", "detail": Self.reponseClaude(q.question),
                                 "question_id": id], at: 0)
             mettreAgent(q.agent, etat: "libre", tache: nil)
         }

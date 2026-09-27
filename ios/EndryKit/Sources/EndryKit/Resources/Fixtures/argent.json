@@ -220,7 +220,7 @@
         "achat": "Siphon design et bonde clic-clac (hors offre)",
         "montant": 186.4,
         "date": "2026-09-19",
-        "id": "AR-12",
+        "id": "achat:12",
         "libelle": "Siphon design et bonde clic-clac (hors offre)",
         "fournisseur": "Sanipex SA",
         "chantier": "Résidence Les Tilleuls"
@@ -231,7 +231,7 @@
         "achat": "Vase d’expansion 35 L supplémentaire",
         "montant": 264.0,
         "date": "2026-09-21",
-        "id": "AR-13",
+        "id": "achat:13",
         "libelle": "Vase d’expansion 35 L supplémentaire",
         "fournisseur": "Meier Tobler AG",
         "chantier": "Villa Morel"
@@ -242,7 +242,7 @@
         "achat": "Location carotteuse 2 jours",
         "montant": 390.0,
         "date": "2026-09-09",
-        "id": "AR-14",
+        "id": "achat:14",
         "libelle": "Location carotteuse 2 jours",
         "fournisseur": "Debrunner Acifer SA",
         "chantier": "PPE Les Cèdres"

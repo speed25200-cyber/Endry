@@ -145,7 +145,7 @@ final class BureauClaudeTests: XCTestCase {
         XCTAssertEqual(reponse?.statut, .repondu)
         XCTAssertTrue(reponse?.reponse?.contains("Gander") ?? false)
         let apres = await bureau.etat()
-        XCTAssertEqual(apres?.journal.first?.type, .reponse)
+        XCTAssertEqual(apres?.journal.first?.titre, "Réponse au patron")
     }
 
     func testRepliSaisieV11() async throws {
@@ -305,5 +305,42 @@ final class HorsHorairesTests: XCTestCase {
         XCTAssertTrue(s.question)
         XCTAssertEqual(s.agent, "secretariat")
         XCTAssertEqual(s.tacheId, "T-88")
+    }
+}
+
+final class ContratPC270926Tests: XCTestCase {
+    func testQuestionsFixtures() throws {
+        let enCours = try JSONDecoder().decode(ReponseAgent.self, from: Fixtures.donnees(.questionEnCours))
+        XCTAssertEqual(enCours.statut, .enCours)
+        XCTAssertNil(enCours.message)
+        let horsHoraires = try JSONDecoder().decode(ReponseAgent.self, from: Fixtures.donnees(.questionHorsHoraires))
+        XCTAssertEqual(horsHoraires.statut, .enCours)
+        XCTAssertTrue(horsHoraires.message?.contains("prochain passage") ?? false)
+        let repondu = try JSONDecoder().decode(ReponseAgent.self, from: Fixtures.donnees(.questionRepondu))
+        XCTAssertEqual(repondu.statut, .repondu)
+        XCTAssertNil(repondu.decisionReference)
+    }
+
+    func testFixturesAuContratReel() throws {
+        let argent = try JSONDecoder().decode(Argent.self, from: Fixtures.donnees(.argent))
+        XCTAssertTrue(argent.aRefacturer.achats.allSatisfy { $0.id.hasPrefix("achat:") })
+        XCTAssertEqual(argent.heuresSecretariat?.heures, 31.5)
+        let saisies = try JSONDecoder().decode(ListeSaisies.self, from: Fixtures.donnees(.saisies)).saisies
+        let question = try XCTUnwrap(saisies.first { $0.question })
+        XCTAssertEqual(question.agent, "secretariat")
+        XCTAssertEqual(BureauClaude.libelle(question.texte), "Question à Claude · Secrétariat : Mme Gander a-t-elle rappelé ?")
+        let accueil = try JSONDecoder().decode(Accueil.self, from: Fixtures.donnees(.accueil))
+        XCTAssertEqual(accueil.salut, "Bonjour")
+        XCTAssertEqual(accueil.chantiers7Jours.first?.etape, "planifie")
+        XCTAssertTrue(accueil.decisions.filter { $0.estQuestion }.allSatisfy { !$0.exigeGlisser })
+    }
+
+    func testRenvoiIdentiqueMemeIdentifiant() async throws {
+        let demo = APIDemo(latence: .zero)
+        let formulaire = FormulaireMultipart(champs: [Parametre("texte", "Citerne dégazée à la Villa Morel.")])
+        let premier = try await demo.charger(ReponseSimple.self, .saisie(formulaire))
+        let second = try await demo.charger(ReponseSimple.self, .saisie(formulaire))
+        XCTAssertEqual(premier.saisieId, second.saisieId)
+        XCTAssertEqual(second.message, "Déjà transmis.")
     }
 }

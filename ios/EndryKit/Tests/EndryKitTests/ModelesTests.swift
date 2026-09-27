@@ -264,7 +264,7 @@ final class FileSaisiesTests: XCTestCase {
     func testHistoriqueStatuts() async {
         let modele = ModeleSaisie(api: APIDemo(latence: .zero))
         await modele.chargerHistorique()
-        XCTAssertEqual(modele.historique.count, 3)
+        XCTAssertEqual(modele.historique.count, 4)
         XCTAssertEqual(modele.historique[1].decisionReference, "V-2M8R4T")
         XCTAssertEqual(StatutSaisie.enCours.libelle, "En cours")
     }

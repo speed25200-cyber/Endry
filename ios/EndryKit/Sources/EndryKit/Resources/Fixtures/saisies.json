@@ -6,7 +6,10 @@
     "photos": 2,
     "statut": "traite",
     "resume": "Note ajoutée au dossier Villa Morel.",
-    "decision_reference": null
+    "decision_reference": null,
+    "question": false,
+    "agent": "chantiers",
+    "tache_id": "T-0142"
   },
   {
     "id": "S-0141",
@@ -15,7 +18,10 @@
     "photos": 1,
     "statut": "traite",
     "resume": "Facture RE-00416 préparée.",
-    "decision_reference": "V-2M8R4T"
+    "decision_reference": "V-2M8R4T",
+    "question": false,
+    "agent": "comptabilite",
+    "tache_id": "T-0141"
   },
   {
     "id": "S-0140",
@@ -24,6 +30,21 @@
     "photos": 0,
     "statut": "en_cours",
     "resume": null,
-    "decision_reference": null
+    "decision_reference": null,
+    "question": false,
+    "agent": null,
+    "tache_id": null
+  },
+  {
+    "id": "S-0139",
+    "cree": "2026-09-25T11:20:00",
+    "texte": "Question du patron (depuis l’assistant vocal de l’iPhone). Réponds-lui dans le résumé, en deux ou trois phrases à dire à voix haute ; ne prépare et n’envoie rien : [Pour l’agent Secrétariat] « Mme Gander a-t-elle rappelé ? »",
+    "photos": 0,
+    "statut": "traite",
+    "resume": "Oui, hier à 16 h : elle confirme la visite de jeudi pour l’adoucisseur.",
+    "decision_reference": null,
+    "question": true,
+    "agent": "secretariat",
+    "tache_id": "T-0143"
   }
 ]

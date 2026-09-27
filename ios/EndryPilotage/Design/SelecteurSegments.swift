@@ -18,7 +18,7 @@ struct SelecteurSegments<Valeur: Hashable>: View {
             ForEach(options) { option in
                 let actif = option.valeur == selection
                 Button {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { selection = option.valeur }
+                    withAnimation(.endry) { selection = option.valeur }
                 } label: {
                     Text(option.titre)
                         .font(Police.texte(13, relativeTo: .footnote, graisse: .semibold))
@@ -38,7 +38,7 @@ struct SelecteurSegments<Valeur: Hashable>: View {
         }
         .padding(3)
         .background(Color.surfaceCreuse.opacity(0.9), in: Capsule())
-        .overlay(Capsule().strokeBorder(Color.white.opacity(0.08), lineWidth: 0.6))
+        .overlay(Capsule().strokeBorder(Color.bordureOr, lineWidth: Espace.filet))
         .sensoryFeedback(.selection, trigger: selection)
     }
 }

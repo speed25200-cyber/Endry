@@ -45,7 +45,7 @@ struct SaisieView: View {
                 }
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, 130)
-                .animation(.spring(response: 0.5, dampingFraction: 0.8), value: modele.etat)
+                .animation(.endry, value: modele.etat)
             }
             .scrollDismissesKeyboard(.interactively)
             .scrollIndicators(.hidden)
@@ -149,7 +149,7 @@ struct SaisieView: View {
                     HStack(spacing: Espace.s) {
                         ForEach(modele.pieces) { piece in
                             VignettePiece(piece: piece) {
-                                withAnimation(.snappy) { modele.retirer(piece) }
+                                withAnimation(.endry) { modele.retirer(piece) }
                             }
                             .transition(.scale.combined(with: .opacity))
                         }
@@ -157,7 +157,7 @@ struct SaisieView: View {
                     .padding(.vertical, Espace.xxs)
                 }
                 .scrollClipDisabled()
-                .animation(.spring(response: 0.4, dampingFraction: 0.75), value: modele.pieces.map(\.id))
+                .animation(.endry, value: modele.pieces.map(\.id))
             }
 
             if case .erreur(let message) = modele.etat {
@@ -198,7 +198,7 @@ struct SaisieView: View {
             Text(titre).styleTitre(32, relativeTo: .largeTitle).foregroundStyle(Color.encre)
             Text(message).styleTexte(16).foregroundStyle(Color.encreDouce).multilineTextAlignment(.center)
             Button("Nouvelle saisie") {
-                withAnimation(.spring) { modele.recommencer() }
+                withAnimation(.endry) { modele.recommencer() }
                 selectionPhotos = []
             }
             .buttonStyle(BoutonSecondaire())
@@ -417,7 +417,7 @@ struct HistoriqueSaisies: View {
                 .padding(.horizontal, Espace.m)
                 .surfaceCarte(rayon: 22)
             }
-            .animation(.spring(response: 0.42, dampingFraction: 0.86), value: modele.historique.map(\.id))
+            .animation(.endry, value: modele.historique.map(\.id))
         }
     }
 

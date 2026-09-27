@@ -20,7 +20,7 @@ struct MicroAnime: View {
                             .strokeBorder(Color.or.opacity(ecoute ? 0.45 - Double(i) * 0.12 : 0.18 - Double(i) * 0.05), lineWidth: 1)
                             .frame(width: diametre + CGFloat(i + 1) * 26, height: diametre + CGFloat(i + 1) * 26)
                             .scaleEffect(ecoute && !reduireAnimations ? 1 + CGFloat(niveau) * (0.10 + CGFloat(i) * 0.06) : 1)
-                            .animation(.spring(response: 0.25, dampingFraction: 0.6), value: niveau)
+                            .animation(.endry, value: niveau)
                     }
 
                     Circle()
@@ -72,7 +72,7 @@ struct FormeOnde: View {
                 Capsule()
                     .fill(active ? AnyShapeStyle(.degradeOr) : AnyShapeStyle(Color.filet))
                     .frame(width: 3, height: max(3, CGFloat(active ? valeur : 0.05) * 36 * enveloppe(index)))
-                    .animation(.spring(response: 0.22, dampingFraction: 0.7), value: valeur)
+                    .animation(.endry, value: valeur)
             }
         }
     }

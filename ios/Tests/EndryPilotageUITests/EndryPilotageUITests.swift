@@ -32,6 +32,21 @@ final class EndryPilotageUITests: XCTestCase {
         return element
     }
 
+    /// Pile de décisions : passe les cartes (« Plus tard ») jusqu'à ce que l'élément voulu soit devant.
+    @MainActor
+    @discardableResult
+    private func amener(_ element: XCUIElement, dans app: XCUIApplication, essais: Int = 7) -> XCUIElement {
+        let suivante = app.buttons["decision-suivante"]
+        for _ in 0..<essais {
+            if element.exists {
+                return atteindre(element, dans: app)
+            }
+            guard suivante.waitForExistence(timeout: 2) else { break }
+            atteindre(suivante, dans: app).tap()
+        }
+        return atteindre(element, dans: app)
+    }
+
     @MainActor
     func testConnexionDemoDepuisAccueil() {
         let app = lancer([])
@@ -51,13 +66,13 @@ final class EndryPilotageUITests: XCTestCase {
         XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 5))
 
         // Oui simple (créer une offre dans Bexio : pas d'envoi au client).
-        let oui = atteindre(app.buttons["oui-V-9P1X6D"], dans: app)
+        let oui = amener(app.buttons["oui-V-9P1X6D"], dans: app)
         XCTAssertTrue(oui.waitForExistence(timeout: 3))
         oui.tap()
         XCTAssertTrue(oui.waitForNonExistence(timeout: 5))
 
         // Non : confirmation obligatoire.
-        let non = atteindre(app.buttons["non-V-5T7B2N"], dans: app)
+        let non = amener(app.buttons["non-V-5T7B2N"], dans: app)
         XCTAssertTrue(non.waitForExistence(timeout: 3))
         non.tap()
         let ecarter = app.buttons["Écarter"]
@@ -68,7 +83,7 @@ final class EndryPilotageUITests: XCTestCase {
         // Corriger : consignes écrites.
         app.swipeDown(velocity: .fast)
         app.swipeDown(velocity: .fast)
-        let corriger = atteindre(app.buttons["corriger-V-2M8R4T"], dans: app)
+        let corriger = amener(app.buttons["corriger-V-2M8R4T"], dans: app)
         XCTAssertTrue(corriger.waitForExistence(timeout: 3))
         corriger.tap()
         let champ = app.textViews["champ-consignes"]
@@ -84,7 +99,7 @@ final class EndryPilotageUITests: XCTestCase {
         let app = lancer()
         XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 5))
         let carte = app.descendants(matching: .any)["carte-V-7K3F9Q"]
-        let curseur = atteindre(app.descendants(matching: .any)["glisser-pour-envoyer"].firstMatch, dans: app)
+        let curseur = amener(app.descendants(matching: .any)["glisser-pour-envoyer"].firstMatch, dans: app)
         XCTAssertTrue(curseur.waitForExistence(timeout: 3))
         let depart = curseur.coordinate(withNormalizedOffset: CGVector(dx: 0.08, dy: 0.5))
         let arrivee = curseur.coordinate(withNormalizedOffset: CGVector(dx: 0.99, dy: 0.5))
@@ -106,16 +121,35 @@ final class EndryPilotageUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Transmis"].waitForExistence(timeout: 5))
     }
 
+    /// Captures relues à chaque lot : clair / sombre. La CI relance ce test sur iPhone SE en taille XXL
+    /// et sur un Pro Max (variables `CAPTURE_APPAREIL` et `CAPTURE_TAILLE`, passées via `TEST_RUNNER_…`).
     @MainActor
     func testCapturesClairEtSombre() {
+        let env = ProcessInfo.processInfo.environment
+        let appareil = env["CAPTURE_APPAREIL"].map { "-\($0)" } ?? ""
+        var reglages: [String] = []
+        if let taille = env["CAPTURE_TAILLE"], !taille.isEmpty {
+            reglages = ["-UIPreferredContentSizeCategoryName", taille]
+        }
         for schema in ["-clair", "-sombre"] {
-            let app = lancer(["-demo", schema])
+            let suffixe = schema + appareil
+            let app = lancer(["-demo", schema] + reglages)
             XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 5))
-            capturer(app, "1-decisions\(schema)")
+            sleep(1)
+            capturer(app, "1-aujourdhui\(suffixe)")
+            app.swipeUp(velocity: .slow)
+            sleep(1)
+            capturer(app, "1b-aujourdhui-suite\(suffixe)")
             for (onglet, nom) in [("onglet-chantiers", "2-chantiers"), ("onglet-saisie", "3-saisie"), ("onglet-finances", "4-finances"), ("onglet-entreprise", "5-entreprise")] {
                 app.buttons[onglet].tap()
                 sleep(1)
-                capturer(app, "\(nom)\(schema)")
+                capturer(app, "\(nom)\(suffixe)")
+                if onglet == "onglet-chantiers", app.buttons["Planning"].exists {
+                    app.buttons["Planning"].tap()
+                    sleep(1)
+                    capturer(app, "2b-planning\(suffixe)")
+                    app.buttons["Pipeline"].tap()
+                }
             }
             app.terminate()
         }

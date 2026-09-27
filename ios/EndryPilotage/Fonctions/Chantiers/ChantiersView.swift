@@ -75,7 +75,7 @@ struct ChantiersView: View {
                         selectionne: modele.filtre == etape.cle,
                         espace: espaceFiltres
                     ) {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        withAnimation(.endry) {
                             modele.choisir(etape.cle)
                         }
                     }

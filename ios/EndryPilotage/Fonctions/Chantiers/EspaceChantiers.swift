@@ -29,6 +29,6 @@ struct EspaceChantiers: View {
             .padding(.trailing, Espace.bord)
             .padding(.top, Espace.s)
         }
-        .animation(.spring(response: 0.45, dampingFraction: 0.86), value: vue)
+        .animation(.endry, value: vue)
     }
 }

@@ -6,12 +6,13 @@ struct EndryPilotageApp: App {
     @UIApplicationDelegateAdaptor(DelegueApp.self) private var delegue
     @State private var modele = ModeleApp()
     @Environment(\.scenePhase) private var phase
+    @AppStorage(ThemeApparence.cle) private var apparence: ThemeApparence = .systeme
 
     var body: some Scene {
         WindowGroup {
             RacineView()
                 .environment(modele)
-                .preferredColorScheme(Configuration.schemaForce == "clair" ? .light : .dark)
+                .preferredColorScheme(schema)
                 .onAppear {
                     delegue.surJetonAPNs = { [modele] jeton in modele.recevoirJetonAPNs(jeton) }
                     delegue.surReference = { [modele] reference in modele.ouvrir(reference: reference) }
@@ -46,6 +47,15 @@ struct EndryPilotageApp: App {
                 }
         }
     }
+
+    /// Captures forcées (`-clair` / `-sombre`), sinon le choix des Réglages (système par défaut).
+    private var schema: ColorScheme? {
+        switch Configuration.schemaForce {
+        case "clair": .light
+        case "sombre": .dark
+        default: apparence.schema
+        }
+    }
 }
 
 struct RacineView: View {
@@ -78,9 +88,9 @@ struct RacineView: View {
                     .zIndex(3)
             }
         }
-        .animation(.smooth(duration: 0.35), value: modele.session.estConnecte)
-        .animation(.smooth(duration: 0.25), value: modele.verrou.doitAfficherEcran)
-        .animation(.easeOut(duration: 0.15), value: phase)
+        .animation(.endry, value: modele.session.estConnecte)
+        .animation(.endry, value: modele.verrou.doitAfficherEcran)
+        .animation(.fonduDoux, value: phase)
         .tint(Color.bronze)
         .confirmationDialog(
             "Connecter l’app à \(modele.lienEnAttente?.hoteAffiche ?? "ce serveur") ?",

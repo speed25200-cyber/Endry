@@ -1,14 +1,43 @@
 import SwiftUI
 import UIKit
 
-/// Inter Tight (titres, montants) + Inter (texte), embarquées sous licence OFL.
+/// Échelle typographique fixe : 34 / 28 / 22 / 17 / 15 / 13 (plus 11 pour les surtitres et badges).
+/// Toute taille demandée est ramenée au palier le plus proche : le rythme reste le même sur tous les écrans.
+enum Echelle {
+    static let titre1: CGFloat = 34
+    static let titre2: CGFloat = 28
+    static let titre3: CGFloat = 22
+    static let corps: CGFloat = 17
+    static let secondaire: CGFloat = 15
+    static let legende: CGFloat = 13
+    static let micro: CGFloat = 11
+
+    static func palier(_ taille: CGFloat) -> CGFloat {
+        switch taille {
+        case ..<12.5: micro
+        case ..<14: legende
+        case ..<16.5: secondaire
+        case ..<19.5: corps
+        case ..<25: titre3
+        case ..<31: titre2
+        default: titre1
+        }
+    }
+}
+
+/// Inter Tight (titres) + Inter (texte), embarquées sous licence OFL ; chiffres en SF Mono tabulaire.
 /// Si une police manque, SwiftUI retombe sur SF Pro. Toutes les tailles suivent Dynamic Type.
 enum Police {
     static func titre(_ taille: CGFloat, relativeTo style: Font.TextStyle = .title, graisse: GraisseTitre = .semibold) -> Font {
-        .custom(graisse.nom, size: taille, relativeTo: style)
+        .custom(graisse.nom, size: Echelle.palier(taille), relativeTo: style)
     }
 
-    static func texte(_ taille: CGFloat = 16, relativeTo style: Font.TextStyle = .body, graisse: GraisseTexte = .regular) -> Font {
+    static func texte(_ taille: CGFloat = 17, relativeTo style: Font.TextStyle = .body, graisse: GraisseTexte = .regular) -> Font {
+        .custom(graisse.nom, size: Echelle.palier(taille), relativeTo: style)
+    }
+
+    /// Texte hors échelle (proportions internes d'un montant) : jamais utilisé pour du texte courant.
+    static func texteLibre(_ taille: CGFloat, relativeTo style: Font.TextStyle = .body, graisse: GraisseTexte = .semibold) -> Font {
         .custom(graisse.nom, size: taille, relativeTo: style)
     }
 
@@ -40,22 +69,22 @@ enum Police {
 }
 
 extension View {
-    /// Titre Inter Tight, interlettrage serré (−4 %), chiffres tabulaires.
+    /// Titre Inter Tight Semibold, interlettrage serré (−2.5 %), chiffres tabulaires.
     func styleTitre(_ taille: CGFloat, relativeTo style: Font.TextStyle = .title, graisse: Police.GraisseTitre = .semibold) -> some View {
         font(Police.titre(taille, relativeTo: style, graisse: graisse))
-            .tracking(-0.04 * taille)
+            .tracking(-0.025 * Echelle.palier(taille))
             .monospacedDigit()
     }
 
     /// Surtitre en petites capitales espacées.
     func styleSurtitre() -> some View {
-        font(Police.texte(11, relativeTo: .caption2, graisse: .semibold))
+        font(Police.texte(Echelle.micro, relativeTo: .caption2, graisse: .semibold))
             .textCase(.uppercase)
-            .tracking(1.1)
+            .tracking(1.2)
             .foregroundStyle(Color.encrePale)
     }
 
-    func styleTexte(_ taille: CGFloat = 16, relativeTo style: Font.TextStyle = .body, graisse: Police.GraisseTexte = .regular) -> some View {
+    func styleTexte(_ taille: CGFloat = 17, relativeTo style: Font.TextStyle = .body, graisse: Police.GraisseTexte = .regular) -> some View {
         font(Police.texte(taille, relativeTo: style, graisse: graisse))
     }
 }

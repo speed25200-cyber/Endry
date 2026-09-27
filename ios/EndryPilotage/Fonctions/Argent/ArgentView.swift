@@ -76,7 +76,7 @@ struct ArgentView: View {
                 ForEach(Array(e.parClient.enumerated()), id: \.element.id) { index, groupe in
                     VStack(alignment: .leading, spacing: 0) {
                         Button {
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                            withAnimation(.endry) {
                                 if clientsDeplies.contains(groupe.client) { clientsDeplies.remove(groupe.client) } else { clientsDeplies.insert(groupe.client) }
                             }
                         } label: {
@@ -312,7 +312,7 @@ struct BarreProportion: View {
             }
         }
         .frame(height: 6)
-        .onAppear { withAnimation(.spring(response: 0.8, dampingFraction: 0.82).delay(0.15)) { visible = true } }
+        .onAppear { withAnimation(.endry.delay(0.15)) { visible = true } }
         .accessibilityHidden(true)
     }
 }

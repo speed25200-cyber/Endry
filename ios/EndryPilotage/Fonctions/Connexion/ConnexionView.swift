@@ -179,7 +179,7 @@ struct ConnexionView: View {
         .padding(Espace.l)
         .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: Espace.rayon, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: Espace.rayon, style: .continuous).strokeBorder(Color.or.opacity(0.18), lineWidth: 0.6))
-        .animation(.snappy, value: erreur)
+        .animation(.endry, value: erreur)
     }
 
     private func connecter() async {

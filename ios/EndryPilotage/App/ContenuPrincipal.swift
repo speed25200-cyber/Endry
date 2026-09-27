@@ -30,7 +30,7 @@ struct ContenuPrincipal: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
-        .animation(.spring(response: 0.45, dampingFraction: 0.8), value: app.session.connexionPerdue)
+        .animation(.endry, value: app.session.connexionPerdue)
         .toast($app.toast)
         .quickLookPreview($documents.apercu)
         .alert("Document indisponible", isPresented: Binding(
@@ -65,7 +65,7 @@ struct ContenuPrincipal: View {
             .blur(radius: actif ? 0 : 8)
             .allowsHitTesting(actif)
             .accessibilityHidden(!actif)
-            .animation(.spring(response: 0.42, dampingFraction: 0.88), value: actif)
+            .animation(.endry, value: actif)
     }
 }
 

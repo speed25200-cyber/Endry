@@ -40,6 +40,45 @@ struct AuroreOr: View {
     }
 }
 
+/// Fond des écrans : noir chaud (ou ivoire), aurore or presque imperceptible qui dérive très lentement,
+/// grain photographique léger (shader Metal). Figé si « Réduire les animations ».
+struct FondAmbiant: View {
+    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
+    @Environment(\.colorScheme) private var schema
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            Color.fond
+            TimelineView(.animation(minimumInterval: 1.0 / 15.0, paused: reduireAnimations)) { contexte in
+                let t = Float(contexte.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 3_600))
+                MeshGradient(
+                    width: 3,
+                    height: 3,
+                    points: AuroreOr.points(t: t * 0.35, amplitude: reduireAnimations ? 0 : 1),
+                    colors: schema == .dark ? Self.nuit : Self.jour,
+                    smoothsColors: true
+                )
+            }
+            .frame(height: 560)
+            .mask(LinearGradient(colors: [.black, .black.opacity(0.6), .clear], startPoint: .top, endPoint: .bottom))
+        }
+        .colorEffect(ShaderLibrary.grain(.float(schema == .dark ? 0.035 : 0.025)))
+        .ignoresSafeArea()
+        .accessibilityHidden(true)
+    }
+
+    private static let nuit: [Color] = [
+        Color(hex: 0x241A0C), Color(hex: 0x0E0C0A), Color(hex: 0x0B0A09),
+        Color(hex: 0x17110A), Color(hex: 0x2E2210), Color(hex: 0x0D0B09),
+        Color(hex: 0x0B0A09), Color(hex: 0x0B0A09), Color(hex: 0x0B0A09),
+    ]
+    private static let jour: [Color] = [
+        Color(hex: 0xEBDDBF), Color(hex: 0xF4EFE6), Color(hex: 0xF4EFE6),
+        Color(hex: 0xF1E6CF), Color(hex: 0xE9D8B3), Color(hex: 0xF4EFE6),
+        Color(hex: 0xF4EFE6), Color(hex: 0xF4EFE6), Color(hex: 0xF4EFE6),
+    ]
+}
+
 /// Matière des cartes héros : aurore + grain + reflet qui balaie (shader Metal), filet doré.
 struct MatiereEspresso: View {
     var rayon: CGFloat = Espace.rayon
@@ -55,13 +94,12 @@ struct MatiereEspresso: View {
         }
         .overlay {
             forme.strokeBorder(
-                LinearGradient(colors: [Color.orClair.opacity(0.55), Color.or.opacity(0.06), Color.or.opacity(0.28)],
+                LinearGradient(colors: [Color.orClair.opacity(0.5), Color.or.opacity(0.10), Color.or.opacity(0.3)],
                                startPoint: .topLeading, endPoint: .bottomTrailing),
-                lineWidth: 0.8
+                lineWidth: Espace.filet
             )
         }
-        .shadow(color: Color.or.opacity(0.10), radius: 30, y: 0)
-        .shadow(color: .black.opacity(0.6), radius: 28, y: 18)
+        .shadow(color: Color.ombre, radius: 26, y: 16)
     }
 }
 
@@ -119,11 +157,11 @@ struct MontantAnime: View {
                 if reduireAnimations {
                     affiche = montant
                 } else {
-                    withAnimation(.spring(response: 1.1, dampingFraction: 0.9).delay(0.15)) { affiche = montant }
+                    withAnimation(.endry.delay(0.15)) { affiche = montant }
                 }
             }
             .onChange(of: montant) { _, nouveau in
-                withAnimation(.snappy) { affiche = nouveau }
+                withAnimation(.endry) { affiche = nouveau }
             }
             .accessibilityLabel(Text(FormatSuisse.chf(montant)))
     }

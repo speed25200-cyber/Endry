@@ -75,6 +75,7 @@ struct EntrepriseView: View {
     @Environment(ModeleApp.self) private var app
     @State private var visible = false
     @State private var tousLesClients = false
+    @State private var appareilsOuverts = false
 
     private var clients: [FicheClient] {
         Annuaire.clients(chantiers: app.chantiers?.tous ?? [], argent: app.argent?.argent)
@@ -107,6 +108,7 @@ struct EntrepriseView: View {
             }
             .background(FondAmbiant())
             .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(isPresented: $appareilsOuverts) { AppareilsView() }
         }
         .task {
             if app.argent?.etat == .initial { await app.argent?.charger() }
@@ -126,7 +128,7 @@ struct EntrepriseView: View {
                     .background(MatiereEspresso(rayon: 20))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(app.session.entreprise)
-                        .styleTitre(30, relativeTo: .largeTitle)
+                        .styleTitre(28, relativeTo: .largeTitle)
                         .foregroundStyle(Color.encre)
                     Text("Sanitaire · Chauffage · Ventilation")
                         .styleTexte(13, relativeTo: .footnote)
@@ -138,7 +140,7 @@ struct EntrepriseView: View {
                     .fill(app.session.connexionPerdue ? Color.rouille : Color.vertControle)
                     .frame(width: 7, height: 7)
                     .shadow(color: app.session.connexionPerdue ? Color.rouille : Color.vertControle, radius: 4)
-                Text(app.session.connexionPerdue ? "Connexion perdue" : "Relié à \(app.session.hoteAffiche ?? "l’assistant")")
+                Text(etatConnexion)
                     .styleTexte(12, relativeTo: .caption, graisse: .medium)
                     .foregroundStyle(Color.encreDouce)
                     .lineLimit(1)
@@ -148,6 +150,12 @@ struct EntrepriseView: View {
             .background(Color.surfaceCreuse, in: Capsule())
         }
         .padding(.top, Espace.m)
+    }
+
+    private var etatConnexion: String {
+        if app.session.estDemo { return "Mode démo · données fictives" }
+        if app.session.connexionPerdue { return "Connexion perdue" }
+        return "Connecté · \(app.session.hoteAffiche ?? "serveur privé")"
     }
 
     // MARK: - Indicateurs
@@ -173,7 +181,7 @@ struct EntrepriseView: View {
         let affiches = tousLesClients ? liste : Array(liste.prefix(6))
         return VStack(alignment: .leading, spacing: Espace.s) {
             EnTeteSection(titre: "Clients", detail: "\(liste.count)",
-                          action: liste.count > 6 ? { withAnimation(.snappy) { tousLesClients.toggle() } } : nil,
+                          action: liste.count > 6 ? { withAnimation(.endry) { tousLesClients.toggle() } } : nil,
                           libelleAction: tousLesClients ? "Réduire" : "Tout voir")
             if liste.isEmpty {
                 Squelette(hauteur: 180, rayon: Espace.rayon)
@@ -239,6 +247,13 @@ struct EntrepriseView: View {
                     Toggle("", isOn: $verrou.actif).labelsHidden().tint(Color.or)
                 }
                 .padding(.vertical, Espace.s)
+                if !app.session.estDemo {
+                    separateur
+                    LigneReglage(icone: "iphone.gen3", titre: "Appareils connectés", detail: nil) {
+                        appareilsOuverts = true
+                    }
+                    .accessibilityIdentifier("appareils-connectes")
+                }
                 separateur
                 LigneReglage(icone: "link.badge.plus", titre: "Coller un nouveau lien", detail: nil) {
                     app.connexionPresentee = true
@@ -277,7 +292,7 @@ struct TuileIndicateur: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(alerte ? AnyShapeStyle(Color.ambre) : AnyShapeStyle(.degradeOr))
                 .frame(width: 30, height: 30)
-                .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(Color.surfaceCreuse, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             Text(valeur)
                 .styleTitre(26, relativeTo: .title2)
                 .foregroundStyle(Color.encre)
@@ -394,7 +409,7 @@ struct IconeReglage: View {
             .font(.system(size: 14, weight: .semibold))
             .foregroundStyle(.degradeOr)
             .frame(width: 32, height: 32)
-            .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+            .background(Color.surfaceCreuse, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
     }
 }
 
@@ -419,24 +434,6 @@ struct LigneReglage: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-}
-
-/// Fond d'écran : noir profond avec une lueur dorée diffuse en haut, qui respire lentement.
-struct FondAmbiant: View {
-    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
-
-    var body: some View {
-        ZStack(alignment: .top) {
-            Color.fond
-            RadialGradient(colors: [Color.or.opacity(0.16), Color.or.opacity(0.04), .clear],
-                           center: UnitPoint(x: 0.15, y: 0), startRadius: 0, endRadius: 420)
-                .frame(height: 520)
-                .phaseAnimator(reduireAnimations ? [false] : [false, true]) { contenu, phase in
-                    contenu.opacity(phase ? 1 : 0.7).scaleEffect(phase ? 1.08 : 1, anchor: .topLeading)
-                } animation: { _ in .easeInOut(duration: 6) }
-        }
-        .ignoresSafeArea()
     }
 }
 

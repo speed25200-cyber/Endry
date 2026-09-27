@@ -30,6 +30,31 @@ ios/
 
 Réglages (pastille « E » en haut de Décisions) : serveur actuel, nouveau lien, Face ID, notifications, déconnexion.
 
+## Design et performance
+
+**Identité.** Noir chaud `#0B0A09`, or signature `#C9A55C` (lumière `#E8D3A2`, ombre `#8C6E35`), texte ivoire `#F4EFE6`.
+Deux couleurs d'état : sauge (« fait ») et ambre (« attend ») ; la rouille est réservée aux gestes destructifs.
+Le thème clair (ivoire et bronze) a ses propres valeurs, il n'est pas une inversion ; il suit le réglage système,
+avec un choix Système / Clair / Sombre dans Réglages › Affichage. Jetons dans `EndryPilotage/Design/Palette.swift`.
+
+**Typographie.** Échelle fixe 34 / 28 / 22 / 17 / 15 / 13 (`Echelle` dans `Typographie.swift`) : toute taille est
+ramenée au palier le plus proche. Titres Inter Tight Semibold, interlettrage −2.5 % ; texte Inter ; montants en
+SF Mono tabulaire. Tout suit Dynamic Type (captures CI en XXL sur iPhone SE).
+
+**Mouvement.** Un seul ressort, `Animation.endry` (`response 0.42`, `dampingFraction 0.86`), aucune animation linéaire ;
+« Réduire les animations » remplace les déplacements par des fondus (`Animation.endry(reduire:)`).
+
+**Mesurer la fluidité (120 Hz, iPhone 13 ou plus récent).**
+1. Sur un Mac, ouvrir le projet, choisir un iPhone réel branché, *Product › Profile* (build Release).
+2. Modèle Instruments **Animation Hitches** : lancer l'enregistrement, faire défiler Aujourd'hui, Chantiers,
+   Planning et Finances, balayer la pile de décisions, glisser le curseur d'envoi.
+3. Critère : aucune *hitch* au-dessus de 5 ms/s de défilement (« Hitch Time Ratio » < 5 ms/s) et aucune image
+   au-delà de 8.3 ms dans la piste *Frame Lifetimes*.
+4. Si une hitch apparaît : piste **SwiftUI** (mises à jour de vues inutiles) puis **Time Profiler** sur le
+   thread principal pendant la même plage.
+5. Premier affichage : modèle **App Launch** ; l'écran Aujourd'hui s'affiche depuis le cache hors ligne,
+   cible < 300 ms entre le lancement et la première image utile.
+
 ## Sécurité
 
 - Le jeton est rangé **uniquement dans le trousseau iOS** (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`), dans un

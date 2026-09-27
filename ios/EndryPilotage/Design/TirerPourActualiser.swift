@@ -30,7 +30,7 @@ struct TirerPourActualiser: ViewModifier {
                 IndicateurActualisation(progression: enCours ? 1 : min(tirage / seuil, 1), enCours: enCours)
                     .opacity(enCours || tirage > 8 ? 1 : 0)
                     .offset(y: enCours ? 12 : min(tirage, seuil) * 0.5 - 24)
-                    .animation(.snappy, value: enCours)
+                    .animation(.endry, value: enCours)
                     .allowsHitTesting(false)
             }
             .sensoryFeedback(.impact(weight: .light), trigger: arme) { _, nouveau in nouveau }
@@ -39,10 +39,10 @@ struct TirerPourActualiser: ViewModifier {
     }
 
     private func lancer() {
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { enCours = true }
+        withAnimation(.endry) { enCours = true }
         Task {
             await action()
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) { enCours = false }
+            withAnimation(.endry) { enCours = false }
         }
     }
 }
@@ -70,7 +70,7 @@ struct IndicateurActualisation: View {
         .shadow(color: Color.espresso.opacity(0.12), radius: 8, y: 3)
         .onChange(of: enCours) { _, actif in
             if actif, !reduireAnimations {
-                withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: false)) { rotation = 360 }
+                withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: false)) { rotation = 360 }
             } else {
                 withAnimation(.default) { rotation = 0 }
             }

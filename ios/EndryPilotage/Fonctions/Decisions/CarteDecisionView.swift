@@ -7,6 +7,8 @@ struct CarteDecisionView: View {
     var actionsPossibles: Bool
     var enCours: Bool
     var enAvant: Bool
+    /// Incrémenté par la pile quand le patron balaie la carte vers la gauche : ouvre la confirmation « Non ».
+    var demandeNon = 0
     var agir: @MainActor (ActionDecision, String?) async -> Bool
     var ouvrirPiece: (Piece) -> Void
 
@@ -20,7 +22,7 @@ struct CarteDecisionView: View {
             enTete
 
             Text(carte.titre)
-                .styleTitre(21, relativeTo: .title3)
+                .styleTitre(22, relativeTo: .title3)
                 .foregroundStyle(Color.encre)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -81,6 +83,7 @@ struct CarteDecisionView: View {
                 .animation(.easeInOut(duration: 0.6), value: surbrillance)
         }
         .opacity(enCours ? 0.7 : 1)
+        .sensoryFeedback(.warning, trigger: confirmationNon) { _, nouveau in nouveau }
         .confirmationDialog("Écarter cette proposition ?", isPresented: $confirmationNon, titleVisibility: .visible) {
             Button("Écarter", role: .destructive) {
                 Task { _ = await agir(.non, nil) }
@@ -93,6 +96,10 @@ struct CarteDecisionView: View {
             ConsignesSheet(mode: mode, carte: carte) { texte in
                 await agir(mode == .corriger ? .corriger : .repondre, texte)
             }
+        }
+        .onChange(of: demandeNon) { _, _ in
+            guard !carte.estQuestion else { return }
+            confirmationNon = true
         }
         .onChange(of: enAvant, initial: true) { _, actif in
             guard actif else { return }
@@ -136,7 +143,7 @@ struct CarteDecisionView: View {
     private func texteComplet(_ texte: String) -> some View {
         VStack(alignment: .leading, spacing: Espace.xs) {
             Button {
-                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) { texteDeplie.toggle() }
+                withAnimation(.endry) { texteDeplie.toggle() }
             } label: {
                 HStack(spacing: 6) {
                     Text(texteDeplie ? "Masquer le texte" : "Lire le texte complet")

@@ -123,7 +123,7 @@ struct ConsignesSheet: View {
             }
             .onAppear { focus = true }
             .onDisappear { dictee.arreter() }
-            .animation(.snappy, value: dictee.ecoute)
+            .animation(.endry, value: dictee.ecoute)
         }
         .presentationDetents([.medium, .large])
         .presentationCornerRadius(Espace.rayon)

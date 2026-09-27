@@ -6,9 +6,8 @@ struct ReglagesView: View {
     @Environment(ModeleApp.self) private var app
     @Environment(\.dismiss) private var fermer
     @State private var confirmationDeconnexion = false
-    @State private var appareils: [Appareil] = []
-    @State private var appareilsDisponibles = false
     @State private var notificationsActives = false
+    @AppStorage(ThemeApparence.cle) private var apparence: ThemeApparence = .systeme
 
     var body: some View {
         @Bindable var verrou = app.verrou
@@ -41,37 +40,32 @@ struct ReglagesView: View {
                     Text("L’adresse du serveur vient du lien d’accès. Si elle change (tunnel provisoire, puis réseau privé), collez simplement le nouveau lien.")
                 }
 
-                if appareilsDisponibles {
+                if !app.session.estDemo {
                     Section {
-                        ForEach(appareils) { appareil in
-                            HStack(spacing: Espace.s) {
-                                Image(systemName: appareil.modele?.lowercased().contains("ipad") == true ? "ipad" : "iphone")
-                                    .foregroundStyle(Color.or)
-                                    .frame(width: 24)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(appareil.nom).styleTexte(15, relativeTo: .body, graisse: .medium)
-                                    Text([appareil.modele, appareil.dernierPassage.map { "vu \(DateEndry.ilYa($0))" }].compactMap { $0 }.joined(separator: " · "))
-                                        .styleTexte(12, relativeTo: .caption)
-                                        .foregroundStyle(Color.encrePale)
-                                }
-                                Spacer()
-                                if appareil.actuel {
-                                    Pastille(texte: "Cet iPhone", couleur: .vertControle)
-                                }
-                            }
-                            .swipeActions {
-                                if !appareil.actuel {
-                                    Button("Déconnecter", role: .destructive) {
-                                        Task { await retirer(appareil) }
-                                    }
-                                }
-                            }
+                        NavigationLink {
+                            AppareilsView()
+                        } label: {
+                            Label("Appareils connectés", systemImage: "iphone.gen3")
                         }
-                    } header: {
-                        Text("Appareils connectés")
                     } footer: {
-                        Text("Chaque appareil a son propre jeton. Balayez pour déconnecter un appareil perdu.")
+                        Text("Chaque appareil a son propre jeton, révocable à distance.")
                     }
+                }
+
+                Section {
+                    Picker(selection: $apparence) {
+                        ForEach(ThemeApparence.allCases) { theme in
+                            Text(theme.libelle).tag(theme)
+                        }
+                    } label: {
+                        Label("Apparence", systemImage: "circle.lefthalf.filled")
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("choix-apparence")
+                } header: {
+                    Text("Affichage")
+                } footer: {
+                    Text("« Système » suit le réglage clair ou sombre de l’iPhone.")
                 }
 
                 Section("Sécurité") {
@@ -166,28 +160,9 @@ struct ReglagesView: View {
             }
             .task {
                 notificationsActives = await DelegueApp.autorisationDejaAccordee()
-                await chargerAppareils()
             }
         }
         .presentationCornerRadius(Espace.rayon)
-    }
-
-    private func chargerAppareils() async {
-        guard let api = app.session.api, let liste = try? await api.appareils() else { return }
-        withAnimation(.snappy) {
-            appareils = liste
-            appareilsDisponibles = true
-        }
-    }
-
-    private func retirer(_ appareil: Appareil) async {
-        guard let api = app.session.api else { return }
-        do {
-            try await api.supprimerAppareil(appareil.id)
-            withAnimation(.snappy) { appareils.removeAll { $0.id == appareil.id } }
-        } catch {
-            app.toast = Toast(error.message, style: .erreur)
-        }
     }
 
     private var version: String {

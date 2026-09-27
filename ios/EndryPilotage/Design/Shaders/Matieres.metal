@@ -33,3 +33,4 @@ static float bruit(float2 p) {
     float g = (bruit(floor(position)) - 0.5) * force;
     return half4(clamp(couleur.rgb + half3(half(g)) * couleur.a, half3(0.0), half3(couleur.a)), couleur.a);
 }
+

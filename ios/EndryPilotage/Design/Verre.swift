@@ -10,11 +10,11 @@ extension View {
             glassEffect(interactif ? Glass.regular.interactive() : Glass.regular, in: forme)
         } else {
             background(.ultraThinMaterial, in: forme)
-                .overlay(forme.stroke(Color.white.opacity(0.18), lineWidth: 0.5))
+                .overlay(forme.stroke(Color.bordureOr, lineWidth: Espace.filet))
         }
         #else
         background(.ultraThinMaterial, in: forme)
-            .overlay(forme.stroke(Color.white.opacity(0.18), lineWidth: 0.5))
+            .overlay(forme.stroke(Color.bordureOr, lineWidth: Espace.filet))
         #endif
     }
 }
@@ -61,6 +61,8 @@ enum Onglet: String, CaseIterable, Identifiable, Hashable {
 struct BarreOnglets: View {
     @Binding var selection: Onglet
     var badgeDecisions: Int
+    /// Toucher long du micro : assistant vocal plein écran.
+    var ouvrirAssistant: () -> Void = {}
     @Namespace private var espace
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
@@ -68,8 +70,8 @@ struct BarreOnglets: View {
         HStack(spacing: 0) {
             bouton(.aujourdhui)
             bouton(.chantiers)
-            BoutonMicroCentral(actif: selection == .saisie) {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) { selection = .saisie }
+            BoutonMicroCentral(actif: selection == .saisie, appuiLong: ouvrirAssistant) {
+                withAnimation(.endry) { selection = .saisie }
             }
             .frame(maxWidth: .infinity)
             bouton(.finances)
@@ -77,12 +79,10 @@ struct BarreOnglets: View {
         }
         .padding(.horizontal, 6)
         .frame(height: 66)
-        .background(Color.espressoProfond.opacity(0.55), in: Capsule())
+        .background(Color(clair: 0xFBF8F2, sombre: 0x070605, opaciteClair: 0.55, opaciteSombre: 0.55), in: Capsule())
         .verre(Capsule(), interactif: true)
-        .overlay(Capsule().strokeBorder(
-            LinearGradient(colors: [Color.white.opacity(0.16), Color.white.opacity(0.03)], startPoint: .top, endPoint: .bottom),
-            lineWidth: 0.7))
-        .shadow(color: .black.opacity(0.55), radius: 26, y: 12)
+        .overlay(Capsule().strokeBorder(Color.bordureOr, lineWidth: Espace.filet))
+        .shadow(color: Color.ombre, radius: 26, y: 12)
         .padding(.horizontal, Espace.m)
         .sensoryFeedback(.selection, trigger: selection)
     }
@@ -90,7 +90,7 @@ struct BarreOnglets: View {
     private func bouton(_ onglet: Onglet) -> some View {
         let actif = selection == onglet
         return Button {
-            withAnimation(reduireAnimations ? .easeOut(duration: 0.15) : .spring(response: 0.38, dampingFraction: 0.78)) {
+            withAnimation(reduireAnimations ? .easeOut(duration: 0.15) : .endry) {
                 selection = onglet
             }
         } label: {
@@ -115,7 +115,7 @@ struct BarreOnglets: View {
                     }
                 Text(onglet.titre)
                     .font(Police.texte(10, relativeTo: .caption2, graisse: actif ? .semibold : .medium))
-                    .foregroundStyle(actif ? Color.orClair : Color.encrePale)
+                    .foregroundStyle(actif ? Color.bronze : Color.encrePale)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
                 // Point lumineux sous l'onglet actif.
@@ -141,36 +141,56 @@ struct BarreOnglets: View {
 }
 
 /// Bouton micro doré, qui respire au repos et rayonne quand il est actif.
+/// Toucher court : dictée (saisie terrain). Toucher long : assistant vocal plein écran.
 struct BoutonMicroCentral: View {
     var actif: Bool
+    var appuiLong: () -> Void = {}
     var action: () -> Void
+    @GestureState private var presse = false
+    @State private var assistantOuvert = 0
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
     var body: some View {
-        Button(action: action) {
-            ZStack {
-                Circle()
-                    .fill(Color.or.opacity(actif ? 0.35 : 0.18))
-                    .frame(width: 76, height: 76)
-                    .blur(radius: 14)
-                Circle()
-                    .fill(.degradeOr)
-                    .frame(width: 60, height: 60)
-                    .overlay(Circle().strokeBorder(Color.white.opacity(0.5), lineWidth: 0.8).padding(1))
-                    .shadow(color: Color.or.opacity(0.45), radius: 16, y: 6)
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(Color.espressoProfond)
-            }
-            .phaseAnimator(reduireAnimations || actif ? [false] : [false, true]) { contenu, phase in
-                contenu.scaleEffect(phase ? 1.05 : 1)
-            } animation: { _ in
-                .easeInOut(duration: 1.8)
-            }
-            .offset(y: -16)
+        ZStack {
+            Circle()
+                .fill(Color.or.opacity(actif || presse ? 0.35 : 0.18))
+                .frame(width: 76, height: 76)
+                .blur(radius: 14)
+            Circle()
+                .fill(.degradeOr)
+                .frame(width: 60, height: 60)
+                .overlay(Circle().strokeBorder(Color.orClair.opacity(0.7), lineWidth: Espace.filet).padding(1))
+                .shadow(color: Color.or.opacity(0.45), radius: 16, y: 6)
+            Image(systemName: presse ? "waveform" : "mic.fill")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(Color.espressoProfond)
+                .contentTransition(.symbolEffect(.replace))
         }
-        .buttonStyle(.plain)
+        .scaleEffect(presse ? 1.08 : 1)
+        .phaseAnimator(reduireAnimations || actif ? [false] : [false, true]) { contenu, phase in
+            contenu.scaleEffect(phase ? 1.05 : 1)
+        } animation: { _ in
+            .easeInOut(duration: 1.8)
+        }
+        .offset(y: -16)
+        .contentShape(Circle())
+        .gesture(
+            LongPressGesture(minimumDuration: 0.45)
+                .updating($presse) { valeur, etat, _ in etat = valeur }
+                .onEnded { _ in
+                    assistantOuvert += 1
+                    appuiLong()
+                }
+                .exclusively(before: TapGesture().onEnded { action() })
+        )
+        .animation(.endryVif, value: presse)
+        .sensoryFeedback(.impact(weight: .medium), trigger: assistantOuvert)
+        .accessibilityElement()
         .accessibilityLabel(Text("Dicter une saisie terrain"))
+        .accessibilityHint(Text("Toucher long : assistant vocal."))
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { action() }
+        .accessibilityAction(named: Text("Parler à l’assistant")) { appuiLong() }
         .accessibilityIdentifier("onglet-saisie")
     }
 }
@@ -195,7 +215,7 @@ struct ToastView: View {
         .padding(.horizontal, Espace.l)
         .padding(.vertical, 14)
         .verre(Capsule())
-        .shadow(color: Color.espressoProfond.opacity(0.15), radius: 18, y: 8)
+        .shadow(color: Color.ombre, radius: 18, y: 8)
         .padding(.horizontal, Espace.l)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isStaticText)
@@ -229,15 +249,15 @@ extension View {
                         .transition(.move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.92)))
                         .task(id: valeur.id) {
                             try? await Task.sleep(for: .seconds(valeur.style == .erreur ? 4.5 : 2.8))
-                            withAnimation(.snappy) {
+                            withAnimation(.endry) {
                                 if toast.wrappedValue?.id == valeur.id { toast.wrappedValue = nil }
                             }
                         }
-                        .onTapGesture { withAnimation(.snappy) { toast.wrappedValue = nil } }
+                        .onTapGesture { withAnimation(.endry) { toast.wrappedValue = nil } }
                 }
             }
             .padding(.bottom, decalageBas)
-            .animation(.spring(response: 0.45, dampingFraction: 0.78), value: toast.wrappedValue?.id)
+            .animation(.endry, value: toast.wrappedValue?.id)
         }
     }
 }

@@ -12,18 +12,13 @@ struct SurfaceCarte: ViewModifier {
         content
             .background {
                 forme.fill(remplissage)
-                    // Lumière rasante venue du haut : la carte semble taillée dans une matière sombre.
-                    .overlay(forme.fill(LinearGradient(colors: [Color.white.opacity(0.045), .clear],
+                    // Lumière rasante venue du haut : la carte semble taillée dans la matière.
+                    .overlay(forme.fill(LinearGradient(colors: [Color.reflet, .clear],
                                                        startPoint: .top, endPoint: .center)))
             }
-            .overlay {
-                forme.strokeBorder(
-                    LinearGradient(colors: [Color.white.opacity(0.14), Color.white.opacity(0.03), Color.or.opacity(0.10)],
-                                   startPoint: .top, endPoint: .bottom),
-                    lineWidth: 0.7
-                )
-            }
-            .shadow(color: .black.opacity(0.45), radius: 24, y: 14)
+            // Filet or 0.5 pt à 18 %.
+            .overlay { forme.strokeBorder(Color.bordureOr, lineWidth: Espace.filet) }
+            .shadow(color: Color.ombre, radius: 22, y: 12)
     }
 }
 
@@ -59,7 +54,7 @@ private struct ApparitionCascade: ViewModifier {
             .blur(radius: visible || reduireAnimations ? 0 : 8)
             .offset(y: visible || reduireAnimations ? 0 : 18)
             .animation(
-                reduireAnimations ? .easeOut(duration: 0.2) : .spring(response: 0.55, dampingFraction: 0.82).delay(Double(min(index, 8)) * 0.055),
+                reduireAnimations ? .fonduDoux : Animation.endry.delay(Double(min(index, 8)) * 0.05),
                 value: visible
             )
     }
@@ -75,7 +70,7 @@ struct EnTeteSection: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(titre).styleTitre(20, relativeTo: .title3)
+            Text(titre).styleTitre(22, relativeTo: .title3)
                 .foregroundStyle(Color.encre)
             if let detail {
                 Text(detail).styleTexte(13, relativeTo: .footnote, graisse: .medium)
@@ -103,7 +98,7 @@ struct BadgeControle: View {
         VStack(alignment: .leading, spacing: Espace.xs) {
             Button {
                 guard !controle.pointsAVerifier.isEmpty else { return }
-                withAnimation(.snappy) { deplie.toggle() }
+                withAnimation(.endry) { deplie.toggle() }
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: controle.ok ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
@@ -163,6 +158,8 @@ struct Pastille: View {
         HStack(spacing: 4) {
             if let icone { Image(systemName: icone).font(.caption2.weight(.bold)) }
             Text(texte).styleTexte(11, relativeTo: .caption2, graisse: .semibold)
+                .lineLimit(1)
+                .fixedSize()
         }
         .foregroundStyle(couleur)
         .padding(.horizontal, 8)
@@ -249,7 +246,7 @@ struct RailAvancement: View {
             if reduireAnimations {
                 rempli = true
             } else {
-                withAnimation(.spring(response: 0.9, dampingFraction: 0.85).delay(0.15)) { rempli = true }
+                withAnimation(.endry.delay(0.15)) { rempli = true }
             }
         }
         .accessibilityElement(children: .ignore)
@@ -301,7 +298,7 @@ struct BarreAnciennete: View {
                 }
             }
         }
-        .onAppear { withAnimation(.spring(response: 0.8, dampingFraction: 0.8).delay(0.2)) { visible = true } }
+        .onAppear { withAnimation(.endry.delay(0.2)) { visible = true } }
     }
 }
 
@@ -349,7 +346,7 @@ struct Squelette: View {
             .overlay {
                 if !reduireAnimations {
                     GeometryReader { geo in
-                        LinearGradient(colors: [.clear, Color.surface.opacity(0.7), .clear], startPoint: .leading, endPoint: .trailing)
+                        LinearGradient(colors: [.clear, Color.or.opacity(0.14), .clear], startPoint: .leading, endPoint: .trailing)
                             .frame(width: geo.size.width * 0.6)
                             .offset(x: phase * geo.size.width)
                     }
@@ -357,7 +354,8 @@ struct Squelette: View {
                 }
             }
             .onAppear {
-                withAnimation(.linear(duration: 1.4).repeatForever(autoreverses: false)) { phase = 1.4 }
+                guard !reduireAnimations else { return }
+                withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: false)) { phase = 1.4 }
             }
             .accessibilityHidden(true)
     }
@@ -456,7 +454,7 @@ private struct EtiquetteBouton<Etiquette: View>: View {
     var body: some View {
         if principal {
             label
-                .styleTexte(16, relativeTo: .body, graisse: .semibold)
+                .styleTexte(17, relativeTo: .body, graisse: .semibold)
                 .foregroundStyle(Color.espressoProfond)
                 .frame(maxWidth: .infinity, minHeight: 54)
                 .padding(.horizontal, Espace.m)
@@ -469,17 +467,17 @@ private struct EtiquetteBouton<Etiquette: View>: View {
                 }
                 .shadow(color: (couleur ?? Color.or).opacity(actif ? 0.35 : 0), radius: presse ? 6 : 14, y: presse ? 2 : 6)
                 .scaleEffect(presse ? 0.97 : 1)
-                .animation(.spring(response: 0.25, dampingFraction: 0.7), value: presse)
+                .animation(.endryVif, value: presse)
         } else {
             label
-                .styleTexte(16, relativeTo: .body, graisse: .semibold)
+                .styleTexte(17, relativeTo: .body, graisse: .semibold)
                 .foregroundStyle((couleur ?? Color.encre).opacity(actif ? 1 : 0.4))
                 .frame(maxWidth: .infinity, minHeight: 54)
                 .padding(.horizontal, Espace.m)
-                .background(Color.white.opacity(presse ? 0.10 : 0.05), in: Capsule())
-                .overlay(Capsule().strokeBorder(Color.white.opacity(0.10), lineWidth: 0.7))
+                .background(Color.surfaceCreuse.opacity(presse ? 1 : 0.6), in: Capsule())
+                .overlay(Capsule().strokeBorder(Color.bordureOr, lineWidth: Espace.filet))
                 .scaleEffect(presse ? 0.97 : 1)
-                .animation(.spring(response: 0.25, dampingFraction: 0.7), value: presse)
+                .animation(.endryVif, value: presse)
         }
     }
 }
@@ -502,18 +500,20 @@ struct PuceFiltre: View {
                         .monospacedDigit()
                         .padding(.horizontal, 6)
                         .padding(.vertical, 1)
-                        .background((selectionne ? Color.fond : Color.encre).opacity(0.12), in: Capsule())
+                        .background((selectionne ? Color.espressoProfond : Color.encre).opacity(0.12), in: Capsule())
                         .contentTransition(.numericText(value: Double(nombre)))
                 }
             }
-            .foregroundStyle(selectionne ? Color.fond : Color.encre)
+            .foregroundStyle(selectionne ? Color.espressoProfond : Color.encre)
+            .lineLimit(1)
+            .fixedSize()
             .padding(.horizontal, 14)
             .frame(minHeight: 36)
             .background {
                 if selectionne {
-                    Capsule().fill(Color.encre).matchedGeometryEffect(id: "puce", in: espace)
+                    Capsule().fill(.degradeOr).matchedGeometryEffect(id: "puce", in: espace)
                 } else {
-                    Capsule().fill(Color.surface).overlay(Capsule().strokeBorder(Color.filet, lineWidth: 0.5))
+                    Capsule().fill(Color.surface).overlay(Capsule().strokeBorder(Color.bordureOr, lineWidth: Espace.filet))
                 }
             }
         }

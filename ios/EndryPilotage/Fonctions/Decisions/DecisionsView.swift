@@ -1,45 +1,47 @@
 import EndryKit
 import SwiftUI
 
-/// Écran principal : salutation, carte héros « À encaisser », puis les décisions à prendre.
+/// Écran « Aujourd'hui » : salutation, résumé en une phrase, pile de décisions,
+/// argent de la semaine, chantiers des prochains jours. L'en-tête se condense au défilement.
 struct DecisionsView: View {
     @Environment(ModeleApp.self) private var app
+    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
     var modele: ModeleDecisions
 
     @State private var visible = false
+    @State private var condense = false
 
     var body: some View {
         NavigationStack {
-            ScrollViewReader { lecteur in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: Espace.l) {
-                        entete
-                            .apparitionEnCascade(index: 0, visible: visible)
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: Espace.l) {
+                    entete
+                        .apparitionEnCascade(index: 0, visible: visible)
 
-                        if modele.horsLigne {
-                            BandeauHorsLigne(majLe: modele.majLe)
-                        }
-                        if let accueil = modele.accueil, accueil.pause {
-                            Label("L’assistant est en pause : vous pouvez tout consulter, les actions reprendront à la reprise.", systemImage: "pause.circle")
-                                .styleTexte(14, relativeTo: .subheadline, graisse: .medium)
-                                .foregroundStyle(Color.ambre)
-                                .padding(Espace.m)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color.ambre.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        }
-
-                        contenu(lecteur: lecteur)
+                    if modele.horsLigne {
+                        BandeauHorsLigne(majLe: modele.majLe)
                     }
-                    .padding(.horizontal, Espace.bord)
-                    .padding(.top, Espace.xs)
-                    .padding(.bottom, 120)
-                    .animation(.spring(response: 0.5, dampingFraction: 0.82), value: modele.cartes.map(\.id))
+                    if modele.enPause {
+                        BandeauPause()
+                    }
+
+                    contenu
                 }
-                .scrollIndicators(.hidden)
-                .tirerPourActualiser { await modele.charger() }
-                .onChange(of: app.referenceCiblee) { _, reference in
-                    guard let reference else { return }
-                    withAnimation(.spring) { lecteur.scrollTo(reference, anchor: .top) }
+                .padding(.horizontal, Espace.bord)
+                .padding(.top, Espace.xs)
+                .padding(.bottom, 120)
+            }
+            .scrollIndicators(.hidden)
+            .tirerPourActualiser { await modele.charger() }
+            .onScrollGeometryChange(for: Bool.self) { geometrie in
+                geometrie.contentOffset.y + geometrie.contentInsets.top > 96
+            } action: { _, nouveau in
+                withAnimation(.endry(reduire: reduireAnimations)) { condense = nouveau }
+            }
+            .overlay(alignment: .top) {
+                if condense {
+                    EnTeteCondense(titre: "Aujourd’hui", detail: modele.nombreDecisions > 0 ? "\(modele.nombreDecisions) à décider" : nil)
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
             .background(FondAmbiant())
@@ -56,130 +58,173 @@ struct DecisionsView: View {
     // MARK: - En-tête
 
     private var entete: some View {
-        VStack(alignment: .leading, spacing: Espace.m) {
+        VStack(alignment: .leading, spacing: Espace.s) {
             HStack(alignment: .center) {
                 Text((modele.accueil?.date ?? DateEndry.longue(Date())).capitalizedPremiere)
-                    .font(Police.texte(12, relativeTo: .caption, graisse: .semibold))
+                    .font(Police.texte(11, relativeTo: .caption2, graisse: .semibold))
                     .textCase(.uppercase)
-                    .tracking(1.4)
-                    .foregroundStyle(Color.or)
+                    .tracking(1.2)
+                    .foregroundStyle(Color.bronze)
                 Spacer()
                 Button {
                     app.reglagesPresentes = true
                 } label: {
                     ZStack {
-                        Circle().fill(Color.surfaceCreuse)
-                        Circle().strokeBorder(.degradeOr, lineWidth: 1)
+                        Circle().fill(Color.surface)
+                        Circle().strokeBorder(Color.bordureOr, lineWidth: Espace.filet)
                         Text("E").font(Police.titre(17, relativeTo: .body)).foregroundStyle(.degradeOr)
                         if app.session.estDemo {
-                            Circle().fill(Color.or).frame(width: 9, height: 9)
+                            Circle().fill(Color.or).frame(width: 8, height: 8)
                                 .overlay(Circle().stroke(Color.fond, lineWidth: 2))
-                                .offset(x: 14, y: -14)
+                                .offset(x: 15, y: -15)
                         }
                     }
-                    .frame(width: 40, height: 40)
+                    .frame(width: 44, height: 44)
                 }
-                .accessibilityLabel(Text("Réglages"))
+                .accessibilityLabel(Text(app.session.estDemo ? "Réglages, mode démo" : "Réglages"))
                 .accessibilityIdentifier("bouton-reglages")
             }
             Text(modele.accueil?.salut ?? "Bonjour")
-                .styleTitre(36, relativeTo: .largeTitle)
+                .styleTitre(34, relativeTo: .largeTitle)
                 .foregroundStyle(Color.encre)
                 .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
             if let accueil = modele.accueil {
-                apercu(accueil)
+                Text(ResumeDuJour.phrase(accueil: accueil, decisions: modele.nombreDecisions))
+                    .styleTexte(17, relativeTo: .body)
+                    .foregroundStyle(Color.encreDouce)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("resume-du-jour")
+            } else {
+                Squelette(hauteur: 17, largeur: 260)
             }
         }
         .padding(.top, Espace.s)
     }
 
-    /// Résumé du jour en pastilles de verre.
-    private func apercu(_ accueil: Accueil) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Espace.xs) {
-                PastilleApercu(icone: "checkmark.seal.fill", texte: "\(modele.nombreDecisions) à décider", accent: modele.nombreDecisions > 0)
-                PastilleApercu(icone: "hammer.fill", texte: "\(accueil.chantiers7Jours.count) chantiers cette semaine", accent: false)
-                if !accueil.payer.cetteSemaine.isEmpty {
-                    PastilleApercu(icone: "calendar.badge.clock", texte: "\(accueil.payer.cetteSemaine.count) paiements sous 7 j", accent: false)
-                }
-                if accueil.encaisser.anciennete.plus30 > 0 {
-                    PastilleApercu(icone: "exclamationmark.triangle.fill", texte: "\(FormatSuisse.chfArrondi(accueil.encaisser.anciennete.plus30)) > 30 j", accent: false, alerte: true)
-                }
-            }
-        }
-        .scrollClipDisabled()
-    }
-
     // MARK: - Contenu
 
     @ViewBuilder
-    private func contenu(lecteur: ScrollViewProxy) -> some View {
+    private var contenu: some View {
         switch modele.etat {
         case .initial, .chargement where modele.accueil == nil:
-            Squelette(hauteur: 250, rayon: Espace.rayon)
             SqueletteCarte()
-            SqueletteCarte()
+            Squelette(hauteur: 220, rayon: Espace.rayon)
         case .erreur(let erreur) where modele.accueil == nil:
             VueErreur(erreur: erreur) { Task { await modele.charger() } }
         default:
             if let accueil = modele.accueil {
-                CarteHeros(encaisser: accueil.encaisser, offres: accueil.offres, payer: accueil.payer) {
-                    app.onglet = .finances
+                titreDecisions
+                    .apparitionEnCascade(index: 1, visible: visible)
+
+                Group {
+                    if modele.cartes.isEmpty {
+                        EtatVide(titre: "Rien à décider. Tout roule.",
+                                 message: "L’assistant vous préviendra dès qu’une proposition attendra votre accord.")
+                            .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                    } else {
+                        PileDecisions(modele: modele)
+                    }
                 }
-                .apparitionEnCascade(index: 1, visible: visible)
+                .apparitionEnCascade(index: 2, visible: visible)
+
+                VStack(alignment: .leading, spacing: Espace.s) {
+                    EnTeteSection(titre: "L’argent de la semaine", action: { app.onglet = .finances }, libelleAction: "Finances")
+                    CarteHeros(encaisser: accueil.encaisser, offres: accueil.offres, payer: accueil.payer) {
+                        app.onglet = .finances
+                    }
+                }
+                .transitionDefilement()
+                .apparitionEnCascade(index: 3, visible: visible)
 
                 if !accueil.chantiers7Jours.isEmpty {
                     AgendaSemaine(semaine: accueil.chantiers7Jours) {
                         app.vueChantiers = .planning
                         app.onglet = .chantiers
                     }
-                        .apparitionEnCascade(index: 2, visible: visible)
+                    .transitionDefilement()
+                    .apparitionEnCascade(index: 4, visible: visible)
                 }
-
-                HStack(alignment: .firstTextBaseline, spacing: Espace.xs) {
-                    Text("À décider").styleTitre(24, relativeTo: .title2).foregroundStyle(Color.encre)
-                    Text("\(modele.nombreDecisions)")
-                        .styleTitre(24, relativeTo: .title2)
-                        .foregroundStyle(Color.bronze)
-                        .contentTransition(.numericText(value: Double(modele.nombreDecisions)))
-                    Spacer()
-                    if !modele.decisionsAutorisees {
-                        Pastille(texte: "Lecture seule", couleur: .ambre, icone: "lock.fill")
-                    }
-                }
-                .padding(.top, Espace.xs)
-                .accessibilityElement(children: .combine)
-                .accessibilityAddTraits(.isHeader)
-                .accessibilityIdentifier("titre-a-decider")
-                .apparitionEnCascade(index: 2, visible: visible)
-
-                if modele.cartes.isEmpty {
-                    EtatVide(titre: "Rien à décider.", message: "L’assistant vous préviendra dès qu’une proposition attend votre accord.")
-                        .transition(.opacity.combined(with: .scale(scale: 0.96)))
-                } else {
-                    ForEach(Array(modele.cartes.enumerated()), id: \.element.id) { index, carte in
-                        CarteDecisionView(
-                            carte: carte,
-                            actionsPossibles: modele.actionsPossibles,
-                            enCours: modele.enCours.contains(carte.reference),
-                            enAvant: app.referenceCiblee == carte.reference,
-                            agir: { action, consignes in await modele.agir(action, sur: carte, consignes: consignes) },
-                            ouvrirPiece: { piece in
-                                Task { await app.documents.ouvrir(piece.url, nom: piece.nom, api: app.session.api) }
-                            }
-                        )
-                        .id(carte.reference)
-                        .transitionDefilement()
-                        .apparitionEnCascade(index: index + 3, visible: visible)
-                        .transition(.asymmetric(
-                            insertion: .opacity.combined(with: .move(edge: .bottom)),
-                            removal: .move(edge: .trailing).combined(with: .opacity).combined(with: .scale(scale: 0.92))
-                        ))
-                    }
-                }
-
             }
         }
+    }
+
+    private var titreDecisions: some View {
+        HStack(alignment: .firstTextBaseline, spacing: Espace.xs) {
+            Text("À décider").styleTitre(28, relativeTo: .title).foregroundStyle(Color.encre)
+            Text("\(modele.nombreDecisions)")
+                .font(Police.chiffres(28, relativeTo: .title, graisse: .medium))
+                .foregroundStyle(Color.bronze)
+                .contentTransition(.numericText(value: Double(modele.nombreDecisions)))
+            Spacer()
+            if !modele.decisionsAutorisees {
+                Pastille(texte: "Lecture seule", couleur: .ambre, icone: "lock.fill")
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+        .accessibilityIdentifier("titre-a-decider")
+    }
+}
+
+/// Résumé du jour en une phrase, calculé à partir de l'accueil.
+enum ResumeDuJour {
+    static func phrase(accueil: Accueil, decisions: Int) -> String {
+        var morceaux: [String] = []
+        switch decisions {
+        case 0: morceaux.append("Aucune décision en attente")
+        case 1: morceaux.append("Une décision vous attend")
+        default: morceaux.append("\(decisions) décisions vous attendent")
+        }
+        let chantiers = accueil.chantiers7Jours.count
+        if chantiers > 0 {
+            morceaux.append(chantiers == 1 ? "un chantier cette semaine" : "\(chantiers) chantiers cette semaine")
+        }
+        if accueil.payer.totalSemaine > 0 {
+            morceaux.append("\(FormatSuisse.chfArrondi(accueil.payer.totalSemaine)) à payer sous 7 jours")
+        }
+        guard morceaux.count > 1 else { return morceaux[0] + "." }
+        let fin = morceaux.removeLast()
+        return morceaux.joined(separator: ", ") + " et " + fin + "."
+    }
+}
+
+/// Bandeau « assistant en pause » : on lit tout, les actions attendent la reprise.
+struct BandeauPause: View {
+    var body: some View {
+        Label("L’assistant est en pause : vous pouvez tout consulter, les actions reprendront à la reprise.", systemImage: "pause.circle")
+            .styleTexte(15, relativeTo: .subheadline, graisse: .medium)
+            .foregroundStyle(Color.ambre)
+            .padding(Espace.m)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.ambre.opacity(0.12), in: RoundedRectangle(cornerRadius: Espace.rayonPetit, style: .continuous))
+            .accessibilityIdentifier("bandeau-pause")
+    }
+}
+
+/// En-tête condensé : apparaît en verre quand le grand titre sort de l'écran.
+struct EnTeteCondense: View {
+    var titre: String
+    var detail: String?
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: Espace.xs) {
+            Text(titre).styleTitre(17, relativeTo: .headline).foregroundStyle(Color.encre)
+            if let detail {
+                Text(detail).styleTexte(13, relativeTo: .footnote, graisse: .medium).foregroundStyle(Color.bronze)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, Espace.bord)
+        .padding(.vertical, Espace.s)
+        .frame(maxWidth: .infinity)
+        .background {
+            Rectangle().fill(.ultraThinMaterial)
+                .overlay(alignment: .bottom) { Rectangle().fill(Color.bordureOr).frame(height: Espace.filet) }
+                .ignoresSafeArea(edges: .top)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -203,7 +248,7 @@ struct PastilleApercu: View {
                 Capsule().fill(.degradeOr)
             } else {
                 Capsule().fill(Color.surfaceCreuse)
-                    .overlay(Capsule().strokeBorder(Color.white.opacity(0.07), lineWidth: 0.6))
+                    .overlay(Capsule().strokeBorder(Color.bordureOr, lineWidth: Espace.filet))
             }
         }
     }

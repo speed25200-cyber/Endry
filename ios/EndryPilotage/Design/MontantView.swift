@@ -1,8 +1,8 @@
 import EndryKit
 import SwiftUI
 
-/// Montant suisse haut de gamme : « CHF » en petites capitales, francs en grand, centimes en exposant.
-/// Les chiffres défilent (`numericText`) quand la valeur change.
+/// Montant suisse haut de gamme : « CHF » en petites capitales, francs en SF Mono tabulaire,
+/// centimes en exposant. Les chiffres défilent (`numericText`) quand la valeur change.
 struct MontantView: View {
     var montant: Double
     var taille: CGFloat = 34
@@ -17,17 +17,17 @@ struct MontantView: View {
         let parties = FormatSuisse.parties(afficherCentimes ? montant : montant.rounded())
         HStack(alignment: .firstTextBaseline, spacing: taille * 0.14) {
             Text("CHF")
-                .font(Police.texte(max(10, taille * 0.34), relativeTo: .caption, graisse: .semibold))
+                .font(Police.texteLibre(max(10, taille * 0.32), relativeTo: .caption, graisse: .semibold))
                 .tracking(taille * 0.02)
                 .foregroundStyle(couleurDevise ?? couleur.opacity(0.62))
             HStack(alignment: .firstTextBaseline, spacing: 1) {
                 Text(parties.signe + parties.francs)
-                    .font(Police.titre(taille, relativeTo: style))
-                    .tracking(-0.045 * taille)
+                    .font(Police.chiffres(taille, relativeTo: style, graisse: .medium))
+                    .tracking(-0.03 * taille)
                     .contentTransition(.numericText(value: montant))
                 if afficherCentimes {
                     Text(parties.centimes)
-                        .font(Police.titre(taille * 0.46, relativeTo: style, graisse: .medium))
+                        .font(Police.chiffres(taille * 0.46, relativeTo: style, graisse: .regular))
                         .tracking(-0.01 * taille)
                         .baselineOffset(taille * 0.42)
                         .contentTransition(.numericText(value: montant))
@@ -61,7 +61,7 @@ struct ReferenceView: View {
 #Preview("Montants") {
     VStack(alignment: .leading, spacing: 24) {
         MontantView(montant: 13_695.45)
-        MontantView(montant: 46_109.70, taille: 48, couleur: .orClair)
+        MontantView(montant: 46_109.70, taille: 44, couleur: .orClair)
             .padding()
             .background(Color.espresso)
         MontantView(montant: 486.35, taille: 17, style: .body)

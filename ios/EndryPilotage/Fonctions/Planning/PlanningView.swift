@@ -46,7 +46,7 @@ struct PlanningView: View {
                 }
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, 120)
-                .animation(.spring(response: 0.42, dampingFraction: 0.86), value: decalage)
+                .animation(.endry, value: decalage)
             }
             .scrollIndicators(.hidden)
             .tirerPourActualiser { await modele.charger() }
@@ -104,7 +104,7 @@ struct PlanningView: View {
     }
 
     private func decaler(_ n: Int) {
-        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+        withAnimation(.endry) {
             decalage += n
             let dans = Planning.jours(depuis: Planning.lundi(de: Date(), decalage: decalage), nombre: 7)
             jourChoisi = dans.first { DateEndry.estAujourdhui($0) } ?? dans.first ?? jourChoisi
@@ -120,7 +120,7 @@ struct PlanningView: View {
                 let aujourdhui = DateEndry.estAujourdhui(jour)
                 let nombre = Planning.actifs(le: jour, dans: dossiersDates).count
                 Button {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { jourChoisi = jour }
+                    withAnimation(.endry) { jourChoisi = jour }
                 } label: {
                     VStack(spacing: 6) {
                         Text(DateEndry.jourAbrege(jour))
@@ -174,7 +174,7 @@ struct PlanningView: View {
                 ForEach(actifs) { dossier in ligne(dossier) }
             }
         }
-        .animation(.spring(response: 0.42, dampingFraction: 0.86), value: jourChoisi)
+        .animation(.endry, value: jourChoisi)
     }
 
     private func ligne(_ d: Dossier) -> some View {

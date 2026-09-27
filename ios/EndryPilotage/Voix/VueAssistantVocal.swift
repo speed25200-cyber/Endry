@@ -754,8 +754,21 @@ struct OrbeEndry: View {
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
     var body: some View {
-        // Figé pendant les tests d'interface : une horloge à 120 Hz empêche XCTest de lire l'écran.
-        TimelineView(.animation(minimumInterval: nil, paused: Configuration.testsUI)) { contexte in
+        if Configuration.testsUI {
+            // Tests d'interface (simulateur sans GPU) : sphère fixe, sans shader ni lecture des niveaux audio.
+            Circle()
+                .fill(RadialGradient(colors: [Color.orClair, Color.or, Color(hex: 0x3A2A14)], center: UnitPoint(x: 0.35, y: 0.3),
+                                     startRadius: 4, endRadius: 150))
+                .padding(40)
+                .aspectRatio(1, contentMode: .fit)
+                .accessibilityHidden(true)
+        } else {
+            orbe
+        }
+    }
+
+    private var orbe: some View {
+        TimelineView(.animation) { contexte in
             let v = lisseur.avancer(contexte.date, assistant: assistant, lent: reduireAnimations)
             Rectangle()
                 .fill(Color.white)
@@ -781,8 +794,16 @@ struct LueurBord: View {
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
     var body: some View {
-        // Figé pendant les tests d'interface : une horloge à 120 Hz empêche XCTest de lire l'écran.
-        TimelineView(.animation(minimumInterval: nil, paused: Configuration.testsUI)) { contexte in
+        if Configuration.testsUI {
+            // Tests d'interface : pas de lueur (shader plein écran trop lent sur le simulateur de la CI).
+            Color.clear.allowsHitTesting(false).accessibilityHidden(true)
+        } else {
+            lueur
+        }
+    }
+
+    private var lueur: some View {
+        TimelineView(.animation) { contexte in
             let v = lisseur.avancer(contexte.date, assistant: assistant, lent: reduireAnimations)
             Rectangle()
                 .fill(Color.white)

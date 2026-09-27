@@ -1,0 +1,29 @@
+[
+  {
+    "id": "S-0142",
+    "cree": "2026-09-27T10:05:00",
+    "texte": "Villa Morel : citerne dégazée, OK pour démontage lundi.",
+    "photos": 2,
+    "statut": "traite",
+    "resume": "Note ajoutée au dossier Villa Morel.",
+    "decision_reference": null
+  },
+  {
+    "id": "S-0141",
+    "cree": "2026-09-26T16:40:00",
+    "texte": "Prépare une facture pour la régie Dubois, débouchage, 6 h 30 et un déplacement.",
+    "photos": 1,
+    "statut": "traite",
+    "resume": "Facture RE-00416 préparée.",
+    "decision_reference": "V-2M8R4T"
+  },
+  {
+    "id": "S-0140",
+    "cree": "2026-09-26T09:12:00",
+    "texte": "Mme Gander veut un adoucisseur, rappeler pour la visite.",
+    "photos": 0,
+    "statut": "en_cours",
+    "resume": null,
+    "decision_reference": null
+  }
+]

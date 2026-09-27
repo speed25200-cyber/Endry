@@ -3,10 +3,21 @@ import Foundation
 /// Fichiers JSON d'exemple (données fictives) pour le mode démo, les aperçus SwiftUI et les tests.
 public enum Fixtures {
     public enum Nom: String, CaseIterable, Sendable {
-        case accueil, decisions, chantiers, argent, session
+        // Serveur v1.1 (mode démo)
+        case accueil, decisions, chantiers, argent, session, appareils, saisies
         case chantiersDetails = "chantiers-details"
+        case etatAssistant = "assistant-etat"
+        case sessionVoix = "voix-session"
         case erreur401 = "erreur-401"
         case erreurLienInvalide = "erreur-lien-invalide"
+        case erreurBexio = "erreur-bexio"
+        // Serveur v1.0 (tests de contrat : réponses exactes, sans les champs v1.1)
+        case accueilV10 = "accueil-v10"
+        case decisionsV10 = "decisions-v10"
+        case chantiersV10 = "chantiers-v10"
+        case chantierV10 = "chantier-v10"
+        case argentV10 = "argent-v10"
+        case sessionV10 = "session-v10"
     }
 
     public static func donnees(_ nom: Nom) -> Data {
@@ -31,6 +42,6 @@ public enum Fixtures {
 
     public static var dossierDetaille: Dossier {
         let details = (try? decoder([String: Dossier].self, .chantiersDetails)) ?? [:]
-        return details["D-1042"] ?? chantiers.chantiers[0]
+        return details["18"] ?? chantiers.chantiers[0]
     }
 }

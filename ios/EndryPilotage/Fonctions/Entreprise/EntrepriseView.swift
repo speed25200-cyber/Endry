@@ -77,7 +77,7 @@ struct EntrepriseView: View {
     @State private var tousLesClients = false
 
     private var clients: [FicheClient] {
-        Annuaire.clients(chantiers: app.chantiers?.chantiers ?? [], argent: app.argent?.argent)
+        Annuaire.clients(chantiers: app.chantiers?.tous ?? [], argent: app.argent?.argent)
     }
 
     private var fournisseurs: [FicheFournisseur] { Annuaire.fournisseurs(argent: app.argent?.argent) }
@@ -154,7 +154,7 @@ struct EntrepriseView: View {
 
     private var indicateurs: some View {
         let argent = app.argent?.argent
-        let actifs = (app.chantiers?.chantiers ?? []).filter { (2...4).contains($0.etapeIndex) }.count
+        let actifs = (app.chantiers?.tous ?? []).filter { (2...4).contains($0.etapeIndex) }.count
         return LazyVGrid(columns: [GridItem(.flexible(), spacing: Espace.s), GridItem(.flexible(), spacing: Espace.s)], spacing: Espace.s) {
             TuileIndicateur(titre: "Chantiers en cours", valeur: "\(actifs)", detail: "acceptés → réalisés", icone: "hammer.fill")
             TuileIndicateur(titre: "Clients suivis", valeur: "\(clients.count)", detail: "chantiers, factures, offres", icone: "person.2.fill")

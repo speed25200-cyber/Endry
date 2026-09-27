@@ -44,8 +44,15 @@ struct ChantiersView: View {
             .background(FondAmbiant())
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Dossier.self) { dossier in
-                DossierView(modele: ModeleDossier(dossier: dossier, api: app.session.api ?? APIDemo(), cache: app.session.estDemo ? nil : app.session.cache) { app.session.signaler($0) })
-                    .navigationTransition(.zoom(sourceID: dossier.id, in: espaceZoom))
+                Group {
+                    // Jamais de repli sur la démo en mode réel : sans client API, on l'explique.
+                    if let api = app.session.api {
+                        DossierView(modele: ModeleDossier(dossier: dossier, api: api, cache: app.session.estDemo ? nil : app.session.cache) { app.session.signaler($0) })
+                    } else {
+                        VueErreur(erreur: .nonAuthentifie(nil)) { app.connexionPresentee = true }
+                    }
+                }
+                .navigationTransition(.zoom(sourceID: dossier.id, in: espaceZoom))
             }
         }
         .toast(Binding(get: { modele.toast }, set: { modele.toast = $0 }))
@@ -60,7 +67,7 @@ struct ChantiersView: View {
             HStack(spacing: Espace.xs) {
                 let etapes = modele.etapes.isEmpty
                     ? [CompteurEtape(cle: "tous", libelle: "Tous", nombre: 0)] + EtapeChantier.allCases.map { CompteurEtape(cle: $0.rawValue, libelle: $0.libelle, nombre: 0) }
-                    : modele.etapes
+                    : modele.compteurs
                 ForEach(etapes) { etape in
                     PuceFiltre(
                         libelle: etape.libelle,
@@ -69,9 +76,8 @@ struct ChantiersView: View {
                         espace: espaceFiltres
                     ) {
                         withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            modele.filtre = etape.cle
+                            modele.choisir(etape.cle)
                         }
-                        Task { await modele.charger() }
                     }
                     .accessibilityIdentifier("filtre-\(etape.cle)")
                 }
@@ -102,6 +108,7 @@ struct ChantiersView: View {
                     .buttonStyle(.plain)
                     .transitionDefilement()
                     .apparitionEnCascade(index: index, visible: visible)
+                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
                     .accessibilityIdentifier("chantier-\(dossier.id)")
                 }
             }

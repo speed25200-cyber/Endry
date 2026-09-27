@@ -247,7 +247,13 @@ struct ArgentView: View {
                     ForEach(v) { versement in
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(versement.libelle).font(Police.reference(12)).foregroundStyle(Color.encre).lineLimit(2)
+                                Text(versement.titre).styleTexte(14, relativeTo: .subheadline, graisse: .semibold).foregroundStyle(Color.encre).lineLimit(1)
+                                if let texte = versement.texte, versement.contrepartie != nil {
+                                    Text(texte).font(Police.reference(11)).foregroundStyle(Color.encreDouce).lineLimit(2)
+                                }
+                                if let reference = versement.reference {
+                                    Text(reference).font(Police.reference(10)).foregroundStyle(Color.encrePale).lineLimit(1)
+                                }
                                 if let date = versement.date {
                                     Text(DateEndry.courte(date)).styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encrePale)
                                 }

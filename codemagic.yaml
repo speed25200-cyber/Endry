@@ -6,8 +6,9 @@
 #                  à chaque push et pull request qui touche ios/ ou ce fichier.
 #   ios-testflight signature + IPA + envoi TestFlight, sur un tag « ios-v* » ou lancé à la main.
 #
-# Aucun secret dans ce fichier : la signature utilise l'intégration App Store Connect « PetMind ASC API »
-# et le certificat de distribution enregistré dans l'équipe Codemagic (Code signing identities).
+# Aucun secret dans ce fichier : la signature utilise l'intégration App Store Connect « Endry ASC API »
+# (créée par Endry SA dans Codemagic avec sa propre clé) et le certificat de distribution enregistré
+# dans l'équipe Codemagic (Code signing identities). Voir ios/README.md.
 
 definitions:
   outils: &outils
@@ -31,6 +32,38 @@ definitions:
     name: Générer le projet Xcode
     working_directory: ios
     script: xcodegen generate
+  tests_kit: &tests_kit
+    name: Tests du paquet EndryKit
+    working_directory: ios/EndryKit
+    script: swift test
+  tests_app: &tests_app
+    name: Build et tests de l'app (simulateur)
+    working_directory: ios
+    script: |
+      set -o pipefail
+      # Dernier iPhone disponible sur le runtime iOS le plus récent de l'image.
+      SIM_ID=$(xcrun simctl list devices available -j | python3 -c '
+      import json, sys
+      d = json.load(sys.stdin)["devices"]
+      def version(k):
+          v = k.rsplit(".", 1)[-1].replace("iOS-", "").split("-")
+          return tuple(int(x) for x in v if x.isdigit())
+      runtimes = sorted((k for k in d if ".iOS-" in k and d[k]), key=version)
+      for k in reversed(runtimes):
+          iphones = [x for x in d[k] if x["name"].startswith("iPhone") and "SE" not in x["name"]]
+          if iphones:
+              print(iphones[0]["udid"]); break
+      ')
+      echo "Simulateur : $SIM_ID"
+      xcrun simctl boot "$SIM_ID" || true
+      xcodebuild test \
+        -project EndryPilotage.xcodeproj \
+        -scheme EndryPilotage \
+        -destination "id=$SIM_ID" \
+        -resultBundlePath build/Tests.xcresult \
+        CODE_SIGNING_ALLOWED=NO \
+        | xcpretty --report junit --output build/junit.xml
+    test_report: ios/build/junit.xml
 
 workflows:
   ios-tests:
@@ -56,36 +89,8 @@ workflows:
     scripts:
       - *outils
       - *projet
-      - name: Tests du paquet EndryKit
-        working_directory: ios/EndryKit
-        script: swift test
-      - name: Build et tests de l'app (simulateur)
-        working_directory: ios
-        script: |
-          set -o pipefail
-          # Dernier iPhone disponible sur le runtime iOS le plus récent de l'image.
-          SIM_ID=$(xcrun simctl list devices available -j | python3 -c '
-          import json, sys
-          d = json.load(sys.stdin)["devices"]
-          def version(k):
-              v = k.rsplit(".", 1)[-1].replace("iOS-", "").split("-")
-              return tuple(int(x) for x in v if x.isdigit())
-          runtimes = sorted((k for k in d if ".iOS-" in k and d[k]), key=version)
-          for k in reversed(runtimes):
-              iphones = [x for x in d[k] if x["name"].startswith("iPhone") and "SE" not in x["name"]]
-              if iphones:
-                  print(iphones[0]["udid"]); break
-          ')
-          echo "Simulateur : $SIM_ID"
-          xcrun simctl boot "$SIM_ID" || true
-          xcodebuild test \
-            -project EndryPilotage.xcodeproj \
-            -scheme EndryPilotage \
-            -destination "id=$SIM_ID" \
-            -resultBundlePath build/Tests.xcresult \
-            CODE_SIGNING_ALLOWED=NO \
-            | xcpretty --report junit --output build/junit.xml
-        test_report: ios/build/junit.xml
+      - *tests_kit
+      - *tests_app
       - name: Extraire les captures d'écran
         working_directory: ios
         script: |
@@ -102,13 +107,13 @@ workflows:
     name: iOS · TestFlight
     instance_type: mac_mini_m2
     max_build_duration: 90
-    # Même intégration App Store Connect et même signature automatique que Picshop.
+    # Intégration App Store Connect propre à Endry SA (Codemagic › Teams › Integrations).
     integrations:
-      app_store_connect: PetMind ASC API
+      app_store_connect: Endry ASC API
     environment:
       xcode: latest
-      # Signature automatique Codemagic (comme Picshop) : certificat de distribution de l'équipe
-      # (Code signing identities) + profil App Store de l'app.
+      # Signature automatique Codemagic : certificat de distribution de l'équipe
+      # (Code signing identities) + profil App Store de com.endrysa.endry.
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.endrysa.endry
@@ -125,9 +130,9 @@ workflows:
     scripts:
       - *outils
       - *projet
-      - name: Tests du paquet EndryKit
-        working_directory: ios/EndryKit
-        script: swift test
+      # Aucune publication sans une suite de tests complète et verte.
+      - *tests_kit
+      - *tests_app
       - name: Appliquer la signature
         script: |
           set -e

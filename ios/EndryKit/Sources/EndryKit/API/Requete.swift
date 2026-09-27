@@ -12,7 +12,7 @@ public struct Parametre: Sendable, Hashable {
 
 /// Une requête vers le serveur de l'assistant, indépendante du transport (réseau réel ou démo).
 public struct Requete: Sendable, Hashable {
-    public enum Methode: String, Sendable { case get = "GET", post = "POST" }
+    public enum Methode: String, Sendable { case get = "GET", post = "POST", delete = "DELETE" }
 
     public enum Corps: Sendable, Hashable {
         case json(Data)
@@ -46,11 +46,15 @@ public struct Requete: Sendable, Hashable {
 extension Requete {
     static let prefixe = "/app/api/v1"
 
-    public static func session(acces: String) -> Requete {
-        .init(.post, "\(prefixe)/session", corps: .json(json(["acces": acces])))
+    /// v1.1 : `appareil` fournit un jeton propre à cet iPhone ; v1.0 l'ignore.
+    public static func session(acces: String, appareil: (nom: String, modele: String)? = nil) -> Requete {
+        var corps: [String: Any] = ["acces": acces]
+        if let appareil { corps["appareil"] = ["nom": appareil.nom, "modele": appareil.modele] }
+        return .init(.post, "\(prefixe)/session", corps: .json(jsonObjet(corps)))
     }
 
-    public static let accueil = Requete(.get, "\(prefixe)/accueil")
+    /// Délai généreux : le PC peut interroger Bexio et Zoho avant de répondre.
+    public static let accueil = Requete(.get, "\(prefixe)/accueil", delai: 45)
     public static let decisions = Requete(.get, "\(prefixe)/decisions")
     public static let argent = Requete(.get, "\(prefixe)/argent")
     public static let actualiser = Requete(.post, "\(prefixe)/actualiser", delai: 90)
@@ -83,6 +87,25 @@ extension Requete {
 
     public static func document(_ chemin: String) -> Requete {
         .init(.get, chemin, delai: 60)
+    }
+
+    // MARK: v1.1
+
+    public static let appareils = Requete(.get, "\(prefixe)/appareils")
+
+    public static func supprimerAppareil(_ id: String) -> Requete {
+        .init(.delete, "\(prefixe)/appareils/\(id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id)")
+    }
+
+    public static let saisies = Requete(.get, "\(prefixe)/saisies")
+    public static let etatAssistant = Requete(.get, "\(prefixe)/assistant/etat")
+    public static let pause = Requete(.post, "\(prefixe)/assistant/pause")
+    public static let reprise = Requete(.post, "\(prefixe)/assistant/reprise")
+    public static let sessionVoix = Requete(.post, "\(prefixe)/voix/session", delai: 15)
+    public static let evenements = Requete(.get, "\(prefixe)/evenements", delai: 3_600)
+
+    static func jsonObjet(_ objet: [String: Any]) -> Data {
+        (try? JSONSerialization.data(withJSONObject: objet, options: [.sortedKeys])) ?? Data("{}".utf8)
     }
 
     static func json(_ dictionnaire: [String: String]) -> Data {

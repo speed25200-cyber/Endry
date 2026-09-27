@@ -30,9 +30,7 @@
         }
       ],
       "outil": "mail_repondre",
-      "modifiable": true,
-      "envoi_tiers": true,
-      "chantier_id": 27
+      "modifiable": true
     },
     {
       "type": "validation",
@@ -67,9 +65,7 @@
         }
       ],
       "outil": "envoyer_facture",
-      "modifiable": true,
-      "envoi_tiers": true,
-      "chantier_id": 31
+      "modifiable": true
     },
     {
       "type": "validation",
@@ -96,9 +92,7 @@
         }
       ],
       "outil": "bexio_creer_offre",
-      "modifiable": true,
-      "envoi_tiers": false,
-      "chantier_id": 29
+      "modifiable": true
     },
     {
       "type": "question",
@@ -114,9 +108,7 @@
       "documents": [],
       "pieces": [],
       "outil": "question",
-      "modifiable": true,
-      "envoi_tiers": false,
-      "chantier_id": 18
+      "modifiable": true
     },
     {
       "type": "validation",
@@ -136,9 +128,7 @@
       "documents": [],
       "pieces": [],
       "outil": "preparer_paiement",
-      "modifiable": false,
-      "envoi_tiers": false,
-      "chantier_id": 18
+      "modifiable": false
     }
   ],
   "encaisser": {

@@ -82,7 +82,7 @@ struct DossierView: View {
                         ForEach(dossier.documents) { element in
                             LigneElement(element: element, chargement: app.documents.chargement == element.pdf) {
                                 if let pdf = element.pdf {
-                                    Task { await app.documents.ouvrir(pdf, nom: "\(element.ref).pdf", api: app.session.api) }
+                                    Task { await app.documents.ouvrir(pdf, nom: "\(element.numeroAffiche ?? element.libelle).pdf", api: app.session.api) }
                                 }
                             }
                         }
@@ -162,17 +162,19 @@ struct LigneElement: View {
                     Text(element.libelle).styleTexte(15, relativeTo: .subheadline, graisse: .semibold)
                         .foregroundStyle(Color.encre).lineLimit(2).multilineTextAlignment(.leading)
                     HStack(spacing: 6) {
-                        Text(element.ref).font(Police.reference(11)).foregroundStyle(Color.encrePale)
-                        if let statut = element.statut {
-                            Text("· \(statut)").styleTexte(12, relativeTo: .caption).foregroundStyle(couleurStatut(statut))
+                        if let numero = element.numeroAffiche {
+                            Text(numero).font(Police.reference(11)).foregroundStyle(Color.encrePale)
                         }
-                        if let echeance = element.echeance {
-                            Text("· éch. \(DateEndry.courte(echeance))").styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encrePale)
+                        if let statut = element.statut, !statut.isEmpty {
+                            Text(statut).styleTexte(12, relativeTo: .caption, graisse: .medium).foregroundStyle(couleurStatut(statut))
+                        }
+                        if let echeance = element.echeance, !echeance.isEmpty {
+                            Text("éch. \(DateEndry.courte(echeance))").styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encrePale)
                         }
                     }
                 }
                 Spacer(minLength: Espace.xs)
-                if let montant = element.montant {
+                if let montant = element.montantAffiche {
                     MontantView(montant: montant, taille: 15, afficherCentimes: false, style: .subheadline)
                 }
                 if chargement {
@@ -243,6 +245,7 @@ struct LigneFournisseur: View {
     app.activerDemo()
     return NavigationStack {
         DossierView(modele: ModeleDossier(dossier: Fixtures.dossierDetaille, api: APIDemo()))
+            .preferredColorScheme(.dark)
     }
     .environment(app)
 }

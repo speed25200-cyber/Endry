@@ -100,10 +100,20 @@ Codemagic n’a pas besoin de fastlane : sa CLI (`app-store-connect`, `xcode-pro
 
 ### À faire une seule fois (vous)
 
-> **Configuration actuelle (sans Mac)** : le workflow `ios-testflight` utilise, comme Picshop, l’intégration
-> **« PetMind ASC API »** et la signature automatique de Codemagic (`ios_signing`) avec le certificat
-> « Apple Distribution » enregistré dans Codemagic › Teams › **Code signing identities** (clé privée incluse).
-> S’il n’y en a pas : onglet *iOS certificates* › **Generate certificate**. Les points 1 à 3 ne servent pas.
+> **Configuration actuelle** : le workflow `ios-testflight` utilise l’intégration App Store Connect
+> **« Endry ASC API »**, propre à Endry SA, et la signature automatique de Codemagic (`ios_signing`, bundle
+> `com.endrysa.endry`). Il lance **tous** les tests (EndryKit, app, UI) avant de construire l’IPA.
+>
+> **Créer l’intégration (une fois)** : App Store Connect › Utilisateurs et accès › Intégrations › API App Store Connect ›
+> Clés d’équipe › « + » (accès *Gestionnaire d’app*), téléchargez le `.p8`. Puis Codemagic › Teams › votre équipe ›
+> **Integrations** › **Developer Portal** › *Manage keys* › **Add key** : nom exact **`Endry ASC API`**, Issuer ID,
+> Key ID et fichier `.p8`. Rien n’est stocké dans le dépôt.
+>
+> Signature : Codemagic › Code signing identities › *iOS certificates* doit contenir un certificat **Apple Distribution**
+> avec sa clé (sinon *Generate certificate*), et *iOS provisioning profiles* le profil App Store de `com.endrysa.endry`
+> créé **avec ce certificat** (« Certificate : Uploaded »).
+>
+> Publication : `git tag ios-v2.0.0 && git push origin ios-v2.0.0`, ou *Start new build* › `iOS · TestFlight`.
 
 **1. Clé API App Store Connect** (`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`)
 - [appstoreconnect.apple.com](https://appstoreconnect.apple.com) › **Utilisateurs et accès** › onglet **Intégrations** ›

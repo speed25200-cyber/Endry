@@ -15,6 +15,8 @@ public enum ErreurAPI: Error, Equatable, Sendable {
     case serveur(statut: Int, message: String?)
     case decodage(String)
     case horsLigne
+    /// `POST /actualiser` : Bexio ne répond pas (502 en v1.0, 503 `bexio_indisponible` en v1.1).
+    case bexioIndisponible
 
     public var message: String {
         switch self {
@@ -32,6 +34,8 @@ public enum ErreurAPI: Error, Equatable, Sendable {
             "Réponse inattendue du serveur."
         case .horsLigne:
             "Hors ligne : action impossible sans réseau."
+        case .bexioIndisponible:
+            "Bexio ne répond pas, réessayez dans un instant."
         }
     }
 
@@ -171,17 +175,21 @@ public struct ClientAPI: EndryAPI {
     }
 
     /// Échange le secret du lien contre un jeton.
-    public static func ouvrirSession(_ lien: LienAcces, transport: TransportHTTP = TransportURLSession()) async throws(ErreurAPI) -> Identifiants {
+    /// `appareil` (v1.1) : nom et modèle de l'iPhone, pour obtenir un jeton propre à cet appareil.
+    public static func ouvrirSession(
+        _ lien: LienAcces, appareil: (nom: String, modele: String)? = nil, transport: TransportHTTP = TransportURLSession()
+    ) async throws(ErreurAPI) -> Identifiants {
         let client = ClientAPI(base: lien.base, jeton: nil, transport: transport)
         let data: Data
         do {
-            data = try await client.envoyer(.session(acces: lien.secret))
+            data = try await client.envoyer(.session(acces: lien.secret, appareil: appareil))
         } catch .nonAuthentifie(let message) {
             throw .lienInvalide(message)
         }
         let session = try client.decoder(SessionOuverte.self, depuis: data)
         let expiration = session.valableJours.map { Date().addingTimeInterval(TimeInterval($0) * 86_400) }
-        return Identifiants(base: lien.base, jeton: session.jeton, entreprise: session.entreprise, expireLe: expiration)
+        return Identifiants(base: lien.base, jeton: session.jeton, entreprise: session.entreprise, expireLe: expiration,
+                            appareilId: session.appareilId)
     }
 
     public func urlAbsolue(_ chemin: String) -> URL? {
@@ -243,6 +251,10 @@ public struct ClientAPI: EndryAPI {
         }
 
         let corpsErreur = try? JSONDecoder().decode(CorpsErreur.self, from: data)
+        if corpsErreur?.erreur == "bexio_indisponible"
+            || (requete.chemin.hasSuffix("/actualiser") && [502, 503].contains(reponse.statusCode)) {
+            throw .bexioIndisponible
+        }
         switch reponse.statusCode {
         case 200..<300:
             return data

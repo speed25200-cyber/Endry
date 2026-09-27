@@ -9,6 +9,8 @@ final class DelegueApp: NSObject, UIApplicationDelegate, UNUserNotificationCente
     /// Appelés sur le MainActor par l'app (branchés dans `EndryPilotageApp`).
     var surJetonAPNs: (@MainActor (String) -> Void)?
     var surReference: (@MainActor (String) -> Void)?
+    /// Une notification arrive app ouverte : les écrans se rechargent.
+    var surNotificationRecue: (@MainActor () -> Void)?
     private var referenceEnAttente: String?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
@@ -29,7 +31,8 @@ final class DelegueApp: NSObject, UIApplicationDelegate, UNUserNotificationCente
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter, willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
-        [.banner, .list, .badge]
+        await MainActor.run { surNotificationRecue?() }
+        return [.banner, .list, .badge]
     }
 
     /// Toucher la notification : ouvrir la carte correspondante.

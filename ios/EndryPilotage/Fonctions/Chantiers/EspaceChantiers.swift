@@ -4,12 +4,12 @@ import SwiftUI
 /// Espace Chantiers : pipeline des dossiers et planning, réunis sous un même onglet.
 struct EspaceChantiers: View {
     var modele: ModeleChantiers
+    @Environment(ModeleApp.self) private var app
 
-    enum Vue: Hashable { case pipeline, planning }
-
-    @State private var vue: Vue = .pipeline
+    private var vue: VueChantiers { app.vueChantiers }
 
     var body: some View {
+        @Bindable var app = app
         ZStack(alignment: .topTrailing) {
             ChantiersView(modele: modele)
                 .opacity(vue == .pipeline ? 1 : 0)
@@ -23,9 +23,9 @@ struct EspaceChantiers: View {
                 .accessibilityHidden(vue != .planning)
 
             SelecteurSegments(options: [
-                OptionSegment(valeur: Vue.pipeline, titre: "Pipeline"),
-                OptionSegment(valeur: Vue.planning, titre: "Planning"),
-            ], selection: $vue)
+                OptionSegment(valeur: VueChantiers.pipeline, titre: "Pipeline"),
+                OptionSegment(valeur: VueChantiers.planning, titre: "Planning"),
+            ], selection: $app.vueChantiers)
             .padding(.trailing, Espace.bord)
             .padding(.top, Espace.s)
         }

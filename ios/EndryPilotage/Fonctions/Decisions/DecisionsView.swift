@@ -20,7 +20,7 @@ struct DecisionsView: View {
                             BandeauHorsLigne(majLe: modele.majLe)
                         }
                         if let accueil = modele.accueil, accueil.pause {
-                            Label("L’assistant est en pause : les décisions seront traitées à la reprise.", systemImage: "pause.circle")
+                            Label("L’assistant est en pause : vous pouvez tout consulter, les actions reprendront à la reprise.", systemImage: "pause.circle")
                                 .styleTexte(14, relativeTo: .subheadline, graisse: .medium)
                                 .foregroundStyle(Color.ambre)
                                 .padding(Espace.m)
@@ -129,7 +129,10 @@ struct DecisionsView: View {
                 .apparitionEnCascade(index: 1, visible: visible)
 
                 if !accueil.chantiers7Jours.isEmpty {
-                    AgendaSemaine(semaine: accueil.chantiers7Jours) { app.onglet = .chantiers }
+                    AgendaSemaine(semaine: accueil.chantiers7Jours) {
+                        app.vueChantiers = .planning
+                        app.onglet = .chantiers
+                    }
                         .apparitionEnCascade(index: 2, visible: visible)
                 }
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Inter Tight (titres, montants) + Inter (texte), embarquées sous licence OFL.
 /// Si une police manque, SwiftUI retombe sur SF Pro. Toutes les tailles suivent Dynamic Type.
@@ -9,6 +10,11 @@ enum Police {
 
     static func texte(_ taille: CGFloat = 16, relativeTo style: Font.TextStyle = .body, graisse: GraisseTexte = .regular) -> Font {
         .custom(graisse.nom, size: taille, relativeTo: style)
+    }
+
+    /// Chiffres : SF Mono tabulaire, mis à l'échelle avec Dynamic Type.
+    static func chiffres(_ taille: CGFloat, relativeTo style: Font.TextStyle = .body, graisse: Font.Weight = .semibold) -> Font {
+        .system(size: UIFontMetrics(forTextStyle: style.uiKit).scaledValue(for: taille), weight: graisse, design: .monospaced)
     }
 
     /// Références (V-…, RE-…) : monospace système.
@@ -51,5 +57,24 @@ extension View {
 
     func styleTexte(_ taille: CGFloat = 16, relativeTo style: Font.TextStyle = .body, graisse: Police.GraisseTexte = .regular) -> some View {
         font(Police.texte(taille, relativeTo: style, graisse: graisse))
+    }
+}
+
+extension Font.TextStyle {
+    /// Équivalent UIKit, pour `UIFontMetrics`.
+    var uiKit: UIFont.TextStyle {
+        switch self {
+        case .largeTitle: .largeTitle
+        case .title: .title1
+        case .title2: .title2
+        case .title3: .title3
+        case .headline: .headline
+        case .subheadline: .subheadline
+        case .callout: .callout
+        case .footnote: .footnote
+        case .caption: .caption1
+        case .caption2: .caption2
+        default: .body
+        }
     }
 }

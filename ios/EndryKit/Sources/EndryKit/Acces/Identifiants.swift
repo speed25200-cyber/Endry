@@ -9,12 +9,15 @@ public struct Identifiants: Codable, Sendable, Equatable {
     public var jeton: String
     public var entreprise: String?
     public var expireLe: Date?
+    /// v1.1 : identifiant de l'appareil côté PC (absent avec l'ancien jeton commun).
+    public var appareilId: String?
 
-    public init(base: URL, jeton: String, entreprise: String? = nil, expireLe: Date? = nil) {
+    public init(base: URL, jeton: String, entreprise: String? = nil, expireLe: Date? = nil, appareilId: String? = nil) {
         self.base = base
         self.jeton = jeton
         self.entreprise = entreprise
         self.expireLe = expireLe
+        self.appareilId = appareilId
     }
 
     public var estExpire: Bool {
@@ -63,7 +66,6 @@ public enum ErreurTrousseau: Error, Equatable, Sendable {
 /// Jeton rangé dans le trousseau iOS, accessible après le premier déverrouillage, jamais synchronisé ni sauvegardé
 /// hors de l'appareil (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`).
 ///
-/// Un groupe de trousseau partagé permet au widget de lire le même jeton.
 public struct CoffreTrousseau: CoffreJeton {
     public let service: String
     public let compte: String

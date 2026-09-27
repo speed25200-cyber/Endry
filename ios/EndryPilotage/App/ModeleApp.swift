@@ -12,6 +12,8 @@ final class ModeleApp {
     let documents = Documents()
 
     var onglet: Onglet = .aujourdhui
+    /// Vue de l'espace Chantiers (Pipeline ou Planning), pilotable depuis l'accueil.
+    var vueChantiers: VueChantiers = .pipeline
     /// Carte à mettre en avant (toucher d'une notification).
     var referenceCiblee: String?
     /// Présente l'écran de connexion par-dessus l'app (nouveau lien).
@@ -38,6 +40,7 @@ final class ModeleApp {
             #endif
             self.session = ModeleSession(coffre: coffre, cache: .parDefaut())
         }
+        self.session.appareil = (UIDevice.current.name, Self.modeleMachine())
         if Configuration.lancementDemo {
             self.session.activerDemo(latence: Configuration.testsUI ? .milliseconds(80) : .milliseconds(450))
             verrou.marquerDeverrouille()
@@ -99,6 +102,28 @@ final class ModeleApp {
         onglet = .aujourdhui
     }
 
+    /// Identifiant matériel (« iPhone17,1 »), pour la liste des appareils côté PC.
+    static func modeleMachine() -> String {
+        var info = utsname()
+        uname(&info)
+        return withUnsafeBytes(of: &info.machine) { octets in
+            String(decoding: octets.prefix { $0 != 0 }, as: UTF8.self)
+        }
+    }
+
+    // MARK: - Rafraîchissement
+
+    /// Recharge les écrans : retour au premier plan, notification reçue, événement serveur.
+    func rafraichirTout() async {
+        guard session.estConnecte else { return }
+        let d = decisions, c = chantiers, a = argent
+        await withDiscardingTaskGroup { groupe in
+            groupe.addTask { await d?.charger() }
+            groupe.addTask { await c?.charger() }
+            groupe.addTask { await a?.charger() }
+        }
+    }
+
     // MARK: - Badge
 
     private func publier(_ accueil: Accueil) {
@@ -132,4 +157,8 @@ final class ModeleApp {
             }
         }
     }
+}
+
+enum VueChantiers: Hashable {
+    case pipeline, planning
 }

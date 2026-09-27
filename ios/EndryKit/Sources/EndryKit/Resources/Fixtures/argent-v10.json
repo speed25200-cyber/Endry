@@ -219,33 +219,21 @@
         "dossier": "Résidence Les Tilleuls",
         "achat": "Siphon design et bonde clic-clac (hors offre)",
         "montant": 186.4,
-        "date": "2026-09-19",
-        "id": "AR-12",
-        "libelle": "Siphon design et bonde clic-clac (hors offre)",
-        "fournisseur": "Sanipex SA",
-        "chantier": "Résidence Les Tilleuls"
+        "date": "2026-09-19"
       },
       {
         "dossier_id": 18,
         "dossier": "Villa Morel",
         "achat": "Vase d’expansion 35 L supplémentaire",
         "montant": 264.0,
-        "date": "2026-09-21",
-        "id": "AR-13",
-        "libelle": "Vase d’expansion 35 L supplémentaire",
-        "fournisseur": "Meier Tobler AG",
-        "chantier": "Villa Morel"
+        "date": "2026-09-21"
       },
       {
         "dossier_id": 12,
         "dossier": "PPE Les Cèdres",
         "achat": "Location carotteuse 2 jours",
         "montant": 390.0,
-        "date": "2026-09-09",
-        "id": "AR-14",
-        "libelle": "Location carotteuse 2 jours",
-        "fournisseur": "Debrunner Acifer SA",
-        "chantier": "PPE Les Cèdres"
+        "date": "2026-09-09"
       }
     ],
     "total": 840.4
@@ -271,7 +259,6 @@
   "heures_secretariat": {
     "heures": "31 h 30",
     "montant": 2047.5,
-    "mois": "septembre 2026",
-    "heures_decimal": 31.5
+    "mois": "septembre 2026"
   }
 }

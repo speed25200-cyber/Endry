@@ -54,7 +54,14 @@ public final class ModeleDecisions {
     }
 
     public var nombreDecisions: Int { cartes.count }
-    public var actionsPossibles: Bool { !horsLigne && decisionsAutorisees && !(accueil?.pause ?? false) }
+    /// L'assistant est en pause : on lit tout, mais aucune action n'est envoyée.
+    public var enPause: Bool { accueil?.pause ?? false }
+    public var actionsPossibles: Bool { !horsLigne && decisionsAutorisees && !enPause }
+
+    /// Pause / reprise pilotée depuis l'app (v1.1) : mise à jour immédiate de l'état affiché.
+    public func appliquerPause(_ pause: Bool) {
+        accueil?.pause = pause
+    }
 
     public func charger() async {
         if accueil == nil { etat = .chargement }
@@ -83,11 +90,15 @@ public final class ModeleDecisions {
     @discardableResult
     public func agir(_ action: ActionDecision, sur carte: Carte, consignes: String? = nil) async -> Bool {
         guard actionsPossibles else {
-            toast = Toast(horsLigne ? ErreurAPI.horsLigne.message : "Les décisions sont en pause.", style: .erreur)
+            toast = Toast(horsLigne ? ErreurAPI.horsLigne.message
+                          : enPause ? "L’assistant est en pause : reprenez-le pour agir."
+                          : "Les décisions sont en lecture seule.", style: .erreur)
             return false
         }
+        // Une question se répond toujours par écrit (action `repondre`).
+        let action: ActionDecision = carte.estQuestion ? .repondre : action
         let texte = consignes?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if action == .corriger || carte.estQuestion, (texte ?? "").isEmpty {
+        if action == .corriger || action == .repondre, (texte ?? "").isEmpty {
             toast = Toast(carte.estQuestion ? "Écrivez ou dictez votre réponse." : "Indiquez ce qu’il faut corriger.", style: .erreur)
             return false
         }
@@ -119,7 +130,8 @@ public final class ModeleDecisions {
 @Observable
 public final class ModeleChantiers {
     public private(set) var etapes: [CompteurEtape] = []
-    public private(set) var chantiers: [Dossier] = []
+    /// Tous les chantiers (indépendants du filtre : Entreprise et Planning s'en servent).
+    public private(set) var tous: [Dossier] = []
     public private(set) var semaine: [Semaine] = []
     public private(set) var calendrierICS: String?
     public private(set) var etat: EtatChargement = .initial
@@ -139,14 +151,23 @@ public final class ModeleChantiers {
         self.rapport = rapport
     }
 
+    /// Chantiers de l'étape choisie (filtre appliqué localement, sans requête).
+    public var chantiers: [Dossier] {
+        filtre == "tous" ? tous : tous.filter { $0.etape == filtre }
+    }
+
+    /// Compteurs par étape, avec « Tous » en tête.
+    public var compteurs: [CompteurEtape] {
+        let parEtape = etapes.filter { $0.cle != "tous" }
+        return [CompteurEtape(cle: "tous", libelle: "Tous", nombre: tous.count)] + parEtape
+    }
+
     public func charger() async {
-        if chantiers.isEmpty { etat = .chargement }
-        let filtreDemande = filtre
+        if tous.isEmpty { etat = .chargement }
         do {
-            let charge = try await api.charger(ReponseChantiers.self, .chantiers(etape: filtreDemande), cache: cache)
-            guard filtreDemande == filtre else { return }
+            let charge = try await api.charger(ReponseChantiers.self, .chantiers(etape: "tous"), cache: cache)
             etapes = charge.valeur.etapes
-            chantiers = charge.valeur.chantiers
+            tous = charge.valeur.chantiers
             semaine = charge.valeur.semaine
             calendrierICS = charge.valeur.calendrierICS
             majLe = charge.majLe
@@ -154,15 +175,13 @@ public final class ModeleChantiers {
             etat = .pret
             if let e = charge.erreur { rapport?(e) }
         } catch {
-            etat = chantiers.isEmpty ? .erreur(error) : .pret
+            etat = tous.isEmpty ? .erreur(error) : .pret
             rapport?(error)
         }
     }
 
-    public func choisir(_ etape: String) async {
-        guard etape != filtre else { return }
+    public func choisir(_ etape: String) {
         filtre = etape
-        await charger()
     }
 
     /// Tirer pour actualiser : demande au PC de relire Bexio et les e-mails, puis recharge.

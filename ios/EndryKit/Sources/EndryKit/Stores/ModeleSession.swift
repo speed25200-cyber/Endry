@@ -33,14 +33,15 @@ public final class ModeleSession {
     public let cache: CacheHorsLigne
     @ObservationIgnored private let coffre: CoffreJeton
     @ObservationIgnored private let transport: TransportHTTP
-    @ObservationIgnored private let groupeWidget: String?
     @ObservationIgnored private var apiDemo: APIDemo?
 
-    public init(coffre: CoffreJeton, cache: CacheHorsLigne, transport: TransportHTTP = TransportURLSession(), groupeWidget: String? = nil) {
+    /// Nom et modèle de cet iPhone, envoyés au PC pour obtenir un jeton propre à l'appareil (v1.1).
+    @ObservationIgnored public var appareil: (nom: String, modele: String)?
+
+    public init(coffre: CoffreJeton, cache: CacheHorsLigne, transport: TransportHTTP = TransportURLSession()) {
         self.coffre = coffre
         self.cache = cache
         self.transport = transport
-        self.groupeWidget = groupeWidget
         if let identifiants = coffre.lire(), !identifiants.estExpire {
             etat = .connecte(identifiants)
             api = ClientAPI(identifiants: identifiants, transport: transport)
@@ -76,7 +77,7 @@ public final class ModeleSession {
         }
         let identifiants: Identifiants
         do {
-            identifiants = try await ClientAPI.ouvrirSession(lien, transport: transport)
+            identifiants = try await ClientAPI.ouvrirSession(lien, appareil: appareil, transport: transport)
         } catch {
             throw .api(error)
         }
@@ -109,7 +110,6 @@ public final class ModeleSession {
     public func deconnecter() async {
         coffre.effacer()
         await cache.effacer()
-        if let groupeWidget { ResumeWidget.effacer(groupe: groupeWidget) }
         apiDemo = nil
         api = nil
         etat = .deconnecte
@@ -125,10 +125,5 @@ public final class ModeleSession {
         default:
             break
         }
-    }
-
-    public func publierResume(_ accueil: Accueil) {
-        guard let groupeWidget else { return }
-        ResumeWidget(accueil: accueil).enregistrer(groupe: groupeWidget)
     }
 }

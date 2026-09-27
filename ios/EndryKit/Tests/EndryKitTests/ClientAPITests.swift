@@ -83,14 +83,16 @@ final class ClientAPITests: XCTestCase {
             guard requete.url?.path == "/app/api/v1/session", requete.httpMethod == "POST" else {
                 return .init(statut: 404, corps: Data())
             }
-            let corps = (try? JSONSerialization.jsonObject(with: requete.httpBody ?? Data())) as? [String: String]
-            return corps?["acces"] == "bon-secret"
+            let corps = (try? JSONSerialization.jsonObject(with: requete.httpBody ?? Data())) as? [String: Any]
+            let appareil = corps?["appareil"] as? [String: String]
+            return corps?["acces"] as? String == "bon-secret" && appareil?["modele"] == "iPhone17,1"
                 ? .init(statut: 200, corps: Fixtures.donnees(.session))
                 : .init(statut: 401, corps: Fixtures.donnees(.erreurLienInvalide))
         }
         let lien = try LienAcces.analyser("https://calm-river-1234.trycloudflare.com/app/acces/bon-secret")
-        let identifiants = try await ClientAPI.ouvrirSession(lien, transport: ServeurFactice.transport())
-        XCTAssertEqual(identifiants.jeton, "demo-jeton-non-secret")
+        let identifiants = try await ClientAPI.ouvrirSession(lien, appareil: ("iPhone de la direction", "iPhone17,1"), transport: ServeurFactice.transport())
+        XCTAssertEqual(identifiants.appareilId, "app-7f3c")
+        XCTAssertEqual(identifiants.jeton, "demo-jeton-appareil")
         XCTAssertEqual(identifiants.base, base)
         XCTAssertEqual(identifiants.entreprise, "Endry SA")
         let expire = try XCTUnwrap(identifiants.expireLe)
@@ -99,7 +101,7 @@ final class ClientAPITests: XCTestCase {
 
         let mauvais = try LienAcces.analyser("https://calm-river-1234.trycloudflare.com/app/acces/revoque")
         do {
-            _ = try await ClientAPI.ouvrirSession(mauvais, transport: ServeurFactice.transport())
+            _ = try await ClientAPI.ouvrirSession(mauvais, appareil: ("iPhone", "iPhone17,1"), transport: ServeurFactice.transport())
             XCTFail("un lien révoqué doit échouer")
         } catch {
             XCTAssertEqual(error, .lienInvalide("Ce lien d’accès a été révoqué."))

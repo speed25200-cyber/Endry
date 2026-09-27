@@ -7,11 +7,14 @@ public struct SessionOuverte: Decodable, Sendable, Equatable {
     public var jeton: String
     public var valableJours: Int?
     public var entreprise: String?
+    /// v1.1 : identifiant de cet appareil (jeton par appareil).
+    public var appareilId: String?
 
-    public init(jeton: String, valableJours: Int? = nil, entreprise: String? = nil) {
+    public init(jeton: String, valableJours: Int? = nil, entreprise: String? = nil, appareilId: String? = nil) {
         self.jeton = jeton
         self.valableJours = valableJours
         self.entreprise = entreprise
+        self.appareilId = appareilId
     }
 
     public init(from decoder: Decoder) throws {
@@ -22,6 +25,7 @@ public struct SessionOuverte: Decodable, Sendable, Equatable {
         self.jeton = jeton
         valableJours = c.entier("valable_jours")
         entreprise = c.texte("entreprise")
+        appareilId = c.texte("appareil_id")
     }
 }
 
@@ -113,9 +117,9 @@ public struct Piece: Decodable, Sendable, Hashable, Identifiable {
 
 /// Une décision à prendre par la direction (carte de validation ou question).
 public struct Carte: Decodable, Sendable, Hashable, Identifiable {
-    /// Outils dont le « Oui » fait partir quelque chose chez un tiers : geste « Glisser pour envoyer » obligatoire.
+    /// Repli (serveur v1.0, sans `envoi_tiers`) : outils dont le « Oui » fait partir quelque chose chez un tiers.
     public static let outilsEnvoi: Set<String> = [
-        "mail_envoyer", "mail_repondre", "mail_transferer", "envoyer_facture", "envoyer_offre",
+        "mail_envoyer", "mail_repondre", "mail_transferer", "envoyer_facture", "envoyer_offre", "envoyer_rappel",
     ]
 
     public var type: TypeCarte
@@ -131,13 +135,20 @@ public struct Carte: Decodable, Sendable, Hashable, Identifiable {
     public var pieces: [Piece]
     public var outil: String?
     public var modifiable: Bool
+    /// v1.1 : vrai si « Oui » envoie quelque chose à un tiers (fait foi s'il est présent).
+    public var envoiTiers: Bool?
+    /// v1.1 : chantier concerné (regroupement des notifications, lien vers le dossier).
+    public var chantierId: String?
+    /// Noms des documents joints (v1.0).
+    public var documents: [String]
 
     public var id: String { reference }
 
     public init(
         type: TypeCarte, reference: String, genre: String, titre: String, motif: String,
         cree: String? = nil, controle: Controle? = nil, texte: String? = nil, destinataires: [String] = [],
-        objet: String? = nil, pieces: [Piece] = [], outil: String? = nil, modifiable: Bool = true
+        objet: String? = nil, pieces: [Piece] = [], outil: String? = nil, modifiable: Bool = true,
+        envoiTiers: Bool? = nil, chantierId: String? = nil, documents: [String] = []
     ) {
         self.type = type
         self.reference = reference
@@ -152,6 +163,9 @@ public struct Carte: Decodable, Sendable, Hashable, Identifiable {
         self.pieces = pieces
         self.outil = outil
         self.modifiable = modifiable
+        self.envoiTiers = envoiTiers
+        self.chantierId = chantierId
+        self.documents = documents
     }
 
     public init(from decoder: Decoder) throws {
@@ -177,6 +191,9 @@ public struct Carte: Decodable, Sendable, Hashable, Identifiable {
         pieces = c.liste("pieces")
         outil = c.texte("outil")
         modifiable = c.booleen("modifiable") ?? true
+        envoiTiers = c.booleen("envoi_tiers")
+        chantierId = c.texte("chantier_id")
+        documents = c.textes("documents")
     }
 
     /// Les références `Q-…` et les cartes de type question se répondent par texte ou voix.
@@ -184,8 +201,10 @@ public struct Carte: Decodable, Sendable, Hashable, Identifiable {
         type == .question || reference.uppercased().hasPrefix("Q-")
     }
 
-    /// Vrai si « Oui » envoie un e-mail ou un document à un tiers.
+    /// Vrai si « Oui » envoie un e-mail ou un document à un tiers : geste « Glisser pour envoyer » obligatoire.
+    /// `envoi_tiers` (v1.1) fait foi ; à défaut, liste d'outils connus.
     public var exigeGlisser: Bool {
+        if let envoiTiers { return envoiTiers }
         guard let outil else { return false }
         return Self.outilsEnvoi.contains(outil)
     }
@@ -197,6 +216,8 @@ public enum ActionDecision: String, Sendable, CaseIterable {
     case oui
     case non
     case corriger
+    /// Réponse écrite à une question (`Q-…`), avec `consignes`.
+    case repondre
 }
 
 /// Réponse de `GET /app/api/v1/decisions`.
@@ -432,22 +453,26 @@ public struct Offres: Decodable, Sendable, Hashable {
     }
 }
 
+/// Achat à refacturer. v1.0 : `{dossier_id, dossier, achat, montant, date}` ;
+/// v1.1 ajoute `{id, libelle, fournisseur, chantier}`. Les deux formes sont lues.
 public struct AchatARefacturer: Decodable, Sendable, Hashable, Identifiable {
     public var id: String
     public var fournisseur: String?
     public var libelle: String
     public var chantier: String?
+    public var dossierId: String?
     public var montant: Double
     public var date: String?
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.champs()
-        libelle = c.texte("libelle") ?? c.texte("objet") ?? c.texte("titre") ?? "Achat"
+        libelle = c.texte("libelle") ?? c.texte("achat") ?? c.texte("objet") ?? c.texte("titre") ?? "Achat"
         fournisseur = c.texte("fournisseur")
-        chantier = c.texte("chantier") ?? c.texte("client")
+        chantier = c.texte("chantier") ?? c.texte("dossier") ?? c.texte("client")
+        dossierId = c.texte("dossier_id")
         montant = c.nombre("montant") ?? 0
         date = c.texte("date")
-        id = c.texte("id") ?? c.texte("ref") ?? "\(fournisseur ?? "")-\(libelle)-\(montant)"
+        id = c.texte("id") ?? c.texte("ref") ?? "\(dossierId ?? "")-\(libelle)-\(date ?? "")-\(montant)"
     }
 }
 
@@ -467,19 +492,29 @@ public struct ARefacturer: Decodable, Sendable, Hashable {
     }
 }
 
+/// Versement reçu sans facture correspondante : `{cle, date, montant, contrepartie, texte, reference}`.
 public struct VersementNonIdentifie: Decodable, Sendable, Hashable, Identifiable {
     public var id: String
     public var date: String?
     public var montant: Double
-    public var libelle: String
+    /// Qui a payé.
+    public var contrepartie: String?
+    /// Communication bancaire.
+    public var texte: String?
+    public var reference: String?
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.champs()
         date = c.texte("date")
         montant = c.nombre("montant") ?? 0
-        libelle = c.texte("libelle") ?? c.texte("texte") ?? c.texte("communication") ?? c.texte("donneur") ?? "Versement"
-        id = c.texte("id") ?? "\(date ?? "")-\(montant)-\(libelle)"
+        contrepartie = c.texte("contrepartie") ?? c.texte("donneur")
+        texte = c.texte("texte") ?? c.texte("communication") ?? c.texte("libelle")
+        reference = c.texte("reference")
+        id = c.texte("cle") ?? c.texte("id") ?? "\(date ?? "")-\(montant)-\(contrepartie ?? texte ?? "")"
     }
+
+    /// Titre lisible : la contrepartie, sinon la communication.
+    public var titre: String { contrepartie ?? texte ?? "Versement" }
 }
 
 public struct HeuresSecretariat: Decodable, Sendable, Hashable {
@@ -489,9 +524,22 @@ public struct HeuresSecretariat: Decodable, Sendable, Hashable {
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.champs()
-        heures = c.nombre("heures") ?? 0
+        // v1.1 : `heures_decimal` (nombre) ; v1.0 : `heures` en texte (« 31 h 30 »).
+        heures = c.nombre("heures_decimal") ?? c.texte("heures").flatMap(Self.lireHeures) ?? 0
         montant = c.nombre("montant")
         mois = c.texte("mois", defaut: "")
+    }
+
+    /// « 31 h 30 », « 31h30 », « 31:30 », « 31.5 », « 31,5 h » → 31.5
+    public static func lireHeures(_ texte: String) -> Double? {
+        let s = texte.lowercased().replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "min", with: "")
+        for separateur in ["h", ":"] where s.contains(separateur) {
+            let morceaux = s.split(separator: Character(separateur), omittingEmptySubsequences: false)
+            guard let h = Double(morceaux[0].replacingOccurrences(of: ",", with: ".")) else { return nil }
+            let m = morceaux.count > 1 ? Double(morceaux[1]) ?? 0 : 0
+            return h + m / 60
+        }
+        return Double(s.replacingOccurrences(of: ",", with: "."))
     }
 }
 
@@ -517,23 +565,29 @@ public struct Argent: Decodable, Sendable, Hashable {
 
 // MARK: - Chantiers
 
+/// Chantier de la semaine (`chantiers_7_jours`, `semaine`) : un `ChantierResume` côté serveur.
 public struct Semaine: Decodable, Sendable, Hashable, Identifiable {
     public var id: String
     public var titre: String
+    public var client: String?
     public var lieu: String?
     public var dates: String?
     public var debut: String?
+    public var fin: String?
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.champs()
         titre = c.texte("titre", defaut: "Chantier")
         id = c.texte("id") ?? titre
-        lieu = c.texte("lieu")
-        dates = c.texte("dates")
-        debut = c.texte("debut")
+        client = c.texte("client").flatMap(Dossier.nonVide)
+        lieu = c.texte("lieu").flatMap(Dossier.nonVide)
+        dates = c.texte("dates").flatMap(Dossier.nonVide)
+        debut = (c.texte("debut") ?? c.texte("date_debut")).flatMap(Dossier.nonVide)
+        fin = c.texte("date_fin").flatMap(Dossier.nonVide)
     }
 
     public var dateDebut: Date? { debut.flatMap(DateEndry.lire) }
+    public var dateFin: Date? { (fin ?? debut).flatMap(DateEndry.lire) }
 }
 
 public enum TypeElement: String, Sendable, Hashable {
@@ -549,8 +603,19 @@ public struct ElementDossier: Decodable, Sendable, Hashable, Identifiable {
     public var statut: String?
     public var echeance: String?
     public var pdf: String?
+    /// v1.1 : numéro lisible (« RE-00036 »). `ref` (« offre:37 ») est une clé interne.
+    public var numero: String?
 
     public var id: String { "\(type.rawValue)-\(ref)" }
+
+    /// Numéro à afficher : `numero` (v1.1), sinon `ref` s'il n'est pas une clé interne.
+    public var numeroAffiche: String? {
+        if let numero, !numero.isEmpty { return numero }
+        return ref.isEmpty || ref.contains(":") ? nil : ref
+    }
+
+    /// Montant à afficher (jamais « CHF 0 »).
+    public var montantAffiche: Double? { montant.flatMap { $0 > 0 ? $0 : nil } }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.champs()
@@ -561,7 +626,8 @@ public struct ElementDossier: Decodable, Sendable, Hashable, Identifiable {
         date = c.texte("date")
         statut = c.texte("statut")
         echeance = c.texte("echeance")
-        pdf = c.texte("pdf")
+        pdf = c.texte("pdf").flatMap { $0.isEmpty ? nil : $0 }
+        numero = c.texte("numero")
     }
 }
 
@@ -584,6 +650,15 @@ public struct Dossier: Decodable, Sendable, Hashable, Identifiable {
     public var referenceDecision: String?
     public var elements: [ElementDossier]
     public var facturesFournisseurs: [FactureFournisseur]
+    public var misAJour: String?
+
+    static func nonVide(_ s: String) -> String? {
+        let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? nil : t
+    }
+
+    public var debut: Date? { dateDebut.flatMap(DateEndry.lire) }
+    public var fin: Date? { (dateFin ?? dateDebut).flatMap(DateEndry.lire) }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.champs()
@@ -601,11 +676,12 @@ public struct Dossier: Decodable, Sendable, Hashable, Identifiable {
         etapeIndex = min(max(index ?? etapeConnue?.index ?? 0, 0), EtapeChantier.allCases.count - 1)
         etapeLibelle = c.texte("etape_libelle") ?? etapeConnue?.libelle ?? etape.capitalized
         statut = c.texte("statut")
-        montant = c.nombre("montant")
-        note = c.texte("note")
-        dateDebut = c.texte("date_debut")
-        dateFin = c.texte("date_fin")
-        dates = c.texte("dates")
+        montant = c.nombre("montant").flatMap { $0 > 0 ? $0 : nil }
+        note = c.texte("note").flatMap(Self.nonVide)
+        dateDebut = c.texte("date_debut").flatMap(Self.nonVide)
+        dateFin = c.texte("date_fin").flatMap(Self.nonVide)
+        dates = c.texte("dates").flatMap(Self.nonVide)
+        misAJour = c.texte("mis_a_jour")
         if let b = c.booleen("decision_en_attente") {
             decisionEnAttente = b
             referenceDecision = nil

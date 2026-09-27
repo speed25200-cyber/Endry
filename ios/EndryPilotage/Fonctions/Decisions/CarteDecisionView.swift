@@ -91,7 +91,7 @@ struct CarteDecisionView: View {
         }
         .sheet(item: $feuille) { mode in
             ConsignesSheet(mode: mode, carte: carte) { texte in
-                await agir(mode == .corriger ? .corriger : .oui, texte)
+                await agir(mode == .corriger ? .corriger : .repondre, texte)
             }
         }
         .onChange(of: enAvant, initial: true) { _, actif in
@@ -169,6 +169,7 @@ struct CarteDecisionView: View {
     private var actions: some View {
         if carte.estQuestion {
             HStack(spacing: Espace.s) {
+                // Une question attend une réponse écrite ou dictée : pas de « Non ».
                 Button {
                     feuille = .repondre
                 } label: {
@@ -176,9 +177,6 @@ struct CarteDecisionView: View {
                 }
                 .buttonStyle(BoutonPrincipal())
                 .accessibilityIdentifier("repondre-\(carte.reference)")
-
-                boutonNon
-                    .frame(maxWidth: 120)
             }
             .disabled(!actionsPossibles || enCours)
         } else {

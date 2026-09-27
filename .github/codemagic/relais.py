@@ -46,7 +46,7 @@ if demande.get("action") in ("lancer", "lancer_et_captures"):
 import time
 commit = demande.get("commit") or os.environ.get("GITHUB_SHA", "")
 builds = (appel(f"/builds?appId={app['_id']}") or {}).get("builds", [])
-if demande.get("action") == "attendre" and commit:
+if demande.get("action") in ("attendre", "attendre_et_captures") and commit:
     # Attend le build Codemagic de ce commit (jusqu'à ~25 min).
     for _ in range(100):
         miens = [b for b in builds if (b.get("commit") or {}).get("hash", "").startswith(commit[:7])]
@@ -132,6 +132,11 @@ def captures(build_id):
 
 if demande.get("action") == "lancer_et_captures" and build_lance:
     captures(build_lance)
+elif demande.get("action") == "attendre_et_captures":
+    du_commit = [b for b in builds if (b.get("commit") or {}).get("hash", "").startswith(commit[:7])
+                 and (b.get("workflowId") or b.get("fileWorkflowId")) == "ios-tests" and b.get("status") == "finished"]
+    if du_commit:
+        captures(du_commit[0]["_id"])
 elif demande.get("action") == "captures":
     cible = demande.get("build") or next((b["_id"] for b in builds if b.get("status") == "finished"
                                           and (b.get("workflowId") or b.get("fileWorkflowId")) == "ios-tests"), None)

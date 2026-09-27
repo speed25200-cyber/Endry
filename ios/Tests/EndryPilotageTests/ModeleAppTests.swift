@@ -33,7 +33,7 @@ final class ModeleAppTests: XCTestCase {
         app.activerDemo()
         app.dicter(pour: Fixtures.dossierDetaille)
         XCTAssertEqual(app.onglet, .saisie)
-        XCTAssertEqual(app.saisie?.texte, "Chantier Famille Rochat — Épalinges (VD) : ")
+        XCTAssertEqual(app.saisie?.texte, "Chantier Gérance Morel SA — Epalinges : ")
     }
 
     func testNotificationOuvreLaCarte() {

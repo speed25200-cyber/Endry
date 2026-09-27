@@ -376,11 +376,14 @@ public struct FactureFournisseur: Decodable, Sendable, Hashable, Identifiable {
     public var objet: String?
     public var statut: String?
     public var joursRestants: Int?
+    /// Téléphone du fournisseur, si le PC le fournit (facultatif, toute version).
+    public var telephone: String?
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.champs()
         numero = c.texte("numero", defaut: "")
         fournisseur = c.texte("fournisseur", defaut: "Fournisseur")
+        telephone = c.texte("telephone") ?? c.texte("fournisseur_telephone")
         id = c.texte("id") ?? "\(fournisseur)-\(numero)"
         montant = c.nombre("montant") ?? 0
         echeance = c.texte("echeance")

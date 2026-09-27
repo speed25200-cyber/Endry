@@ -21,6 +21,8 @@ struct FicheFournisseur: Identifiable, Hashable {
     var aPayer: Double
     var prochaineEcheance: Int?
     var aRefacturer: Double
+    /// Numéro fourni par le PC, sinon celui enregistré sur cet iPhone.
+    var telephone: String? = nil
 
     var id: String { nom }
 }
@@ -57,6 +59,7 @@ enum Annuaire {
         for facture in argent?.payer.factures ?? [] {
             var f = fiches[facture.fournisseur] ?? FicheFournisseur(nom: facture.fournisseur, aPayer: 0, prochaineEcheance: nil, aRefacturer: 0)
             f.aPayer += facture.montant
+            if f.telephone == nil { f.telephone = facture.telephone }
             if let j = facture.joursRestants { f.prochaineEcheance = min(f.prochaineEcheance ?? j, j) }
             fiches[facture.fournisseur] = f
         }
@@ -66,7 +69,32 @@ enum Annuaire {
             f.aRefacturer += achat.montant
             fiches[nom] = f
         }
+        for (nom, fiche) in fiches where fiche.telephone == nil {
+            fiches[nom]?.telephone = CarnetTelephones.numero(de: nom)
+        }
         return fiches.values.sorted { $0.aPayer + $0.aRefacturer > $1.aPayer + $1.aRefacturer }
+    }
+}
+
+/// Numéros de fournisseurs saisis par le patron, gardés sur cet iPhone seulement.
+enum CarnetTelephones {
+    private static let cle = "carnet-telephones-fournisseurs"
+
+    static func numero(de fournisseur: String) -> String? {
+        (UserDefaults.standard.dictionary(forKey: cle) as? [String: String])?[fournisseur]
+    }
+
+    static func enregistrer(_ numero: String, pour fournisseur: String) {
+        var carnet = (UserDefaults.standard.dictionary(forKey: cle) as? [String: String]) ?? [:]
+        let propre = numero.trimmingCharacters(in: .whitespacesAndNewlines)
+        carnet[fournisseur] = propre.isEmpty ? nil : propre
+        UserDefaults.standard.set(carnet, forKey: cle)
+    }
+
+    /// Lien `tel:` (chiffres et « + » seulement).
+    static func lien(_ numero: String) -> URL? {
+        let chiffres = numero.filter { $0.isNumber || $0 == "+" }
+        return chiffres.count >= 6 ? URL(string: "tel:\(chiffres)") : nil
     }
 }
 
@@ -91,6 +119,13 @@ struct EntrepriseView: View {
                         .apparitionEnCascade(index: 0, visible: visible)
                     indicateurs
                         .apparitionEnCascade(index: 1, visible: visible)
+                    if let pilotage = app.pilotage, pilotage.disponible {
+                        VStack(alignment: .leading, spacing: Espace.s) {
+                            EnTeteSection(titre: "Assistant du bureau")
+                            CarteAssistantBureau(pilotage: pilotage)
+                        }
+                        .apparitionEnCascade(index: 2, visible: visible)
+                    }
                     sectionClients
                         .apparitionEnCascade(index: 2, visible: visible)
                     sectionFournisseurs
@@ -110,7 +145,9 @@ struct EntrepriseView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: $appareilsOuverts) { AppareilsView() }
         }
+        .toast(Binding(get: { app.pilotage?.toast }, set: { nouveau in if let p = app.pilotage { p.toast = nouveau } }))
         .task {
+            await app.pilotage?.charger()
             if app.argent?.etat == .initial { await app.argent?.charger() }
             if app.chantiers?.etat == .initial { await app.chantiers?.charger() }
             visible = true
@@ -369,12 +406,42 @@ struct LigneClient: View {
 
 struct CarteFournisseur: View {
     var fiche: FicheFournisseur
+    @State private var saisieNumero = false
+    @State private var numero = ""
+    @State private var numeroLocal: String?
+
+    private var telephone: String? { numeroLocal ?? fiche.telephone }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Espace.s) {
-            Image(systemName: "shippingbox.fill")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(.degradeOr)
+            HStack {
+                Image(systemName: "shippingbox.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.degradeOr)
+                Spacer()
+                if let telephone, let lien = CarnetTelephones.lien(telephone) {
+                    Link(destination: lien) {
+                        Image(systemName: "phone.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.espressoProfond)
+                            .frame(width: 36, height: 36)
+                            .background(.degradeOr, in: Circle())
+                    }
+                    .accessibilityLabel(Text("Appeler \(fiche.nom)"))
+                } else {
+                    Button {
+                        numero = ""
+                        saisieNumero = true
+                    } label: {
+                        Image(systemName: "phone.badge.plus")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.bronze)
+                            .frame(width: 36, height: 36)
+                            .background(Color.surfaceCreuse, in: Circle())
+                    }
+                    .accessibilityLabel(Text("Ajouter le numéro de \(fiche.nom)"))
+                }
+            }
             Text(fiche.nom)
                 .styleTexte(14, relativeTo: .subheadline, graisse: .semibold)
                 .foregroundStyle(Color.encre)
@@ -395,9 +462,20 @@ struct CarteFournisseur: View {
             }
         }
         .padding(Espace.m)
-        .frame(width: 178, height: 168, alignment: .topLeading)
+        .frame(width: 178, height: 176, alignment: .topLeading)
         .surfaceCarte(rayon: 22)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
+        .alert("Numéro de \(fiche.nom)", isPresented: $saisieNumero) {
+            TextField("+41 21 000 00 00", text: $numero)
+                .keyboardType(.phonePad)
+            Button("Enregistrer") {
+                CarnetTelephones.enregistrer(numero, pour: fiche.nom)
+                numeroLocal = CarnetTelephones.numero(de: fiche.nom)
+            }
+            Button("Annuler", role: .cancel) {}
+        } message: {
+            Text("Gardé sur cet iPhone seulement.")
+        }
     }
 }
 

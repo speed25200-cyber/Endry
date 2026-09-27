@@ -4,18 +4,43 @@ import UserNotifications
 
 /// Notifications push : autorisation, enregistrement du jeton APNs auprès du PC, ouverture de la bonne carte.
 ///
-/// Charge utile attendue côté PC : `{"aps": {"alert": {...}, "badge": n}, "reference": "V-XXXX"}`.
+/// Charge utile attendue côté PC (v1.1) :
+/// `{"aps": {"alert": {...}, "badge": n, "thread-id": "<chantier>", "category": "DECISION"}, "reference": "V-XXXX"}`.
+/// Catégories : DECISION (Voir, Oui), DECISION_ENVOI (Voir : l'envoi à un tiers exige le geste dans l'app),
+/// SAISIE_TRAITEE (Voir), INFO.
 final class DelegueApp: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     /// Appelés sur le MainActor par l'app (branchés dans `EndryPilotageApp`).
     var surJetonAPNs: (@MainActor (String) -> Void)?
     var surReference: (@MainActor (String) -> Void)?
     /// Une notification arrive app ouverte : les écrans se rechargent.
     var surNotificationRecue: (@MainActor () -> Void)?
+    /// Action « Oui » d'une notification DECISION.
+    var surOui: (@MainActor (String) -> Void)?
+    /// Saisie traitée sans décision liée : ouvrir l'historique des saisies.
+    var surSaisieTraitee: (@MainActor () -> Void)?
     private var referenceEnAttente: String?
+
+    static let actionVoir = "VOIR"
+    static let actionOui = "OUI"
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        Self.enregistrerCategories()
         return true
+    }
+
+    /// Catégories et actions affichées sur la notification (appui long ou balayage).
+    static func enregistrerCategories() {
+        let voir = UNNotificationAction(identifier: actionVoir, title: "Voir", options: [.foreground])
+        // « Oui » exige un iPhone déverrouillé ; jamais proposé pour un envoi à un tiers.
+        let oui = UNNotificationAction(identifier: actionOui, title: "Oui", options: [.authenticationRequired])
+        let categories: Set<UNNotificationCategory> = [
+            UNNotificationCategory(identifier: CategorieNotification.decision.rawValue, actions: [voir, oui], intentIdentifiers: []),
+            UNNotificationCategory(identifier: CategorieNotification.decisionEnvoi.rawValue, actions: [voir], intentIdentifiers: []),
+            UNNotificationCategory(identifier: CategorieNotification.saisieTraitee.rawValue, actions: [voir], intentIdentifiers: []),
+            UNNotificationCategory(identifier: CategorieNotification.info.rawValue, actions: [], intentIdentifiers: []),
+        ]
+        UNUserNotificationCenter.current().setNotificationCategories(categories)
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
@@ -35,11 +60,20 @@ final class DelegueApp: NSObject, UIApplicationDelegate, UNUserNotificationCente
         return [.banner, .list, .badge]
     }
 
-    /// Toucher la notification : ouvrir la carte correspondante.
+    /// Toucher la notification (ou « Voir ») : ouvrir la carte. « Oui » : accepter sans ouvrir l'app,
+    /// seulement pour une décision DECISION (rien ne part chez un tiers).
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
-        let reference = response.notification.request.content.userInfo["reference"] as? String
+        let charge = ChargeNotification(userInfo: response.notification.request.content.userInfo)
+        let action = response.actionIdentifier
         await MainActor.run {
-            guard let reference else { return }
+            if action == Self.actionOui, charge.ouiAutorise, let reference = charge.reference, let surOui {
+                surOui(reference)
+                return
+            }
+            guard let reference = charge.reference else {
+                if charge.categorie == .saisieTraitee { surSaisieTraitee?() }
+                return
+            }
             if let surReference { surReference(reference) } else { referenceEnAttente = reference }
         }
     }

@@ -231,6 +231,13 @@ public struct ClientAPI: EndryAPI {
         return r
     }
 
+    /// Requête du flux d'événements (`GET /evenements`, Server-Sent Events), avec le jeton de l'appareil.
+    public func requeteFlux() throws(ErreurAPI) -> URLRequest {
+        var r = try construire(.evenements)
+        r.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        return r
+    }
+
     public func envoyer(_ requete: Requete) async throws(ErreurAPI) -> Data {
         let urlRequete = try construire(requete)
         let data: Data

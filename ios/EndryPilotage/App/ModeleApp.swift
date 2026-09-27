@@ -29,11 +29,15 @@ final class ModeleApp {
     private(set) var chantiers: ModeleChantiers?
     private(set) var argent: ModeleArgent?
     private(set) var saisie: ModeleSaisie?
+    /// Pause / reprise de l'assistant du PC (v1.1).
+    private(set) var pilotage: ModelePilotage?
 
     @ObservationIgnored private var jetonAPNsEnAttente: String?
     /// File persistante des saisies faites sans réseau.
     @ObservationIgnored let fileSaisies = FileSaisies.parDefaut()
     @ObservationIgnored let reseau = SurveillanceReseau()
+    /// Mises à jour poussées par le PC (SSE), avec repli sur une interrogation toutes les 60 s.
+    @ObservationIgnored let flux = FluxEvenements()
     @ObservationIgnored private var dernierJetonEnvoye: String?
 
     // MARK: - Assistant vocal
@@ -87,15 +91,20 @@ final class ModeleApp {
         reseau.surRetour = { [weak self] in
             Task { await self?.saisie?.viderFile() }
         }
+        flux.surSujets = { [weak self] sujets in
+            await self?.recharger(sujets)
+        }
     }
 
     /// Recrée les modèles d'écran quand le client API change (connexion, démo, déconnexion).
     func reconstruire() {
+        flux.arreter()
         guard let api = session.api else {
             decisions = nil
             chantiers = nil
             argent = nil
             saisie = nil
+            pilotage = nil
             return
         }
         let cache = session.estDemo ? nil : session.cache
@@ -106,7 +115,11 @@ final class ModeleApp {
         chantiers = ModeleChantiers(api: api, cache: cache, rapport: rapport)
         argent = ModeleArgent(api: api, cache: cache, rapport: rapport)
         saisie = ModeleSaisie(api: api, file: session.estDemo ? FileSaisies(dossier: nil) : fileSaisies, rapport: rapport)
+        let p = ModelePilotage(api: api)
+        p.surChangement = { [weak self] pause in self?.decisions?.appliquerPause(pause) }
+        pilotage = p
         dernierJetonEnvoye = nil
+        reprendreFlux()
         if let jeton = jetonAPNsEnAttente { enregistrerAppareil(jeton) }
     }
 
@@ -189,6 +202,28 @@ final class ModeleApp {
         }
     }
 
+    /// Recharge seulement ce que le PC signale comme modifié.
+    func recharger(_ sujets: Set<SujetMaj>) async {
+        guard session.estConnecte else { return }
+        let d = decisions, c = chantiers, a = argent, s = saisie
+        await withDiscardingTaskGroup { groupe in
+            if sujets.contains(.decisions) { groupe.addTask { await d?.charger() } }
+            if sujets.contains(.chantiers) { groupe.addTask { await c?.charger() } }
+            if sujets.contains(.argent) { groupe.addTask { await a?.charger() } }
+            if sujets.contains(.saisies) { groupe.addTask { await s?.chargerHistorique() } }
+        }
+    }
+
+    /// Flux d'événements : seulement avec un vrai serveur, au premier plan.
+    func reprendreFlux() {
+        guard session.estConnecte, !session.estDemo, let client = session.api as? ClientAPI else { return }
+        flux.demarrer(client: client)
+    }
+
+    func suspendreFlux() {
+        flux.arreter()
+    }
+
     // MARK: - Badge
 
     private func publier(_ accueil: Accueil) {
@@ -203,6 +238,25 @@ final class ModeleApp {
             UIApplication.shared.registerForRemoteNotifications()
         } else {
             _ = await DelegueApp.demanderAutorisation()
+        }
+    }
+
+    /// Action « Oui » d'une notification DECISION (appareil déverrouillé).
+    /// Défense en profondeur : la décision est relue ; un envoi à un tiers ou une question n'est jamais validé
+    /// hors de l'app, la carte est alors simplement ouverte.
+    func accepterDepuisNotification(_ reference: String) async {
+        guard let api = session.api, session.estConnecte else { return }
+        guard let liste = try? await api.decisions(),
+              let carte = liste.decisions.first(where: { $0.reference == reference }),
+              !carte.exigeGlisser, !carte.estQuestion, !(decisions?.enPause ?? false) else {
+            ouvrir(reference: reference)
+            return
+        }
+        do {
+            _ = try await api.agir(.oui, sur: reference)
+            await decisions?.charger()
+        } catch {
+            ouvrir(reference: reference)
         }
     }
 

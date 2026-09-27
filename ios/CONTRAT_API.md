@@ -64,3 +64,9 @@ Erreurs : 401 {erreur: "non_authentifie"|"lien_invalide", message}
 | `POST /assistant/pause`, `/assistant/reprise`, `GET /assistant/etat` | `→ {pause, file: number, derniere_activite}` | Entreprise › Assistant |
 | Push APNs | `aps.alert`, `aps.thread-id` = chantier, `category` = `DECISION`\|`DECISION_ENVOI`\|`SAISIE_TRAITEE`\|`INFO`, `reference` | actions `VOIR`, et `OUI` pour `DECISION` seulement |
 | `POST /voix/session` | `→ {disponible: bool, fournisseur, client_secret, modele, voix, expire, instructions, outils: [...]}` | assistant vocal en direct ; `disponible: false` → moteur local |
+
+### Champ facultatif lu par l'app (toute version)
+
+| Champ | Où | Usage |
+| --- | --- | --- |
+| `telephone` (ou `fournisseur_telephone`) | `payer.factures[]` | bouton « Appeler » sur la fiche fournisseur ; sinon, le patron saisit le numéro, gardé sur l'iPhone |

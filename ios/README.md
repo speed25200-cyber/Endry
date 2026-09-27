@@ -87,9 +87,10 @@ Codemagic n’a pas besoin de fastlane : sa CLI (`app-store-connect`, `xcode-pro
 
 ### À faire une seule fois (vous)
 
-> **Configuration actuelle** : le workflow `ios-testflight` réutilise l'intégration App Store Connect
-> **« PetMind ASC API »** et le certificat de distribution déjà enregistrés dans l'équipe Codemagic (comme Picshop).
-> Les étapes 1 à 3 et le groupe `endry_app_store` ci-dessous ne servent que si Endry doit avoir sa propre clé.
+> **Configuration actuelle** : le workflow `ios-testflight` utilise l’intégration App Store Connect
+> **« PetMind ASC API »** de l’équipe Codemagic et **crée lui-même** le certificat de distribution et les profils
+> (app + widget). Une seule variable à fournir : `CERTIFICATE_PRIVATE_KEY` dans le groupe **`endry_signature`**
+> (point 3 ci-dessous). Les points 1, 2 et le groupe `endry_app_store` ne servent plus.
 
 **1. Clé API App Store Connect** (`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`)
 - [appstoreconnect.apple.com](https://appstoreconnect.apple.com) › **Utilisateurs et accès** › onglet **Intégrations** ›
@@ -106,6 +107,8 @@ ssh-keygen -t rsa -b 2048 -m PEM -f endry_cert_key -q -N ""
 cat endry_cert_key          # tout le contenu → CERTIFICATE_PRIVATE_KEY ; gardez le fichier en lieu sûr
 ```
 Codemagic crée avec elle un certificat « Apple Distribution » s’il n’en trouve pas un correspondant.
+À ajouter dans Codemagic › app Endry › Environment variables › groupe **`endry_signature`**, cochée **Secure**.
+Sous Windows : `ssh-keygen -t rsa -b 2048 -m PEM -f endry_cert_key -q -N '""'` dans PowerShell.
 
 **4. Identifiants dans le portail développeur** — [Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/identifiers/list) :
 - **App Groups** › « + » : `group.com.endrysa.endry`.

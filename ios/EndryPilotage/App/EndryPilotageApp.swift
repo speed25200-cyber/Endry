@@ -33,6 +33,7 @@ struct EndryPilotageApp: App {
                         Task { await modele.apresChargement() }
                     case .active:
                         if modele.session.estConnecte {
+                            modele.reessayerRoutesPC()
                             Task { await modele.verrou.deverrouiller() }
                             Task { await modele.rafraichirTout() }
                             modele.reprendreFlux()

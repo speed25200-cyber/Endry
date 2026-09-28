@@ -428,16 +428,15 @@ final class AssistantVocal {
         if let bureau { etatBureau = await bureau.etat() ?? etatBureau }
     }
 
-    /// Pastille « Claude travaille · 2 en cours » : rafraîchie tant que l'assistant est ouvert.
+    /// Pastille « Claude travaille · 2 en cours » : lue à l'ouverture, puis à chaque événement du PC (SSE).
     private func surveillerBureau() {
-        guard let bureau, veille == nil else { return }
-        veille = Task { [weak self] in
-            while !Task.isCancelled {
-                let etat = await bureau.etat()
-                guard !Task.isCancelled, let self else { return }
-                if let etat { self.etatBureau = etat }
-                try? await Task.sleep(for: .seconds(10))
-            }
-        }
+        guard veille == nil else { return }
+        veille = Task { [weak self] in await self?.rafraichirBureau() }
+    }
+
+    /// Événement du PC (agents, saisies, réponse) : la pastille se met à jour, sans sondage.
+    func rafraichirBureau() async {
+        guard let bureau, let etat = await bureau.etat() else { return }
+        etatBureau = etat
     }
 }

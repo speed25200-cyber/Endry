@@ -115,7 +115,7 @@ final class ModeleSuiviActionsTests: XCTestCase {
         XCTAssertEqual(a.fichiers.count, 1)
         XCTAssertTrue(a.envois.isEmpty)
         XCTAssertEqual(suivi.derniereIssue?.reference, "V-9P1X6D")
-        XCTAssertEqual(suivi.recents().count, 1)
+        XCTAssertEqual(suivi.recents().filter { $0.nature == .decision }.count, 1, "les saisies du PC (GET /saisies) sont suivies à part")
 
         let non = try XCTUnwrap(decisions.cartes.first { $0.reference == "V-5T7B2N" })
         _ = await decisions.agir(.non, sur: non)
@@ -152,5 +152,75 @@ final class ModeleSuiviActionsTests: XCTestCase {
         let relu = ModeleSuiviActions(api: api, fichier: fichier)
         XCTAssertEqual(relu.actions.first?.saisieId, "S-1")
         XCTAssertEqual(relu.actions.first?.titre, "où en est la Villa Morel ?")
+    }
+}
+
+/// Réponses programmées par route, et journal des appels (doublons, repli).
+actor APIProgrammee: EndryAPI {
+    var appels: [String] = []
+    private let reponses: [String: Result<Data, ErreurAPI>]
+
+    init(_ reponses: [String: Result<Data, ErreurAPI>]) { self.reponses = reponses }
+
+    func envoyer(_ requete: Requete) async throws(ErreurAPI) -> Data {
+        appels.append("\(requete.methode.rawValue) \(requete.chemin)")
+        let cle = reponses.keys.first { requete.chemin.hasSuffix($0) }
+        switch cle.flatMap({ reponses[$0] }) {
+        case .success(let data)?: return data
+        case .failure(let erreur)?: throw erreur
+        case nil: throw .serveur(statut: 404, message: nil)
+        }
+    }
+
+    nonisolated func urlAbsolue(_ chemin: String) -> URL? { nil }
+}
+
+final class SuiviV4Tests: XCTestCase {
+    func testRouteAbsenteRetenteeApresCinqMinutes() {
+        let c = CapacitesServeur()
+        let t0 = Date()
+        c.marquerAbsente(hote: "pc", methode: .get, chemin: "/app/api/v1/suivi", le: t0)
+        XCTAssertTrue(c.absente(hote: "pc", methode: .get, chemin: "/app/api/v1/suivi", maintenant: t0.addingTimeInterval(60)))
+        XCTAssertFalse(c.absente(hote: "pc", methode: .get, chemin: "/app/api/v1/suivi", maintenant: t0.addingTimeInterval(301)),
+                       "Après 5 min, la route est redemandée (le PC a pu être mis à jour).")
+    }
+
+    func testReponseAuJournalMarqueFait() {
+        let maintenant = Date()
+        let action = ActionSuivie(id: "S:S-9", nature: .saisie, saisieId: "S-9", titre: "Prépare la commande", geste: "transmis",
+                                  le: maintenant.addingTimeInterval(-10))
+        let horodatage = ISO8601DateFormatter().string(from: maintenant)
+        let reponse = EntreeJournal(id: "J-1", horodatage: horodatage, agent: "achats", type: .reponse,
+                                    titre: "Commande préparée", saisieId: "S-9")
+        let a = RapprochementSuivi.appliquer(journal: [reponse], a: action)
+        XCTAssertEqual(a.etat, .fait)
+        XCTAssertEqual(a.resume, "Commande préparée")
+    }
+
+    func testQuestionJamaisDoubleeSurErreurServeur() async {
+        let api = APIProgrammee(["/agents/achats/question": .failure(.serveur(statut: 500, message: "panne"))])
+        do {
+            _ = try await BureauClaude(api: api).poser("Où en est la commande ?", agentId: "achats")
+            XCTFail("L’erreur doit remonter.")
+        } catch {}
+        let appels = await api.appels
+        XCTAssertEqual(appels.count, 1, "Ni /assistant/question ni /saisie après une erreur autre que 404 : \(appels)")
+    }
+
+    func testEnCoursSansIdentifiantNeRepartPas() async throws {
+        let api = APIProgrammee(["/assistant/question": .success(Data(#"{"statut":"en_cours"}"#.utf8))])
+        let posee = try await BureauClaude(api: api).poser("Traite les mails")
+        guard case .enAttente = posee else { return XCTFail("La question est partie, en attente.") }
+        let appels = await api.appels
+        XCTAssertFalse(appels.contains { $0.hasSuffix("/saisie") }, "Pas de repli /saisie : \(appels)")
+    }
+
+    func testRepliSaisieSeulementSiRoutesAbsentes() async throws {
+        let api = APIProgrammee(["/saisie": .success(Data(#"{"ok":true,"saisie_id":"S-12"}"#.utf8))])
+        let posee = try await BureauClaude(api: api).poser("Où en est la commande ?", agentId: "achats")
+        guard case .enAttente(.saisie(let id, _), _) = posee else { return XCTFail() }
+        XCTAssertEqual(id, "S-12")
+        let appels = await api.appels
+        XCTAssertEqual(appels.filter { $0.hasSuffix("/saisie") }.count, 1)
     }
 }

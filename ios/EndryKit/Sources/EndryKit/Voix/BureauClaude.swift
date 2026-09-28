@@ -275,21 +275,31 @@ public struct BureauClaude: Sendable {
         var requetes: [Requete] = []
         if let agentId { requetes.append(.questionAgent(agentId, question: q, conversation: conversation, contexte: contexte)) }
         requetes.append(.questionClaude(q, agent: agentId, conversation: conversation, contexte: contexte))
+        // Une route qui a reçu la question ne doit jamais être doublée par la suivante : on ne passe à la route
+        // suivante (puis au repli /saisie) que si la précédente n'existe pas (404 / 405).
         for requete in requetes {
-            guard let data = try? await api.envoyer(requete),
-                  var reponse = try? JSONDecoder().decode(ReponseAgent.self, from: data) else { continue }
+            let data: Data
+            do throws(ErreurAPI) {
+                data = try await api.envoyer(requete)
+            } catch .serveur(let statut, _) where statut == 404 || statut == 405 {
+                continue
+            }
+            guard var reponse = try? JSONDecoder().decode(ReponseAgent.self, from: data) else {
+                // Reçue par le PC, réponse illisible : la question est partie, on ne la repose pas.
+                return .enAttente(.saisie(id: nil, texte: q), message: nil)
+            }
             if reponse.agent == nil { reponse.agent = agentId }
             switch reponse.statut {
             case .repondu where reponse.reponse != nil:
                 return .reponse(reponse)
-            case .enCours:
-                if let id = reponse.questionId {
-                    return .enAttente(.question(id: id, agent: reponse.agent), message: reponse.message.flatMap { $0.isEmpty ? nil : $0 })
-                }
             case .erreur:
                 throw .refus(reponse.message ?? "L’agent n’a pas pu répondre.")
             default:
-                continue
+                let message = reponse.message.flatMap { $0.isEmpty ? nil : $0 }
+                if let id = reponse.questionId {
+                    return .enAttente(.question(id: id, agent: reponse.agent), message: message)
+                }
+                return .enAttente(.saisie(id: nil, texte: q), message: message)
             }
         }
         let texte = Self.texteQuestion(q, nomAgent: nomAgent)

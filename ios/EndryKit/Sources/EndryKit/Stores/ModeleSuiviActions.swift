@@ -16,7 +16,8 @@ public final class ModeleSuiviActions {
 
     @ObservationIgnored private let api: any EndryAPI
     @ObservationIgnored private let fichier: URL?
-    @ObservationIgnored private var routePCAbsente = false
+    /// `GET /suivi` a répondu 404/405 à ce moment : retentée après 5 min, ou au retour au premier plan.
+    @ObservationIgnored private var routePCAbsenteLe: Date?
     /// Écritures enchaînées : la dernière version reste sur le disque.
     @ObservationIgnored private var sauvegarde: Task<Void, Never>?
 
@@ -105,22 +106,27 @@ public final class ModeleSuiviActions {
         let avant = Dictionary(uniqueKeysWithValues: actions.map { ($0.id, $0.etat) })
 
         var misAJour = actions
-        if !routePCAbsente {
+        if routePCAbsenteLe.map({ Date().timeIntervalSince($0) >= CapacitesServeur.delaiRetour }) ?? true {
             do throws(ErreurAPI) {
                 let suivis = try await api.suivis(limite: 60)
                 comptesRendusPC = true
+                routePCAbsenteLe = nil
                 for s in suivis { fusionner(s, dans: &misAJour) }
             } catch .serveur(let statut, _) where statut == 404 || statut == 405 {
-                routePCAbsente = true
+                routePCAbsenteLe = Date()
                 comptesRendusPC = false
             } catch {
                 // Réseau : on garde l'état connu.
             }
         }
-        if !comptesRendusPC, let journal = try? await api.journal(limite: 80) {
+        // Le journal complète toute action sans compte rendu du PC (réponses aux questions et aux saisies :
+        // `type: "reponse"`, `saisie_id`), même quand `GET /suivi` existe.
+        if misAJour.contains(where: { $0.source != .pc && !$0.etat.termine }), let journal = try? await api.journal(limite: 80) {
             misAJour = misAJour.map { RapprochementSuivi.appliquer(journal: journal, a: $0) }
         }
-        importer(saisies, dans: &misAJour)
+        // Toujours la liste fraîche des saisies : l'historique passé par l'écran peut être vide ou ancien.
+        let fraiches = (try? await api.saisies()) ?? saisies
+        importer(fraiches.isEmpty ? saisies : fraiches, dans: &misAJour)
 
         actions = misAJour.sorted { $0.le > $1.le }
         majLe = Date()
@@ -136,6 +142,11 @@ public final class ModeleSuiviActions {
     }
 
     public func oublierIssue() { derniereIssue = nil }
+
+    /// Retour au premier plan : les routes du PC marquées absentes sont retentées tout de suite.
+    public func reessayerRoutes() {
+        routePCAbsenteLe = nil
+    }
 
     private func fusionner(_ s: SuiviPC, dans liste: inout [ActionSuivie]) {
         let index = liste.firstIndex { a in

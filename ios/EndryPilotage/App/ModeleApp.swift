@@ -89,8 +89,8 @@ final class ModeleApp {
             repli: { self.moteurLocal() },
             bureau: session.api.map { BureauClaude(api: $0) },
             transmettre: { [weak self] demande in
-                guard let saisie = self?.saisie else { return .refusee("Connectez d’abord l’app au bureau.") }
-                return await saisie.transmettre(demande: demande)
+                guard let self else { return .refusee("Connectez d’abord l’app au bureau.") }
+                return await self.transmettreDemande(demande)
             },
             conversation: conversation
         )
@@ -199,8 +199,8 @@ final class ModeleApp {
         p.surChangement = { [weak self] pause in self?.decisions?.appliquerPause(pause) }
         pilotage = p
         agents = ModeleAgents(api: api) { [weak self] demande in
-            guard let saisie = self?.saisie else { return .refusee("Connectez d’abord l’app au bureau.") }
-            return await saisie.transmettre(demande: demande)
+            guard let self else { return .refusee("Connectez d’abord l’app au bureau.") }
+            return await self.transmettreDemande(demande)
         }
         entretiens = ModeleEntretiens(api: api)
         if session.estOuvrier {
@@ -210,8 +210,8 @@ final class ModeleApp {
             conversation = ModeleConversation(
                 bureau: BureauClaude(api: api),
                 transmettre: { [weak self] demande in
-                    guard let saisie = self?.saisie else { return .refusee("Connectez d’abord l’app au bureau.") }
-                    return await saisie.transmettre(demande: demande)
+                    guard let self else { return .refusee("Connectez d’abord l’app au bureau.") }
+                    return await self.transmettreDemande(demande)
                 },
                 fichier: session.estDemo ? nil : dossier?.appendingPathComponent("conversation.json"))
         }
@@ -398,6 +398,7 @@ final class ModeleApp {
                 // Réponses aux questions posées à l'assistant : `maj saisies`, ou `event: reponse` (v1.6, mode direct).
                 let assistant = assistantActif
                 groupe.addTask { await assistant?.verifierEnAttente() }
+                groupe.addTask { await assistant?.rafraichirBureau() }
                 groupe.addTask { await g?.verifierEnAttente() }
                 let fil = conversation
                 groupe.addTask { await fil?.verifierEnAttente() }
@@ -462,6 +463,24 @@ final class ModeleApp {
         } else {
             _ = await DelegueApp.demanderAutorisation()
         }
+    }
+
+    /// Demande dictée ou écrite (assistant vocal, conversation, fiche d'un agent) : transmise, puis suivie tout de suite
+    /// dans « Fait récemment » avec l'identifiant du PC, jusqu'à son compte rendu.
+    func transmettreDemande(_ demande: String) async -> ModeleSaisie.ResultatDemande {
+        guard let saisie else { return .refusee("Connectez d’abord l’app au bureau.") }
+        let resultat = await saisie.transmettre(demande: demande)
+        if resultat == .transmise {
+            suiviActions?.enregistrer(saisie: saisie.derniereSaisieId, texte: demande)
+            suivreApresGeste()
+        }
+        return resultat
+    }
+
+    /// Retour au premier plan : les routes du PC marquées absentes sont redemandées (le PC a pu être mis à jour).
+    func reessayerRoutesPC() {
+        CapacitesServeur.partage.reinitialiser()
+        suiviActions?.reessayerRoutes()
     }
 
     /// Notification « saisie traitée » sans décision : l'onglet Dicter et son historique (la saisie mise en avant).

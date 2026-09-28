@@ -401,6 +401,9 @@ public final class ModeleSaisie {
 
     /// Demande dictée à l'assistant vocal : envoyée seule, sans toucher à la saisie en cours d'écriture.
     /// Sans réseau, elle rejoint la file et partira au retour du réseau.
+    /// Identifiant de la dernière demande transmise (pour la suivre jusqu'au compte rendu).
+    public private(set) var derniereSaisieId: String?
+
     public enum ResultatDemande: Equatable, Sendable {
         case transmise
         case gardee
@@ -410,8 +413,10 @@ public final class ModeleSaisie {
     public func transmettre(demande: String) async -> ResultatDemande {
         let texteEnvoye = demande.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !texteEnvoye.isEmpty else { return .refusee("La demande est vide.") }
+        derniereSaisieId = nil
         do {
-            _ = try await api.saisie(texte: texteEnvoye, fichiers: [])
+            let reponse = try await api.saisie(texte: texteEnvoye, fichiers: [])
+            derniereSaisieId = reponse.saisieId
             await chargerHistorique()
             return .transmise
         } catch {

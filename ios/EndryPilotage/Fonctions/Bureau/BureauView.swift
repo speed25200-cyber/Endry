@@ -97,13 +97,8 @@ struct SectionBureau: View {
         .navigationDestination(for: AgentPC.self) { agent in
             FicheAgentView(modele: modele, agentId: agent.id)
         }
-        .task {
-            // Rafraîchi tant que la section est visible (le flux SSE du PC complète en direct).
-            while !Task.isCancelled {
-                await modele.charger()
-                try? await Task.sleep(for: .seconds(15))
-            }
-        }
+        // Chargé à l'affichage ; ensuite, ce sont les événements du PC (SSE) qui le tiennent à jour.
+        .task { await modele.charger() }
     }
 }
 

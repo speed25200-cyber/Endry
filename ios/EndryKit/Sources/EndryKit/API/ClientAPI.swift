@@ -73,7 +73,10 @@ public enum ErreurAPI: Error, Equatable, Sendable {
 public final class CapacitesServeur: @unchecked Sendable {
     public static let partage = CapacitesServeur()
     private let verrou = NSLock()
-    private var absentes: Set<String> = []
+    /// Route absente → moment où elle a répondu 404/405. Retentée après `delaiRetour` : le PC a pu être mis à jour
+    /// entre-temps (constat du 28.09 : `GET /suivi` ignoré toute la session après un 404 d'avant sa création).
+    private var absentes: [String: Date] = [:]
+    public static let delaiRetour: TimeInterval = 5 * 60
 
     public init() {}
 
@@ -96,14 +99,21 @@ public final class CapacitesServeur: @unchecked Sendable {
         "\(hote?.lowercased() ?? "")|\(methode.rawValue) \(chemin)"
     }
 
-    public func absente(hote: String?, methode: Requete.Methode, chemin: String) -> Bool {
+    public func absente(hote: String?, methode: Requete.Methode, chemin: String, maintenant: Date = Date()) -> Bool {
         let c = Self.cle(hote: hote, methode: methode, chemin: chemin)
-        return verrou.withLock { absentes.contains(c) }
+        return verrou.withLock {
+            guard let le = absentes[c] else { return false }
+            if maintenant.timeIntervalSince(le) >= Self.delaiRetour {
+                absentes[c] = nil
+                return false
+            }
+            return true
+        }
     }
 
-    public func marquerAbsente(hote: String?, methode: Requete.Methode, chemin: String) {
+    public func marquerAbsente(hote: String?, methode: Requete.Methode, chemin: String, le: Date = Date()) {
         let c = Self.cle(hote: hote, methode: methode, chemin: chemin)
-        _ = verrou.withLock { absentes.insert(c) }
+        verrou.withLock { absentes[c] = le }
     }
 
     public func reinitialiser() {

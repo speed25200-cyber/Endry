@@ -57,6 +57,16 @@ enum ErreurVoix: Error {
 ///
 /// Le moteur temps réel est essayé d'abord (session éphémère demandée au PC, l'app ne détient aucune clé) ;
 /// si le PC répond `disponible: false` ou si la connexion échoue, on bascule sans bruit sur le moteur local.
+/// Réglages de l'assistant vocal.
+enum ReglageVoix {
+    static let cleEnvoiDirect = "voix.envoiDirect"
+    /// Questions et demandes dites à voix haute : envoyées au bureau tout de suite (un instant pour annuler),
+    /// comme dans une conversation ouverte avec l'assistant. Les Oui et les envois à des tiers gardent leur geste.
+    static var envoiDirect: Bool { UserDefaults.standard.object(forKey: cleEnvoiDirect) as? Bool ?? true }
+    /// Délai laissé pour annuler un envoi direct.
+    static let delaiAnnulation: Duration = .milliseconds(1_400)
+}
+
 @MainActor
 @Observable
 final class AssistantVocal {
@@ -76,6 +86,10 @@ final class AssistantVocal {
 
     /// Activité de Claude sur le PC (pastille en haut de l'écran), rafraîchie toutes les 10 s.
     private(set) var etatBureau: EtatBureau?
+    /// Cartes qui partent d'elles-mêmes dans un instant (envoi direct), sauf « Annuler » ou modification.
+    private(set) var envoisAuto: [ExecuteurOutils.Effet] = []
+    /// Fil de la conversation avec le bureau (questions et réponses), le plus récent en dernier.
+    private(set) var fil: [(question: String, reponse: String)] = []
 
     @ObservationIgnored private var moteur: (any MoteurVoix)?
     @ObservationIgnored private let bureau: BureauClaude?
@@ -85,6 +99,10 @@ final class AssistantVocal {
     /// Questions sans réponse après 60 s : revérifiées à chaque événement `maj saisies` du PC.
     @ObservationIgnored private var enAttente: [SuiviQuestion: (question: String, agent: String?)] = [:]
     @ObservationIgnored private var veille: Task<Void, Never>?
+    @ObservationIgnored private var minuteries: [(effet: ExecuteurOutils.Effet, tache: Task<Void, Never>)] = []
+    /// Même conversation pour les questions qui se suivent ; nouvelle après 30 min de silence.
+    @ObservationIgnored private var conversation = UUID().uuidString
+    @ObservationIgnored private var derniereQuestion = Date.distantPast
     @ObservationIgnored private let fabrique: @MainActor () async -> any MoteurVoix
     @ObservationIgnored private let repli: @MainActor () -> any MoteurVoix
 
@@ -126,6 +144,9 @@ final class AssistantVocal {
         veille = nil
         suivis.values.forEach { $0.cancel() }
         suivis.removeAll()
+        minuteries.forEach { $0.tache.cancel() }
+        minuteries.removeAll()
+        envoisAuto.removeAll()
         niveauMicro = 0
         niveauVoix = 0
     }
@@ -143,7 +164,35 @@ final class AssistantVocal {
 
 
     func retirer(_ carte: ExecuteurOutils.Effet) {
+        suspendreEnvoiAuto(carte)
         cartes.removeAll { $0 == carte }
+    }
+
+    /// Le patron touche le texte pour le modifier : il enverra lui-même.
+    func suspendreEnvoiAuto(_ carte: ExecuteurOutils.Effet) {
+        minuteries.filter { $0.effet == carte }.forEach { $0.tache.cancel() }
+        minuteries.removeAll { $0.effet == carte }
+        envoisAuto.removeAll { $0 == carte }
+    }
+
+    /// Envoi direct : la question (ou la demande) part après un court délai, sans autre geste.
+    private func programmerEnvoi(_ effet: ExecuteurOutils.Effet, texte: String) {
+        guard ReglageVoix.envoiDirect, !envoisAuto.contains(effet) else { return }
+        envoisAuto.append(effet)
+        let tache = Task { [weak self] in
+            try? await Task.sleep(for: ReglageVoix.delaiAnnulation)
+            guard !Task.isCancelled, let self, self.envoisAuto.contains(effet), self.cartes.contains(effet) else { return }
+            self.envoisAuto.removeAll { $0 == effet }
+            self.minuteries.removeAll { $0.effet == effet }
+            await self.confirmer(effet, texte: texte)
+        }
+        minuteries.append((effet, tache))
+    }
+
+    /// Derniers échanges, pour que le bureau suive le fil (« et pour la Villa Morel ? »).
+    private var contexte: String? {
+        guard !fil.isEmpty else { return nil }
+        return fil.suffix(3).map { "Q : \($0.question)\nR : \($0.reponse)" }.joined(separator: "\n")
     }
 
     private func lancer(_ m: any MoteurVoix) async throws {
@@ -177,6 +226,11 @@ final class AssistantVocal {
             cartes.removeAll { $0 == effet }
             cartes.insert(effet, at: 0)
             if cartes.count > 3 { cartes.removeLast() }
+            switch effet {
+            case .questionAConfirmer(let question, _, _): programmerEnvoi(effet, texte: question)
+            case .saisieAConfirmer(let texte): programmerEnvoi(effet, texte: texte)
+            default: break
+            }
             if case .questionClaude(let suivi, let question, let agent, let message) = effet {
                 if let message {
                     // Hors horaires : on le dit, on ne sonde pas ; la réponse viendra par notification.
@@ -208,17 +262,23 @@ final class AssistantVocal {
                 return
             }
             switch await transmettre(propre) {
-            case .transmise: await moteur?.signaler("C’est transmis au bureau. L’assistant préparera la suite à son prochain passage.")
+            case .transmise: await moteur?.signaler("Transmis au bureau. Je vous préviens dès que c’est prêt.")
             case .gardee: await moteur?.signaler("Pas de réseau : la demande est gardée et partira toute seule.")
             case .refusee(let raison): await moteur?.signaler("La demande n’est pas partie. \(raison)")
             }
         case .questionAConfirmer(_, let agent, let agentId):
             guard let bureau else { return }
+            if Date().timeIntervalSince(derniereQuestion) > 30 * 60 {
+                conversation = UUID().uuidString
+                fil.removeAll()
+            }
+            derniereQuestion = Date()
             do {
-                let posee = try await bureau.poser(propre, agentId: agentId, nomAgent: agent)
+                let posee = try await bureau.poser(propre, agentId: agentId, nomAgent: agent, conversation: conversation, contexte: contexte)
                 retirer(effet)
                 switch posee {
                 case .reponse(let r):
+                    fil.append((propre, r.reponse ?? ""))
                     let finale = ExecuteurOutils.Effet.reponseClaude(question: propre, reponse: r.reponse ?? "", agent: agent)
                     ajouter(finale)
                     await moteur?.annoncer(question: propre, reponse: r.reponse ?? "", agent: agent)
@@ -281,6 +341,8 @@ final class AssistantVocal {
             if case .questionClaude(let s, _, _, _) = $0 { return s == suivi }
             return false
         }
+        fil.append((question, reponse))
+        if fil.count > 20 { fil.removeFirst(fil.count - 20) }
         ajouter(.reponseClaude(question: question, reponse: reponse, agent: agent))
         await moteur?.annoncer(question: question, reponse: reponse, agent: agent)
         if let bureau { etatBureau = await bureau.etat() ?? etatBureau }

@@ -238,9 +238,12 @@ extension Requete {
         return .init(.get, chemin, parametres: [Parametre("limite", String(limite))])
     }
 
-    public static func questionAgent(_ agent: String, question: String) -> Requete {
+    public static func questionAgent(_ agent: String, question: String, conversation: String? = nil, contexte: String? = nil) -> Requete {
         let id = agent.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? agent
-        return .init(.post, "\(prefixe)/agents/\(id)/question", corps: .json(json(["question": question])), delai: 90)
+        var corps = ["question": question, "mode": "direct"]
+        if let conversation { corps["conversation_id"] = conversation }
+        if let contexte, !contexte.isEmpty { corps["contexte"] = contexte }
+        return .init(.post, "\(prefixe)/agents/\(id)/question", corps: .json(json(corps)), delai: 90)
     }
 
     public static func suiviQuestion(_ id: String) -> Requete {

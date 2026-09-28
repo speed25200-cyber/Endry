@@ -272,6 +272,103 @@
     "heures": "31 h 30",
     "montant": 2047.5,
     "mois": "septembre 2026",
-    "heures_decimal": 31.5
+    "heures_decimal": 31.5,
+    "periode": "2026-09",
+    "tarif": 65.0,
+    "documents": [
+      {
+        "nom": "Relevé secrétariat septembre 2026.pdf",
+        "format": "pdf",
+        "chemin": "/app/doc/fichier/heures-secretariat-2026-09"
+      }
+    ],
+    "mois_disponibles": [
+      "2026-09",
+      "2026-08",
+      "2026-07"
+    ],
+    "lignes": [
+      {
+        "date": "2026-09-02",
+        "libelle": "Tri des e-mails et réponses aux demandes de devis",
+        "heures": 2.5,
+        "categorie": "Courrier et e-mails"
+      },
+      {
+        "date": "2026-09-03",
+        "libelle": "Saisie des factures fournisseurs dans Bexio",
+        "heures": 3.0,
+        "categorie": "Comptabilité"
+      },
+      {
+        "date": "2026-09-05",
+        "libelle": "Offre salle de bains",
+        "heures": 1.5,
+        "client": "Famille Rey",
+        "categorie": "Offres"
+      },
+      {
+        "date": "2026-09-09",
+        "libelle": "Rapprochement bancaire",
+        "heures": 2.0,
+        "categorie": "Comptabilité"
+      },
+      {
+        "date": "2026-09-10",
+        "libelle": "Planification des chantiers de la semaine",
+        "heures": 1.5,
+        "categorie": "Planification"
+      },
+      {
+        "date": "2026-09-12",
+        "libelle": "Offre chaufferie à pellets",
+        "heures": 3.5,
+        "client": "Commune de Moudon",
+        "categorie": "Offres"
+      },
+      {
+        "date": "2026-09-16",
+        "libelle": "Tri des e-mails et appels",
+        "heures": 2.0,
+        "categorie": "Courrier et e-mails"
+      },
+      {
+        "date": "2026-09-18",
+        "libelle": "Facturation des chantiers terminés",
+        "heures": 4.0,
+        "categorie": "Comptabilité"
+      },
+      {
+        "date": "2026-09-19",
+        "libelle": "Commande de matériel",
+        "heures": 1.0,
+        "client": "Gérance Morel SA",
+        "categorie": "Achats"
+      },
+      {
+        "date": "2026-09-23",
+        "libelle": "Tri des e-mails et réponses",
+        "heures": 2.5,
+        "categorie": "Courrier et e-mails"
+      },
+      {
+        "date": "2026-09-24",
+        "libelle": "Paiements fournisseurs préparés",
+        "heures": 2.0,
+        "categorie": "Comptabilité"
+      },
+      {
+        "date": "2026-09-26",
+        "libelle": "Classement des offres signées",
+        "heures": 1.5,
+        "categorie": "Offres"
+      },
+      {
+        "date": "2026-09-27",
+        "libelle": "Préparation TVA du trimestre",
+        "heures": 4.5,
+        "categorie": "Comptabilité"
+      }
+    ]
   }
 }

@@ -8,6 +8,7 @@ struct ArgentView: View {
     var modele: ModeleArgent
     @State private var visible = false
     @State private var clientsDeplies: Set<String> = []
+    @State private var heuresOuvertes: HeuresSecretariat?
 
     var body: some View {
         NavigationStack {
@@ -292,6 +293,13 @@ struct ArgentView: View {
     // MARK: - Secrétariat
 
     private func secretariat(_ h: HeuresSecretariat) -> some View {
+        Button { heuresOuvertes = h } label: { carteSecretariat(h) }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("heures-secretariat")
+            .sheet(item: $heuresOuvertes) { HeuresSecretariatView(heures: $0) }
+    }
+
+    private func carteSecretariat(_ h: HeuresSecretariat) -> some View {
         HStack(alignment: .center, spacing: Espace.m) {
             ZStack {
                 Circle().fill(Color.or.opacity(0.16))
@@ -300,7 +308,7 @@ struct ArgentView: View {
             .frame(width: 48, height: 48)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Heures de secrétariat").styleTexte(15, relativeTo: .subheadline, graisse: .semibold).foregroundStyle(Color.encre)
-                Text(h.mois).styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encrePale)
+                Text(h.lignes.isEmpty ? h.mois : "\(h.mois) · détail, PDF, Excel").styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encrePale)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
@@ -309,6 +317,7 @@ struct ArgentView: View {
                     Text(FormatSuisse.chf(montant)).styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encreDouce).monospacedDigit()
                 }
             }
+            Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(Color.encrePale)
         }
         .padding(Espace.l)
         .surfaceCarte()

@@ -390,3 +390,36 @@ Réponse : `{ok, message, id, decision_reference?}` — `decision_reference` dè
 tard, rattachée au Suivi v1.4 par `saisie_id` = `id`). **Rien ne part au client** avant le Oui du patron sur cette
 décision (glisser pour envoyer). Repli (404) : saisie `[Pour l’agent Offres] Nouvelle offre depuis l’iPhone. …` ou
 `[Pour l’agent Comptabilité] Nouvelle facture depuis l’iPhone. …`. Fixture fictive : `offres-signees.json`.
+
+## v1.6 — heures du secrétariat en détail, assistant en mode direct (à appliquer par le PC)
+
+### Heures du secrétariat
+`GET /heures/secretariat?mois=AAAA-MM` (mois en cours sans paramètre) → même objet que `argent.heures_secretariat`,
+enrichi (tous les champs sont facultatifs ; `/argent` peut déjà les porter) :
+
+```
+{mois: "septembre 2026", periode: "2026-09", heures_decimal, montant?, tarif?,
+ lignes: [{date: AAAA-MM-JJ, libelle, heures, client?, categorie?}],
+ documents: [{nom, format: "pdf"|"xlsx", chemin: "/app/doc/fichier/<id>"}],
+ mois_disponibles: ["2026-09", "2026-08", …]}
+```
+L’app affiche le détail (par travail, jour par jour), ouvre les documents du bureau (PDF, Excel) et produit
+elle-même un tableau Excel (.csv) et un relevé PDF à partir des lignes. Repli (404) : le total seul, et
+« Demander le détail au bureau » (question en lecture seule).
+
+### Assistant en mode direct (comme une conversation ouverte)
+Constat : les questions posées à la voix attendaient le passage de l’assistant (toutes les 20 min). Le patron
+demande que ses questions partent et soient traitées **tout de suite**, comme dans une session Claude ouverte.
+
+- `POST /assistant/question` et `POST /agents/{id}/question` reçoivent `mode: "direct"`, `conversation_id` (même fil
+  pour les questions qui se suivent, nouveau fil après 30 min) et `contexte` (trois derniers échanges).
+- **Mode direct** : le PC lance l’assistant **immédiatement** (session dédiée, **lecture seule** pour une question,
+  outils d’écriture bloqués comme aujourd’hui), sans attendre le passage des 20 min, en gardant le fil de la
+  conversation. Réponse `202 {statut:"en_cours", question_id}` puis, dès que c’est prêt :
+  `event: reponse` `data: {"question_id": "…"}` sur `/evenements` (l’app relit alors `GET /questions/{id}`).
+  Hors horaires, si la direction le souhaite, le mode direct peut rester actif ; sinon `message` explique le délai.
+- Une **demande** dictée (« prépare… ») part en saisie comme aujourd’hui ; en mode direct, le PC la traite aussitôt
+  et consigne le résultat au journal (Suivi v1.4). Elle ne fait jamais partir quoi que ce soit chez un tiers : les
+  envois restent des décisions validées à l’écran.
+- Côté app : ce qui est dit part après un court délai d’annulation (réglage « Envoi direct au bureau », actif par
+  défaut) ; `GET /questions/{id}` chaque seconde pendant 20 s puis toutes les 2 s jusqu’à 3 min.

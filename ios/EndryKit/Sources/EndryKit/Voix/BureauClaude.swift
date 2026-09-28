@@ -253,12 +253,15 @@ public struct BureauClaude: Sendable {
 
     /// Pose la question au domaine (`agentId`), sinon à l'assistant qui choisit, sinon (serveur v1.1) par la saisie.
     /// Le PC l'exécute en lecture seule et répond à son prochain passage.
-    public func poser(_ question: String, agentId: String? = nil, nomAgent: String? = nil) async throws(ErreurAPI) -> QuestionPosee {
+    /// `conversation` : même fil pour les questions qui se suivent (« et pour la Villa Morel ? »), comme un chat ;
+    /// `contexte` : derniers échanges, pour un PC qui ne garde pas le fil lui-même.
+    public func poser(_ question: String, agentId: String? = nil, nomAgent: String? = nil,
+                      conversation: String? = nil, contexte: String? = nil) async throws(ErreurAPI) -> QuestionPosee {
         let q = question.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { throw .refus("La question est vide.") }
         var requetes: [Requete] = []
-        if let agentId { requetes.append(.questionAgent(agentId, question: q)) }
-        requetes.append(.questionClaude(q, agent: agentId))
+        if let agentId { requetes.append(.questionAgent(agentId, question: q, conversation: conversation, contexte: contexte)) }
+        requetes.append(.questionClaude(q, agent: agentId, conversation: conversation, contexte: contexte))
         for requete in requetes {
             guard let data = try? await api.envoyer(requete),
                   var reponse = try? JSONDecoder().decode(ReponseAgent.self, from: data) else { continue }
@@ -283,15 +286,18 @@ public struct BureauClaude: Sendable {
         return .enAttente(.saisie(id: reponse.saisieId, texte: texte), message: nil)
     }
 
-    /// Attend la réponse d'une question v1.2 : `GET /questions/{id}` toutes les 2 s pendant 60 s.
+    /// Attend la réponse d'une question v1.2 : `GET /questions/{id}` chaque seconde pendant 20 s (PC en mode direct),
+    /// puis toutes les 2 s jusqu'à 3 min ; ensuite, l'événement `reponse` du PC ou la notification prennent le relais.
     /// Au-delà (ou pour une question déposée en saisie), on ne sonde plus : `verifier` est rappelé
     /// à chaque événement `maj saisies` du PC. `nil` : pas encore de réponse.
-    public func attendre(_ suivi: SuiviQuestion, delai: Duration = .seconds(60), intervalle: Duration = .seconds(2)) async -> ReponseAgent? {
+    public func attendre(_ suivi: SuiviQuestion, delai: Duration = .seconds(180), intervalle: Duration = .seconds(2),
+                         rapide: Duration = .seconds(20)) async -> ReponseAgent? {
         guard case .question = suivi else { return await verifier(suivi) }
-        let limite = ContinuousClock.now + delai
+        let debut = ContinuousClock.now
+        let limite = debut + delai
         while ContinuousClock.now < limite, !Task.isCancelled {
             if let r = await verifier(suivi) { return r }
-            try? await Task.sleep(for: intervalle)
+            try? await Task.sleep(for: ContinuousClock.now - debut < rapide ? min(.seconds(1), intervalle) : intervalle)
         }
         return nil
     }
@@ -326,9 +332,13 @@ struct ReponseQuestion: Decodable {
 
 extension Requete {
     /// Question à Claude, qui choisit l'agent si `agent` est absent.
-    public static func questionClaude(_ question: String, agent: String? = nil) -> Requete {
-        var corps = ["question": question]
+    /// v1.6 : `mode: "direct"` (traiter tout de suite, comme une session ouverte), `conversation_id`, `contexte`.
+    public static func questionClaude(_ question: String, agent: String? = nil, conversation: String? = nil,
+                                      contexte: String? = nil) -> Requete {
+        var corps = ["question": question, "mode": "direct"]
         if let agent { corps["agent"] = agent }
+        if let conversation { corps["conversation_id"] = conversation }
+        if let contexte, !contexte.isEmpty { corps["contexte"] = contexte }
         return .init(.post, "\(prefixe)/assistant/question", corps: .json(json(corps)), delai: 90)
     }
 }

@@ -71,6 +71,9 @@ public actor APIDemo: EndryAPI {
         }
         if route(.get, "app/api/v1/suivi") != nil { return json(["suivis": comptesRendus()]) }
         if route(.get, "app/api/v1/offres/signees") != nil { return Fixtures.donnees(.offresSignees) }
+        if route(.get, "app/api/v1/heures/secretariat") != nil {
+            return json(Self.objet(.argent)?["heures_secretariat"] as? [String: Any] ?? [:])
+        }
         if route(.get, "app/api/v1/chantiers") != nil {
             let etape = requete.parametres.first { $0.nom == "etape" }?.valeur ?? "tous"
             return filtrerChantiers(etape: etape)

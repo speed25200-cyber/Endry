@@ -34,7 +34,8 @@ final class MoteurLocal: MoteurVoix {
     private var enParole = false
 
     /// Fin de phrase : silence après la dernière parole reconnue.
-    private static let delaiSilence: Duration = .milliseconds(1_600)
+    /// 1 s : assez pour une respiration, assez court pour que la réponse parte aussitôt la phrase finie.
+    private static let delaiSilence: Duration = .milliseconds(1_000)
 
     init(donnees: @escaping @MainActor () -> RepondeurLocal.Donnees,
          cerveau: (any CerveauVocal)? = nil,
@@ -170,6 +171,29 @@ final class MoteurLocal: MoteurVoix {
         surEvenement?(.patron(definitif: question, provisoire: ""))
         surEvenement?(.phase(.reflexion))
 
+        // Envoi direct (réglage par défaut) : ce que l'iPhone sait déjà, il le dit tout de suite ; tout le reste part
+        // aussitôt au bureau, sans passer par le modèle de l'iPhone (plus rapide, et c'est Claude qui a les dossiers).
+        if ReglageVoix.envoiDirect {
+            switch RepondeurLocal.repondre(question, avec: donnees()) {
+            case .dire(let texte, let carte):
+                surEvenement?(.effet(carte))
+                await dire(texte)
+                await terminerTour()
+                return
+            case .demanderClaude(let q):
+                await demanderClaude(q)
+                await terminerTour()
+                return
+            case .transmettre(let demande):
+                surEvenement?(.effet(.saisieAConfirmer(texte: demande)))
+                await dire("J’envoie la demande au bureau.")
+                await terminerTour()
+                return
+            case .etatBureau:
+                break
+            }
+        }
+
         if let cerveau, let reponse = await cerveau.repondre(question, delai: .seconds(20)) {
             for effet in reponse.effets { surEvenement?(.effet(effet)) }
             await dire(reponse.texte)
@@ -208,7 +232,11 @@ final class MoteurLocal: MoteurVoix {
         surEvenement?(.effet(r.effet))
         if case .questionAConfirmer(_, let agent, _) = r.effet {
             let cote = agent.map { ", côté \($0)" } ?? ""
-            await dire("Voici la question pour l’assistant du bureau\(cote). Touchez Envoyer : il répondra à son prochain passage.")
+            if ReglageVoix.envoiDirect {
+                await dire("Je pose la question au bureau\(cote).")
+            } else {
+                await dire("Voici la question pour l’assistant du bureau\(cote). Touchez Envoyer : il répondra à son prochain passage.")
+            }
         } else {
             await dire("Je n’ai pas pu préparer la question.")
         }

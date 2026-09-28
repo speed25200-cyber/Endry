@@ -175,6 +175,20 @@ final class EndryPilotageUITests: XCTestCase {
         capturer(app, "24-offre-preparee")
     }
 
+    /// Heures du secrétariat : détail jour par jour, relevé PDF et tableau Excel.
+    @MainActor
+    func testHeuresSecretariat() {
+        let app = lancer()
+        XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 8))
+        app.buttons["onglet-finances"].tap()
+        let carte = atteindre(app.buttons["heures-secretariat"], dans: app, essais: 14)
+        XCTAssertTrue(carte.waitForExistence(timeout: 8))
+        carte.tap()
+        XCTAssertTrue(app.staticTexts["total-heures-secretariat"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.descendants(matching: .any)["export-excel"].firstMatch.waitForExistence(timeout: 8))
+        capturer(app, "25-heures-secretariat")
+    }
+
     @MainActor
     func testFicheComplete() {
         let app = lancer()
@@ -250,12 +264,11 @@ final class EndryPilotageUITests: XCTestCase {
         ecran.name = "8-apres-envoi"
         ecran.lifetime = .keepAlways
         add(ecran)
-        // Rien ne part sans geste : la question s'affiche d'abord, à confirmer.
-        let confirmer = app.buttons["confirmer-envoi"]
-        XCTAssertTrue(confirmer.waitForExistence(timeout: 10), "La question n’a pas été proposée à la confirmation.")
-        capturer(app, "8a-confirmation")
-        confirmer.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["carte-claude"].firstMatch.waitForExistence(timeout: 10),
+        // Envoi direct (réglage par défaut) : la question s'affiche, puis part d'elle-même au bureau
+        // (un instant pour annuler), comme dans une conversation ouverte.
+        let carte = app.descendants(matching: .any)["carte-confirmation"].firstMatch
+        if carte.waitForExistence(timeout: 5) { capturer(app, "8a-envoi-direct") }
+        XCTAssertTrue(app.descendants(matching: .any)["carte-claude"].firstMatch.waitForExistence(timeout: 15),
                       "La question n’est pas partie chez l’assistant.")
         let reponseClaude = app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "jeudi")).firstMatch
         let claudeRepond = reponseClaude.waitForExistence(timeout: 30)

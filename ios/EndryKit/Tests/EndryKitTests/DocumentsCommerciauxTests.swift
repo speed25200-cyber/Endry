@@ -68,3 +68,29 @@ final class ModeleOffresSigneesTests: XCTestCase {
         XCTAssertTrue(modele.offres.allSatisfy(\.deduite))
     }
 }
+
+final class HeuresSecretariatTests: XCTestCase {
+    func testDetailEtExportExcel() async throws {
+        let h = try await APIDemo(latence: .zero).heuresSecretariat()
+        XCTAssertEqual(h.heures, 31.5, accuracy: 0.001)
+        XCTAssertEqual(h.lignes.count, 13)
+        XCTAssertEqual(h.lignes.reduce(0) { $0 + $1.heures }, h.heures, accuracy: 0.001)
+        XCTAssertEqual(h.parCategorie.first?.categorie, "Comptabilité")
+        XCTAssertEqual(h.documents.first?.format, "pdf")
+        XCTAssertEqual(h.moisDisponibles.first, "2026-09")
+        let csv = String(decoding: h.csv().dropFirst(3), as: UTF8.self)
+        let lignes = csv.components(separatedBy: "\r\n")
+        XCTAssertEqual(lignes.first, "Date;Tâche;Catégorie;Client;Heures")
+        XCTAssertEqual(lignes[1], "02.09.2026;Tri des e-mails et réponses aux demandes de devis;Courrier et e-mails;;2,50")
+        XCTAssertTrue(lignes.contains(";;;Total;31,50"))
+        XCTAssertEqual(Array(h.csv().prefix(3)), [0xEF, 0xBB, 0xBF], "BOM : Excel lit les accents")
+    }
+
+    /// Ancien PC (v1.0 / v1.1) : pas de détail, rien ne casse.
+    func testSansDetail() throws {
+        let h = try JSONDecoder().decode(HeuresSecretariat.self, from: Data(#"{"heures":"12 h 15","mois":"août 2026"}"#.utf8))
+        XCTAssertEqual(h.heures, 12.25, accuracy: 0.001)
+        XCTAssertTrue(h.lignes.isEmpty)
+        XCTAssertTrue(h.documents.isEmpty)
+    }
+}

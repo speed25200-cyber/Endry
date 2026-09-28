@@ -541,13 +541,68 @@ public struct HeuresSecretariat: Decodable, Sendable, Hashable {
     public var heures: Double
     public var montant: Double?
     public var mois: String
+    /// v1.6 : mois au format `AAAA-MM` (pour demander le détail d'un autre mois).
+    public var periode: String?
+    /// v1.6 : détail des heures (date, tâche, durée, client).
+    public var lignes: [LigneHeuresSecretariat]
+    /// v1.6 : documents du bureau (relevé PDF, tableau Excel).
+    public var documents: [DocumentHeures]
+    /// v1.6 : tarif horaire HT appliqué.
+    public var tarif: Double?
+    /// v1.6 : autres mois disponibles (`AAAA-MM`), le plus récent d'abord.
+    public var moisDisponibles: [String]
+
+    public init(heures: Double, montant: Double? = nil, mois: String, periode: String? = nil, lignes: [LigneHeuresSecretariat] = [],
+                documents: [DocumentHeures] = [], tarif: Double? = nil, moisDisponibles: [String] = []) {
+        self.heures = heures
+        self.montant = montant
+        self.mois = mois
+        self.periode = periode
+        self.lignes = lignes
+        self.documents = documents
+        self.tarif = tarif
+        self.moisDisponibles = moisDisponibles
+    }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.champs()
         // v1.1 : `heures_decimal` (nombre) ; v1.0 : `heures` en texte (« 31 h 30 »).
-        heures = c.nombre("heures_decimal") ?? c.texte("heures").flatMap(Self.lireHeures) ?? 0
+        lignes = c.liste("lignes")
+        heures = c.nombre("heures_decimal") ?? c.texte("heures").flatMap(Self.lireHeures) ?? lignes.reduce(0) { $0 + $1.heures }
         montant = c.nombre("montant")
         mois = c.texte("mois", defaut: "")
+        periode = c.texte("periode")
+        documents = c.liste("documents")
+        tarif = c.nombre("tarif")
+        moisDisponibles = c.textes("mois_disponibles")
+    }
+
+    /// Heures par catégorie de travail, la plus lourde d'abord.
+    public var parCategorie: [(categorie: String, heures: Double)] {
+        var ordre: [String] = []
+        var total: [String: Double] = [:]
+        for l in lignes {
+            let cle = l.categorie ?? "Autres"
+            if total[cle] == nil { ordre.append(cle) }
+            total[cle, default: 0] += l.heures
+        }
+        return ordre.map { ($0, total[$0] ?? 0) }.sorted { $0.1 > $1.1 }
+    }
+
+    /// Tableau pour Excel ou Numbers (séparateur « ; », virgule décimale, UTF-8 avec BOM).
+    public func csv() -> Data {
+        func champ(_ s: String) -> String {
+            s.contains(";") || s.contains("\"") || s.contains("\n") ? "\"" + s.replacingOccurrences(of: "\"", with: "\"\"") + "\"" : s
+        }
+        func nombre(_ v: Double) -> String { String(format: "%.2f", v).replacingOccurrences(of: ".", with: ",") }
+        var lignesCSV = ["Date;Tâche;Catégorie;Client;Heures"]
+        for l in lignes {
+            lignesCSV.append([DateEndry.courte(l.date), champ(l.libelle), champ(l.categorie ?? ""), champ(l.client ?? ""), nombre(l.heures)]
+                .joined(separator: ";"))
+        }
+        lignesCSV.append(";;;Total;\(nombre(heures))")
+        if let montant { lignesCSV.append(";;;Montant CHF;\(nombre(montant))") }
+        return Data([0xEF, 0xBB, 0xBF]) + Data(lignesCSV.joined(separator: "\r\n").utf8)
     }
 
     /// « 31 h 30 », « 31h30 », « 31:30 », « 31.5 », « 31,5 h » → 31.5
@@ -560,6 +615,79 @@ public struct HeuresSecretariat: Decodable, Sendable, Hashable {
             return h + m / 60
         }
         return Double(s.replacingOccurrences(of: ",", with: "."))
+    }
+}
+
+/// Une ligne du relevé d'heures du secrétariat (v1.6).
+public struct LigneHeuresSecretariat: Decodable, Sendable, Hashable, Identifiable {
+    public var id: String
+    /// `AAAA-MM-JJ`
+    public var date: String
+    public var libelle: String
+    public var heures: Double
+    public var client: String?
+    public var categorie: String?
+
+    public init(id: String = UUID().uuidString, date: String, libelle: String, heures: Double, client: String? = nil, categorie: String? = nil) {
+        self.id = id
+        self.date = date
+        self.libelle = libelle
+        self.heures = heures
+        self.client = client
+        self.categorie = categorie
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.champs()
+        date = c.texte("date", defaut: "")
+        libelle = c.texte("libelle") ?? c.texte("tache") ?? ""
+        guard !libelle.isEmpty else {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "libellé manquant"))
+        }
+        heures = c.nombre("heures_decimal") ?? c.nombre("heures") ?? c.texte("heures").flatMap(HeuresSecretariat.lireHeures) ?? 0
+        client = c.texte("client")
+        categorie = c.texte("categorie")
+        id = c.texte("id") ?? "\(date)-\(libelle)-\(heures)"
+    }
+}
+
+/// Document du bureau : relevé PDF, tableau Excel.
+public struct DocumentHeures: Decodable, Sendable, Hashable, Identifiable {
+    public var nom: String
+    /// `pdf`, `xlsx`, `csv`…
+    public var format: String
+    /// Chemin `/app/doc/…`
+    public var chemin: String
+
+    public var id: String { chemin }
+
+    public init(nom: String, format: String, chemin: String) {
+        self.nom = nom
+        self.format = format
+        self.chemin = chemin
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.champs()
+        guard let chemin = c.texte("chemin") ?? c.texte("url") else {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "chemin manquant"))
+        }
+        self.chemin = chemin
+        nom = c.texte("nom", defaut: (chemin as NSString).lastPathComponent)
+        format = (c.texte("format") ?? (nom as NSString).pathExtension).lowercased()
+    }
+}
+
+extension Requete {
+    /// v1.6 : détail des heures du secrétariat d'un mois (`AAAA-MM`), le mois en cours sans paramètre.
+    public static func heuresSecretariat(mois: String? = nil) -> Requete {
+        .init(.get, "\(prefixe)/heures/secretariat", parametres: mois.map { [Parametre("mois", $0)] } ?? [], delai: 30)
+    }
+}
+
+extension EndryAPI {
+    public func heuresSecretariat(mois: String? = nil) async throws(ErreurAPI) -> HeuresSecretariat {
+        try await charger(HeuresSecretariat.self, .heuresSecretariat(mois: mois))
     }
 }
 

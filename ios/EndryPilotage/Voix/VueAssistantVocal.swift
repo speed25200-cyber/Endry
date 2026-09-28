@@ -221,7 +221,9 @@ struct VueAssistantVocal: View {
         VStack(spacing: Espace.s) {
             ForEach(assistant?.cartes ?? [], id: \.self) { effet in
                 CarteContexte(effet: effet, retirer: { assistant?.retirer(effet) },
-                              confirmer: { texte in await assistant?.confirmer(effet, texte: texte) })
+                              confirmer: { texte in await assistant?.confirmer(effet, texte: texte) },
+                              envoiAuto: assistant?.envoisAuto.contains(effet) ?? false,
+                              garder: { assistant?.suspendreEnvoiAuto(effet) })
                     .transition(reduireAnimations ? .opacity : .move(edge: .bottom).combined(with: .opacity).combined(with: .scale(scale: 0.94)))
             }
         }
@@ -432,6 +434,9 @@ struct CarteContexte: View {
     var retirer: () -> Void
     /// « Envoyer » / « Transmettre » d'une question ou d'une demande préparée par la voix.
     var confirmer: (String) async -> Void = { _ in }
+    /// Envoi direct en cours (réglage « Envoi direct au bureau »).
+    var envoiAuto = false
+    var garder: () -> Void = {}
 
     var body: some View {
         switch effet {
@@ -477,12 +482,12 @@ struct CarteContexte: View {
         case .questionAConfirmer(let question, let agent, _):
             CarteConfirmation(titre: agent.map { "Question pour l’assistant · \($0)" } ?? "Question pour l’assistant du bureau",
                               texte: question, bouton: "Envoyer",
-                              note: "Lecture seule : l’assistant répond à son prochain passage.",
-                              confirmer: confirmer, annuler: retirer)
+                              note: "Lecture seule : l’assistant répond, il ne fait rien d’autre.",
+                              envoiAuto: envoiAuto, confirmer: confirmer, annuler: retirer, garder: garder)
         case .saisieAConfirmer(let texte):
             CarteConfirmation(titre: "Demande pour le bureau", texte: texte, bouton: "Transmettre",
                               note: "L’assistant prépare ; rien ne part chez un tiers sans votre geste.",
-                              confirmer: confirmer, annuler: retirer)
+                              envoiAuto: envoiAuto, confirmer: confirmer, annuler: retirer, garder: garder)
         case .reponseClaude(let question, let reponse, let agent):
             CarteClaude(question: question, reponse: reponse, agent: agent, retirer: retirer)
         case .ouvrirOutil(let nom, let chantierId):
@@ -591,10 +596,15 @@ struct CarteConfirmation: View {
     var texte: String
     var bouton: String
     var note: String
+    /// Envoi direct en cours : la carte part d'elle-même dans un instant.
+    var envoiAuto = false
     var confirmer: (String) async -> Void
     var annuler: () -> Void
+    /// Le patron modifie le texte : l'envoi direct s'arrête, il enverra lui-même.
+    var garder: () -> Void = {}
     @State private var brouillon = ""
     @State private var enCours = false
+    @State private var progression: CGFloat = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: Espace.s) {
@@ -613,9 +623,26 @@ struct CarteConfirmation: View {
                 .padding(Espace.xs)
                 .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .accessibilityIdentifier("texte-a-confirmer")
-            Text(note)
-                .font(PoliceAssistant.texte(12, relativeTo: .caption))
-                .foregroundStyle(Color.orClair.opacity(0.55))
+            if envoiAuto {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Envoi au bureau…")
+                        .font(PoliceAssistant.texte(12, .semibold, relativeTo: .caption))
+                        .foregroundStyle(Color.or)
+                    GeometryReader { geo in
+                        Capsule().fill(Color.or).frame(width: geo.size.width * progression, height: 3)
+                    }
+                    .frame(height: 3)
+                }
+                .accessibilityIdentifier("envoi-auto")
+                .onAppear {
+                    progression = 0
+                    withAnimation(.linear(duration: 1.4)) { progression = 1 }
+                }
+            } else {
+                Text(note)
+                    .font(PoliceAssistant.texte(12, relativeTo: .caption))
+                    .foregroundStyle(Color.orClair.opacity(0.55))
+            }
             HStack(spacing: Espace.s) {
                 Button("Annuler", action: annuler)
                     .font(PoliceAssistant.texte(15, .medium))
@@ -647,6 +674,9 @@ struct CarteConfirmation: View {
         .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(Color.or.opacity(0.45), lineWidth: 1))
         .onAppear { if brouillon.isEmpty { brouillon = texte } }
+        .onChange(of: brouillon) { ancien, nouveau in
+            if envoiAuto, !ancien.isEmpty, nouveau != texte { garder() }
+        }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("carte-confirmation")
     }

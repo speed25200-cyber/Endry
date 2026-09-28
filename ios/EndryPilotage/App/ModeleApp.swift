@@ -352,8 +352,8 @@ final class ModeleApp {
             if sujets.contains(.argent) { groupe.addTask { await a?.charger() } }
             if sujets.contains(.saisies) { groupe.addTask { await s?.chargerHistorique() } }
             if sujets.contains(.agents) || sujets.contains(.saisies) { groupe.addTask { await g?.charger() } }
-            if sujets.contains(.saisies) {
-                // Réponses aux questions posées à l'assistant (plus de sondage : on attend ce signal du PC).
+            if sujets.contains(.saisies) || sujets.contains(.agents) {
+                // Réponses aux questions posées à l'assistant : `maj saisies`, ou `event: reponse` (v1.6, mode direct).
                 let assistant = assistantActif
                 groupe.addTask { await assistant?.verifierEnAttente() }
                 groupe.addTask { await g?.verifierEnAttente() }

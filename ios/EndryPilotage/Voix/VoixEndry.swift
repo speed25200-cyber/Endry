@@ -36,6 +36,7 @@ enum VoixEndry {
 /// Réglages › Voix d'Endry : choix, essai, et comment installer une voix naturelle.
 struct ReglageVoixEndry: View {
     @AppStorage(VoixEndry.cle) private var choisie = ""
+    @AppStorage(ReglageVoix.cleEnvoiDirect) private var envoiDirect = true
     @State private var options: [VoixEndry.Option] = []
     @State private var synthese = AVSpeechSynthesizer()
 
@@ -56,12 +57,17 @@ struct ReglageVoixEndry: View {
             } label: {
                 Label("Écouter", systemImage: "play.circle")
             }
+            Toggle(isOn: $envoiDirect) {
+                Label("Envoi direct au bureau", systemImage: "paperplane")
+            }
+            .accessibilityIdentifier("envoi-direct")
         } header: {
             Text("Voix d’Endry")
         } footer: {
             Text(VoixEndry.seulementCompactes
                  ? "Seules des voix compactes (robotiques) sont installées. Pour une voix naturelle : Réglages › Accessibilité › Contenu énoncé › Voix › Français, puis téléchargez une voix « Premium » ou « Améliorée ». Elle apparaîtra ici."
                  : "Les voix « Premium » et « Améliorée » sont les plus naturelles. D’autres se téléchargent dans Réglages › Accessibilité › Contenu énoncé › Voix › Français.")
+                + Text("\n\nEnvoi direct : ce que vous dites part aussitôt au bureau, comme dans une conversation (un instant pour annuler). Les Oui et les envois aux clients gardent toujours leur geste à l’écran.")
         }
         .onAppear { options = VoixEndry.options() }
     }

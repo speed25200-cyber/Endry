@@ -3,11 +3,18 @@ import SwiftUI
 
 // MARK: - Photographies de la maison
 
-/// Photos de réalisations Endry SA (propriété de l’entreprise, voir `ios/CREDITS.md`), attribuées de façon stable
-/// aux écrans et aux chantiers.
+/// Photos d'ambiance (voir `ios/CREDITS.md`), attribuées de façon stable aux écrans et aux chantiers.
+/// `PhotoRobinetterie` et `PhotoSalleDeBain` sont des **ambiances illustratives** : tant que la direction n'a pas
+/// confirmé leur origine, elles ne sont pas présentées comme des réalisations d'Endry SA et portent la mention
+/// « Ambiance illustrative » quand elles s'affichent en grand.
 enum PhotosMarque {
     static let accueil = "PhotoRobinetterie"
     static let toutes = ["PhotoChauffageSol", "PhotoReseaux", "PhotoSalleDeBain", "PhotoHydraulique", "PhotoSanitaire", "PhotoRobinetterie"]
+    /// Images d'ambiance dont l'origine n'est pas confirmée : jamais présentées comme des réalisations.
+    static let illustratives: Set<String> = ["PhotoRobinetterie", "PhotoSalleDeBain"]
+    static let mentionIllustrative = "Ambiance illustrative"
+
+    static func estIllustrative(_ nom: String) -> Bool { illustratives.contains(nom) }
 
     /// Même chantier, même photo, à chaque ouverture.
     static func pour(id: String) -> String {
@@ -31,6 +38,8 @@ enum PhotosMarque {
 struct PhotoVivante: View {
     var nom: String
     var ancre: UnitPoint = .center
+    /// Affiche « Ambiance illustrative » sur les images concernées (l'accueil l'écrit dans son en-tête).
+    var mention = true
     @State private var zoom = false
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
@@ -42,12 +51,28 @@ struct PhotoVivante: View {
                 .frame(width: geo.size.width, height: geo.size.height)
                 .scaleEffect(zoom ? 1.16 : 1.05, anchor: ancre)
                 .clipped()
+                .overlay(alignment: .topTrailing) {
+                    if mention && PhotosMarque.estIllustrative(nom) {
+                        MentionIllustrative().padding(Espace.s)
+                    }
+                }
         }
         .onAppear {
             guard !reduireAnimations, !Configuration.testsUI else { return }
             withAnimation(.easeOut(duration: 16)) { zoom = true }
         }
         .accessibilityHidden(true)
+    }
+}
+
+/// « Ambiance illustrative » : discret, lisible sur la photo.
+struct MentionIllustrative: View {
+    var body: some View {
+        Text(PhotosMarque.mentionIllustrative)
+            .font(.caption2)
+            .foregroundStyle(Color.white.opacity(0.8))
+            .shadow(color: .black.opacity(0.6), radius: 2)
+            .accessibilityIdentifier("mention-illustrative")
     }
 }
 

@@ -64,8 +64,9 @@ centrée de largeur lisible. En Split View étroit, l'app reprend la mise en pag
 l'assistant) ; maintenir ⌘ les affiche. La CI capture aussi l'iPad Pro 13 pouces, en portrait et en paysage.
 
 **Identité : la maison Endry SA (style « Galerie »).** Couleurs du logo et du site : brun `#211A13`, crème dorée
-`#F9DBA3`, bronze `#9F722A`, papier `#F6F5F2`. Monogramme EY et logo détourés (`Assets.xcassets`), photos de
-réalisations d'Endry SA en plein écran (`PhotosMarque`, voir `CREDITS.md`). L'écran Aujourd'hui est une photo sous
+`#F9DBA3`, bronze `#9F722A`, papier `#F6F5F2`. Monogramme EY et logo détourés (`Assets.xcassets`), photos
+d'ambiance en plein écran (`PhotosMarque`, voir `CREDITS.md` ; deux d'entre elles portent la mention « Ambiance
+illustrative »). L'écran Aujourd'hui est une photo sous
 une feuille brune ; les décisions sont des cartes papier dans un carrousel, et toucher une carte ouvre sa fiche complète
 (texte intégral, destinataires, contrôle, pièces jointes, chantier lié, tous les gestes). Thème clair : papier et
 encre brune ; choix Système / Clair / Sombre dans Réglages › Affichage. Jetons dans `EndryPilotage/Design/Palette.swift`.
@@ -183,8 +184,8 @@ Toucher court du micro central : dictée d'une saisie terrain. **Toucher long** 
 
 ## Crédits
 
-Images, polices et licences : [`CREDITS.md`](CREDITS.md). Les photos sont des réalisations d'Endry SA, propriété de
-l'entreprise.
+Images, polices et licences : [`CREDITS.md`](CREDITS.md). `PhotoRobinetterie` et `PhotoSalleDeBain` sont des
+ambiances illustratives (origine non confirmée) : elles ne sont pas présentées comme des réalisations d'Endry SA.
 
 ## Sécurité
 

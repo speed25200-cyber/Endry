@@ -1,7 +1,7 @@
 import EndryKit
 import SwiftUI
 
-/// Écran « Aujourd'hui », style Galerie : photo de réalisation Endry en plein écran, logo, salutation,
+/// Écran « Aujourd'hui », style Galerie : photo d’ambiance en plein écran (mention « Ambiance illustrative »), logo, salutation,
 /// puis une feuille brune qui monte avec le carrousel des décisions (cartes papier), l'argent de la semaine
 /// et les chantiers. Toucher une carte ouvre sa fiche complète.
 struct DecisionsView: View {
@@ -114,12 +114,16 @@ struct DecisionsView: View {
 
     private var entete: some View {
         VStack(alignment: .leading, spacing: Espace.xs) {
-            Text((modele.accueil?.date ?? DateEndry.longue(Date())).capitalizedPremiere)
-                .font(Police.etiquette(Echelle.micro))
-                .textCase(.uppercase)
-                .tracking(2.4)
-                .foregroundStyle(Color.or)
-                .apparitionEnCascade(index: 0, visible: visible)
+            HStack(alignment: .firstTextBaseline) {
+                Text((modele.accueil?.date ?? DateEndry.longue(Date())).capitalizedPremiere)
+                    .font(Police.etiquette(Echelle.micro))
+                    .textCase(.uppercase)
+                    .tracking(2.4)
+                    .foregroundStyle(Color.or)
+                Spacer(minLength: Espace.xs)
+                if PhotosMarque.estIllustrative(PhotosMarque.accueil) { MentionIllustrative() }
+            }
+            .apparitionEnCascade(index: 0, visible: visible)
             Text(salutation.debut)
                 .styleTitre(34, relativeTo: .largeTitle, graisse: .medium)
                 .foregroundStyle(Color(hex: 0xF7F2E9))
@@ -305,7 +309,7 @@ private struct PhotoAccueil: View {
 
     var body: some View {
         let y = suivi.y
-        PhotoVivante(nom: PhotosMarque.accueil, ancre: UnitPoint(x: 0.4, y: 0.5))
+        PhotoVivante(nom: PhotosMarque.accueil, ancre: UnitPoint(x: 0.4, y: 0.5), mention: false)
             .frame(height: hauteur + max(0, -y))
             .overlay(VoilePhoto(haut: 0.7, bas: 0.95))
             .offset(y: y > 0 ? -y * 0.35 : 0)
@@ -423,7 +427,7 @@ struct ResumeArgent: View {
     }
 }
 
-/// Chantiers de la semaine : cartes avec la photo de la réalisation ; ouvre le Planning.
+/// Chantiers de la semaine : cartes avec une photo d’ambiance ; ouvre le Planning.
 struct ChantiersSemaine: View {
     var semaine: [Semaine]
     var ouvrir: () -> Void

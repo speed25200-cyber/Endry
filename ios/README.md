@@ -148,7 +148,7 @@ Toucher court du micro central : dictée d'une saisie terrain. **Toucher long** 
   session qui reprend le fil. Consignes « conversation en direct » (phrase courte d'abord, pas de formule creuse,
   une question si c'est ambigu, ne se répète pas après avoir été coupé). Modèle préchargé à chaque ouverture ;
   « Je regarde. » quand un outil prend plus d'une seconde ; on coupe aussi Endry pendant qu'il réfléchit.
-- **Conversation continue** (gratuite, sur l'iPhone, iOS 26 et suivants ; réglage actif par défaut) : le micro reste
+- **Conversation continue** (gratuite, sur l’iPhone, iOS 26 et suivants ; expérimentale, à activer dans Réglages › Voix) : le micro reste
   ouvert pendant qu'Endry parle ; sa voix passe par le même moteur audio que le micro (annulation d'écho du système,
   `CanalAudioTempsReel`), et ce qui reste d'écho est écarté (`Interruption`). Le patron **coupe Endry en parlant**
   (deux vrais mots, ou « stop », « attends », « non ») ; s'il reprend la parole moins de 4 s après le début de la

@@ -316,7 +316,8 @@ nonisolated final class CanalAudioTempsReel: @unchecked Sendable {
         lecteur.play()
     }
 
-    func arreter() {
+    /// `desactiverSession` faux : un autre moteur utilise encore le son (démarrage abandonné).
+    func arreter(desactiverSession: Bool = true) {
         verrou.lock()
         generation += 1
         enAttente = 0
@@ -326,7 +327,9 @@ nonisolated final class CanalAudioTempsReel: @unchecked Sendable {
             moteur.inputNode.removeTap(onBus: 0)
             moteur.stop()
         }
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        if desactiverSession {
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        }
     }
 
     /// Joue un morceau PCM16 24 kHz ; renvoie son niveau (0…1) pour la sphère.

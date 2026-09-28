@@ -99,9 +99,11 @@ enum ReglageVoix {
     static var reponseAuToucher: Bool { UserDefaults.standard.bool(forKey: cleReponseAuToucher) }
 
     static let cleConversationContinue = "voix.conversationContinue"
-    /// Vrai (par défaut) : le micro reste ouvert pendant qu'Endry parle (annulation d'écho) ; on le coupe en parlant,
-    /// comme une vraie conversation. Repli automatique sur le tour à tour si l'iPhone ne le permet pas.
-    static var conversationContinue: Bool { UserDefaults.standard.object(forKey: cleConversationContinue) as? Bool ?? true }
+    /// Vrai : le micro reste ouvert pendant qu'Endry parle (annulation d'écho) ; on le coupe en parlant.
+    /// Expérimental, donc désactivé par défaut : le tour à tour éprouvé reste le mode normal.
+    static var conversationContinue: Bool { UserDefaults.standard.bool(forKey: cleConversationContinueV2) }
+    /// Nouvelle clé : l'ancien réglage (actif par défaut) ne s'applique plus.
+    static let cleConversationContinueV2 = "voix.conversationContinue.v2"
 
     static let cleLectureComplete = "voix.lectureComplete"
     /// Faux (par défaut) : une longue réponse du bureau est dite en résumé, le détail reste à l'écran.

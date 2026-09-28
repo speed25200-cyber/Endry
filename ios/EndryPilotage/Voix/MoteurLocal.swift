@@ -90,7 +90,7 @@ final class MoteurLocal: MoteurVoix {
             return
         }
         guard await MoteurDictee.demanderAutorisations() else { throw ErreurVoix.autorisationRefusee }
-        if ReglageVoix.conversationContinue, await demarrerConversationContinue() {
+        if ReglageVoix.conversationContinue, await demarrerConversationContinueDansLeDelai() {
             try await ecouter()
             return
         }
@@ -98,10 +98,34 @@ final class MoteurLocal: MoteurVoix {
         try await ecouter()
     }
 
+    /// La conversation continue a 4 s pour démarrer ; sinon, le tour à tour éprouvé prend le relais
+    /// (et ce qui démarrerait trop tard est arrêté aussitôt).
+    private func demarrerConversationContinueDansLeDelai() async -> Bool {
+        let unique = ReponseUnique()
+        let resultat: ConversationContinuePrete? = await withCheckedContinuation { suite in
+            Task { @MainActor in
+                let pret = await self.preparerConversationContinue()
+                if !unique.donner(pret, a: suite), let pret {
+                    // Trop tard : le mode classique a pris le relais, on n'y touche pas.
+                    pret.oreille.arreter()
+                    pret.canal.arreter(desactiverSession: false)
+                }
+            }
+            Task {
+                try? await Task.sleep(for: .seconds(4))
+                _ = unique.donner(nil, a: suite)
+            }
+        }
+        guard let resultat else { return false }
+        oreille = resultat.oreille
+        canal = resultat.canal
+        return true
+    }
+
     /// Micro et voix sur le même moteur audio, annulation d'écho : on peut couper Endry en parlant.
-    /// Faux (mode classique tour à tour) si la dictée d'iOS 26 manque ou si l'audio ne démarre pas.
-    private func demarrerConversationContinue() async -> Bool {
-        guard #available(iOS 26.0, *), await TranscripteurAnalyseur.disponible() else { return false }
+    /// `nil` (mode classique tour à tour) si la dictée d'iOS 26 manque ou si l'audio ne démarre pas.
+    private func preparerConversationContinue() async -> ConversationContinuePrete? {
+        guard #available(iOS 26.0, *), await TranscripteurAnalyseur.disponible() else { return nil }
         let ecoute = TranscripteurAnalyseur()
         let audio = CanalAudioTempsReel()
         do {
@@ -121,11 +145,9 @@ final class MoteurLocal: MoteurVoix {
         } catch {
             ecoute.arreter()
             audio.arreter()
-            return false
+            return nil
         }
-        oreille = ecoute
-        canal = audio
-        return true
+        return ConversationContinuePrete(oreille: ecoute, canal: audio)
     }
 
     /// Tout ce que le micro entend (conversation continue) : le tour du patron, ou il coupe Endry.
@@ -565,7 +587,7 @@ final class MoteurLocal: MoteurVoix {
                     await prononcer("Je regarde.", decalage: nil)
                     surEvenement?(.phase(.reflexion))
                 }
-                if attente > 15 {
+                if attente > (cerveau.outilEnCours ? 15 : 8) {
                     // Trop long pour une conversation : on passe la main.
                     lecture.cancel()
                     break
@@ -748,4 +770,27 @@ final class EtatFlux {
     var texte = ""
     var fini = false
     var echec = false
+}
+
+/// Oreille et moteur audio de la conversation continue, démarrés.
+struct ConversationContinuePrete: Sendable {
+    let oreille: any Oreille
+    let canal: CanalAudioTempsReel
+}
+
+/// Première réponse gagnante entre le démarrage et le délai de garde.
+nonisolated final class ReponseUnique: @unchecked Sendable {
+    private let verrou = NSLock()
+    private var donnee = false
+
+    /// Vrai si cette réponse est la première (la suite reprend avec elle).
+    func donner<T>(_ valeur: T, a suite: CheckedContinuation<T, Never>) -> Bool {
+        let premiere = verrou.withLock { () -> Bool in
+            if donnee { return false }
+            donnee = true
+            return true
+        }
+        if premiere { suite.resume(returning: valeur) }
+        return premiere
+    }
 }

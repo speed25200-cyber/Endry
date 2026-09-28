@@ -65,6 +65,8 @@ struct ChantiersView: View {
             }
         }
         .toast(Binding(get: { modele.toast }, set: { modele.toast = $0 }))
+        // Fiche ouverte : le sélecteur Pipeline / Planning s'efface (il chevauchait l'en-tête de la fiche).
+        .onChange(of: chemin.isEmpty, initial: true) { _, vide in app.dossierOuvert = !vide }
         .task {
             if modele.etat == .initial { await modele.charger() }
             visible = true

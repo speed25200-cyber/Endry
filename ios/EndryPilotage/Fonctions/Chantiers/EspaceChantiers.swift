@@ -22,13 +22,17 @@ struct EspaceChantiers: View {
                 .allowsHitTesting(vue == .planning)
                 .accessibilityHidden(vue != .planning)
 
-            SelecteurSegments(options: [
-                OptionSegment(valeur: VueChantiers.pipeline, titre: "Pipeline"),
-                OptionSegment(valeur: VueChantiers.planning, titre: "Planning"),
-            ], selection: $app.vueChantiers)
-            .padding(.trailing, Espace.bord)
-            .padding(.top, Espace.s)
+            if !(vue == .pipeline && app.dossierOuvert) {
+                SelecteurSegments(options: [
+                    OptionSegment(valeur: VueChantiers.pipeline, titre: "Pipeline"),
+                    OptionSegment(valeur: VueChantiers.planning, titre: "Planning"),
+                ], selection: $app.vueChantiers)
+                .padding(.trailing, Espace.bord)
+                .padding(.top, Espace.s)
+                .transition(.opacity)
+            }
         }
         .animation(.endry, value: vue)
+        .animation(.endry, value: app.dossierOuvert)
     }
 }

@@ -143,6 +143,38 @@ final class EndryPilotageUITests: XCTestCase {
         capturer(app, "21-suivi-fiche")
     }
 
+    /// Nouvelle offre depuis Finances : le bureau la prépare, elle attend le Oui (rien ne part au client).
+    @MainActor
+    func testNouvelleOffre() {
+        let app = lancer()
+        XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 8))
+        app.buttons["onglet-finances"].tap()
+        let signees = app.descendants(matching: .any)["offres-signees"].firstMatch
+        atteindre(signees, dans: app)
+        XCTAssertTrue(signees.waitForExistence(timeout: 8))
+        capturer(app, "22-offres-signees")
+        app.swipeDown(velocity: .fast)
+        app.swipeDown(velocity: .fast)
+        let nouvelle = app.buttons["nouveau-offre"]
+        XCTAssertTrue(nouvelle.waitForExistence(timeout: 5))
+        nouvelle.tap()
+        let client = app.textFields["champ-client"]
+        XCTAssertTrue(client.waitForExistence(timeout: 5))
+        client.tap()
+        client.typeText("Mme Gander")
+        let objet = app.textFields["champ-objet"]
+        objet.tap()
+        objet.typeText("Adoucisseur et nourrice")
+        fermerClavier(app)
+        let transmettre = atteindre(app.buttons["transmettre-document"], dans: app)
+        XCTAssertTrue(transmettre.waitForExistence(timeout: 5))
+        capturer(app, "23-nouvelle-offre")
+        transmettre.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["resultat-terrain"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["Voir la décision préparée"].exists)
+        capturer(app, "24-offre-preparee")
+    }
+
     @MainActor
     func testFicheComplete() {
         let app = lancer()

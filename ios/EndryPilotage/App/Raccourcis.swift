@@ -13,8 +13,10 @@ final class DemandesRaccourcis {
     var outil: OutilTerrain?
     var chantier: String?
     var briefingDemande = false
+    /// « Dis Siri, nouvelle offre Endry » : la rédaction s'ouvre, dictée prête.
+    var creation: TypeDemandeDocument?
 
-    var enAttente: Bool { assistantDemande || outil != nil || chantier != nil || briefingDemande }
+    var enAttente: Bool { assistantDemande || outil != nil || chantier != nil || briefingDemande || creation != nil }
 }
 
 // MARK: - Ouvrir l'app sur une fonction
@@ -64,6 +66,30 @@ struct ReleverUnePiece: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult {
         DemandesRaccourcis.partage.outil = .releve
+        return .result()
+    }
+}
+
+struct NouvelleOffre: AppIntent {
+    static let title: LocalizedStringResource = "Nouvelle offre"
+    static let description: IntentDescription? = IntentDescription("Dictez l’offre : l’assistant la prépare dans Bexio, elle attend votre Oui avant de partir.")
+    static let openAppWhenRun = true
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        DemandesRaccourcis.partage.creation = .offre
+        return .result()
+    }
+}
+
+struct NouvelleFacture: AppIntent {
+    static let title: LocalizedStringResource = "Nouvelle facture"
+    static let description: IntentDescription? = IntentDescription("Dictez la facture : l’assistant la prépare dans Bexio, elle attend votre Oui avant de partir.")
+    static let openAppWhenRun = true
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        DemandesRaccourcis.partage.creation = .facture
         return .result()
     }
 }
@@ -243,6 +269,14 @@ struct RaccourcisEndry: AppShortcutsProvider {
             "Bon de livraison \(.applicationName)",
             "Scanner un bon avec \(.applicationName)",
         ], shortTitle: "Bon de livraison", systemImageName: "shippingbox")
+        AppShortcut(intent: NouvelleOffre(), phrases: [
+            "Nouvelle offre \(.applicationName)",
+            "Faire une offre avec \(.applicationName)",
+        ], shortTitle: "Nouvelle offre", systemImageName: "doc.badge.plus")
+        AppShortcut(intent: NouvelleFacture(), phrases: [
+            "Nouvelle facture \(.applicationName)",
+            "Faire une facture avec \(.applicationName)",
+        ], shortTitle: "Nouvelle facture", systemImageName: "doc.text")
         AppShortcut(intent: ReleverUnePiece(), phrases: [
             "Relevé 3D \(.applicationName)",
             "Mesurer une pièce avec \(.applicationName)",

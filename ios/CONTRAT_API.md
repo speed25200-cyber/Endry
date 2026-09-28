@@ -354,3 +354,39 @@ Suivi = {reference: "V-…" | null, saisie_id?: "S-…", titre, genre?, outil?, 
 
 Tant que `GET /suivi` répond 404, l’app rapproche `GET /journal?limite=80` (règles 1 à 3 ci-dessus) et
 `GET /saisies`, et l’indique (« D’après le journal du bureau »). Fixture fictive : `suivi.json`.
+
+## v1.5 — offres signées, nouvelle offre, nouvelle facture (à appliquer par le PC)
+
+### Offres signées reçues
+`GET /offres/signees` → `{offres: [OffreSignee]}` : chaque offre revenue signée (pièce jointe d’un e-mail,
+courrier scanné, validation dans Bexio), repérée par l’assistant du Secrétariat.
+
+```
+OffreSignee = {id, numero, titre?, client, chantier_id?, chantier?, montant?, signee_le?: AAAA-MM-JJ,
+               recue_le?: horodatage, source: "email"|"courrier"|"bexio"|"app", expediteur?,
+               document_signe?: "/app/doc/fichier/<id>", document?: "/app/doc/offre/<id>",
+               suite: "a_planifier"|"planifiee"|"acompte_facture"|"facturee", decision_reference?}
+```
+L’app les classe par `suite` (À planifier d’abord) dans Finances › Offres signées, ouvre le document signé et
+propose « Facturer l’acompte ». Repli (404) : chantiers à l’étape `acceptee` ou `planifie`, signalés comme déduits.
+Le PC passe le chantier à l’étape « acceptée » dès qu’il reconnaît une offre signée, et consigne au journal
+`type: action`, « Offre AN-… signée reçue de <expéditeur> ».
+
+### Nouvelle offre, nouvelle facture (demandées depuis l’iPhone)
+Par `POST /terrain` (même formulaire, même idempotence par `cle`, même file hors ligne que v1.3) :
+
+- **`demande_offre`** — l’assistant (domaine Offres) prépare l’offre **en brouillon dans Bexio**, puis une
+  `Decision` `envoyer_offre` (`envoi_tiers: true`, PDF en pièce, destinataire = e-mail du client) ;
+- **`demande_facture`** — l’assistant (Comptabilité) prépare la facture en brouillon, puis une `Decision`
+  `envoyer_facture` (`envoi_tiers: true`).
+
+```
+donnees = {type: "offre"|"facture", chantier_id?, chantier?, client, client_email?, client_adresse?, objet,
+           lignes: [{designation, quantite?, unite?, prix_unitaire?}],   // sans prix : tarifs du bureau
+           consignes,                                                   // dictée complète, telle quelle
+           validite_jours?, offre_numero?, acompte_pourcent?, delai_paiement_jours?, date}
+```
+Réponse : `{ok, message, id, decision_reference?}` — `decision_reference` dès que le brouillon est prêt (sinon plus
+tard, rattachée au Suivi v1.4 par `saisie_id` = `id`). **Rien ne part au client** avant le Oui du patron sur cette
+décision (glisser pour envoyer). Repli (404) : saisie `[Pour l’agent Offres] Nouvelle offre depuis l’iPhone. …` ou
+`[Pour l’agent Comptabilité] Nouvelle facture depuis l’iPhone. …`. Fixture fictive : `offres-signees.json`.

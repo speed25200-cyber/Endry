@@ -33,6 +33,8 @@ public enum Fixtures {
         case terrainOk = "terrain-ok"
         // v1.4
         case suivi
+        // v1.5
+        case offresSignees = "offres-signees"
     }
 
     public static func donnees(_ nom: Nom) -> Data {

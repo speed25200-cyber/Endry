@@ -70,6 +70,7 @@ public actor APIDemo: EndryAPI {
             return try agir(reference: c[0], action: c[1], corps: requete.corps)
         }
         if route(.get, "app/api/v1/suivi") != nil { return json(["suivis": comptesRendus()]) }
+        if route(.get, "app/api/v1/offres/signees") != nil { return Fixtures.donnees(.offresSignees) }
         if route(.get, "app/api/v1/chantiers") != nil {
             let etape = requete.parametres.first { $0.nom == "etape" }?.valeur ?? "tous"
             return filtrerChantiers(etape: etape)
@@ -325,6 +326,28 @@ public actor APIDemo: EndryAPI {
             reponse["message"] = "Relevé reçu : l’assistant prépare l’offre à partir des mesures."
         case .journee:
             reponse["message"] = "Journée reçue. Merci !"
+        case .demandeOffre, .demandeFacture:
+            // Comme le PC v1.5 : brouillon dans Bexio, puis une décision d'envoi qui attend le geste du patron.
+            let offre = TypeTerrain(rawValue: type) == .demandeOffre
+            let d = (try? JSONSerialization.jsonObject(with: Data(champ("donnees").utf8))) as? [String: Any] ?? [:]
+            let client = (d["client"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "le client"
+            let objet = (d["objet"] as? String) ?? ""
+            let email = (d["client_email"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "client@exemple.ch"
+            let numero = offre ? "AN-\(String(format: "%05d", 31 + terrainRecu.count))" : "RE-\(String(format: "%05d", 416 + terrainRecu.count))"
+            let reference = "V-\(offre ? "OF" : "FA")\(400 + terrainRecu.count)"
+            restantes.insert([
+                "type": "validation", "reference": reference, "genre": offre ? "Offre" : "Facture",
+                "titre": "Envoyer \(offre ? "l’offre" : "la facture") \(numero) à \(client)\(objet.isEmpty ? "" : " — \(objet)")",
+                "motif": "Préparée dans Bexio à votre demande depuis l’iPhone. Relisez avant l’envoi.",
+                "cree": DateEndry.horodatage(Date()), "outil": offre ? "envoyer_offre" : "envoyer_facture", "modifiable": true,
+                "envoi_tiers": true, "destinataires": [email], "objet": "\(offre ? "Offre" : "Facture") \(numero)",
+                "texte": "Bonjour,\n\nVeuillez trouver ci-joint \(offre ? "notre offre" : "notre facture") \(numero).\n\nMeilleures salutations\nEndry SA",
+                "pieces": [["nom": "\(numero).pdf", "url": "/app/doc/\(offre ? "offre" : "facture")/\(numero)"]],
+                "chantier_id": champ("chantier_id").isEmpty ? NSNull() : champ("chantier_id") as Any,
+                "controle": ["ok": true, "resume": "Lignes et client repris de votre demande.", "points_a_verifier": []],
+            ], at: 0)
+            reponse["message"] = "Reçu : \(offre ? "l’offre" : "la facture") \(numero) est prête dans Bexio (brouillon) et attend votre Oui. Rien n’est envoyé sans votre geste."
+            reponse["decision_reference"] = reference
         case nil:
             reponse["message"] = "Reçu au bureau."
         }

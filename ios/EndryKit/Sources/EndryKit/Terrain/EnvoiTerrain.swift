@@ -8,6 +8,9 @@ public enum TypeTerrain: String, Codable, Sendable, CaseIterable {
     case bonLivraison = "bon_livraison"
     case releve
     case journee
+    /// v1.5 : le patron demande une offre ou une facture ; l'assistant la prépare dans Bexio (brouillon + décision).
+    case demandeOffre = "demande_offre"
+    case demandeFacture = "demande_facture"
 
     public var libelle: String {
         switch self {
@@ -15,6 +18,8 @@ public enum TypeTerrain: String, Codable, Sendable, CaseIterable {
         case .bonLivraison: "Bon de livraison"
         case .releve: "Relevé 3D"
         case .journee: "Journée d’équipe"
+        case .demandeOffre: "Nouvelle offre"
+        case .demandeFacture: "Nouvelle facture"
         }
     }
 
@@ -25,6 +30,8 @@ public enum TypeTerrain: String, Codable, Sendable, CaseIterable {
         case .bonLivraison: .achats
         case .releve: .offres
         case .journee: .chantiers
+        case .demandeOffre: .offres
+        case .demandeFacture: .comptabilite
         }
     }
 }

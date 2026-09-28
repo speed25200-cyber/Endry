@@ -49,6 +49,12 @@ final class ModeleApp {
     private(set) var suiviActions: ModeleSuiviActions?
     /// Fiche de suivi ouverte (toucher d'une ligne, notification, Siri).
     var suiviOuvert: String?
+    /// Offres signées reçues par le bureau (v1.5).
+    private(set) var offresSignees: ModeleOffresSignees?
+    /// Nouvelle offre / nouvelle facture en cours de rédaction.
+    var creation: DemandeCreation?
+    /// Un chantier est ouvert dans l'espace Chantiers (le sélecteur Pipeline / Planning s'efface).
+    var dossierOuvert = false
 
     @ObservationIgnored private var jetonAPNsEnAttente: String?
     /// File persistante des saisies faites sans réseau.
@@ -139,6 +145,7 @@ final class ModeleApp {
             entretiens = nil
             equipe = nil
             suiviActions = nil
+            offresSignees = nil
             return
         }
         let cache = session.estDemo ? nil : session.cache
@@ -146,6 +153,7 @@ final class ModeleApp {
         let d = ModeleDecisions(api: api, cache: cache, rapport: rapport)
         d.surAccueil = { [weak self] accueil in self?.publier(accueil) }
         decisions = d
+        offresSignees = session.estOuvrier ? nil : ModeleOffresSignees(api: api)
         if session.estOuvrier {
             suiviActions = nil
         } else {
@@ -316,6 +324,7 @@ final class ModeleApp {
             groupe.addTask { await g?.charger() }
         }
         await suiviActions?.rafraichir(saisies: s?.historique ?? [])
+        await offresSignees?.charger(chantiers: c?.tous ?? [])
         await apresChargement()
     }
 
@@ -353,6 +362,9 @@ final class ModeleApp {
         if !sujets.isDisjoint(with: [.decisions, .saisies, .agents, .suivi]) {
             await suiviActions?.rafraichir(saisies: saisie?.historique ?? [])
         }
+        if !sujets.isDisjoint(with: [.chantiers, .argent]) {
+            await offresSignees?.charger(chantiers: chantiers?.tous ?? [])
+        }
         if sujets.contains(.chantiers) || sujets.contains(.decisions) { await apresChargement() }
     }
 
@@ -367,6 +379,13 @@ final class ModeleApp {
                 if suivi.enAttente.isEmpty { return }
             }
         }
+    }
+
+    /// Nouvelle offre ou facture : le patron décrit, le bureau prépare dans Bexio, le Oui reste au patron.
+    func nouveauDocument(_ type: TypeDemandeDocument, chantier: String? = nil, offre: OffreSignee? = nil) {
+        guard !session.estOuvrier else { return }
+        reglagesPresentes = false
+        creation = DemandeCreation(type: type, chantierId: chantier ?? offre?.chantierId, offre: offre)
     }
 
     func ouvrirSuivi(_ id: String) {

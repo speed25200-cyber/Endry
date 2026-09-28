@@ -95,7 +95,20 @@ extension ModeleApp {
     /// Envoi terrain par la saisie (file hors ligne comprise), avec un message pour le patron.
     func transmettre(_ envoi: EnvoiTerrain) async -> ModeleSaisie.ResultatTerrain {
         guard let saisie else { return .refusee("Connectez d’abord l’app au bureau.") }
-        return await saisie.transmettre(terrain: envoi)
+        let resultat = await saisie.transmettre(terrain: envoi)
+        // Tout envoi entre dans le suivi : le patron voit ce que le bureau en fait.
+        switch resultat {
+        case .transmis(let r):
+            suiviActions?.enregistrer(saisie: r.id, texte: envoi.resume, nature: .terrain, chantierId: envoi.chantierId,
+                                      reponse: r.message, decisionPreparee: r.decisionReference)
+            suivreApresGeste()
+        case .gardee:
+            suiviActions?.enregistrer(saisie: nil, texte: envoi.resume, nature: .terrain, chantierId: envoi.chantierId,
+                                      reponse: "Gardé sur l’iPhone : partira au retour du réseau.")
+        case .refusee:
+            break
+        }
+        return resultat
     }
 }
 

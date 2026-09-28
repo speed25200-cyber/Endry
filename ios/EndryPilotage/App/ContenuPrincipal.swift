@@ -27,6 +27,10 @@ struct ContenuPrincipal: View {
             demandes.briefingDemande = false
             app.briefingPresente = true
         }
+        if let type = demandes.creation {
+            demandes.creation = nil
+            app.nouveauDocument(type)
+        }
     }
 
     var body: some View {
@@ -77,6 +81,9 @@ struct ContenuPrincipal: View {
         }
         .sheet(isPresented: $app.briefingPresente) {
             BriefingView()
+        }
+        .sheet(item: $app.creation) { creation in
+            NouveauDocumentView(creation: creation, dossier: app.dossier(creation.chantierId))
         }
         .sheet(item: Binding(get: { app.suiviOuvert.map(IdentifiantSuivi.init) }, set: { app.suiviOuvert = $0?.id })) { cible in
             if let modele = app.suiviActions { FicheSuiviView(modele: modele, id: cible.id) }

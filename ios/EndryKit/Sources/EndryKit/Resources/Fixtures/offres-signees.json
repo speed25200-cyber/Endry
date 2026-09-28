@@ -1,0 +1,51 @@
+{
+  "offres": [
+    {
+      "id": "offre:41",
+      "numero": "AN-00028",
+      "titre": "Remplacement du boiler 300 L",
+      "client": "M. et Mme Favre",
+      "chantier_id": 24,
+      "chantier": "Le Mont — boiler 300 L",
+      "montant": 7840.0,
+      "signee_le": "2026-09-26",
+      "recue_le": "2026-09-27T08:14:00",
+      "source": "email",
+      "expediteur": "favre.lemont@exemple.ch",
+      "document_signe": "/app/doc/fichier/signee-an-00028",
+      "document": "/app/doc/offre/41",
+      "suite": "a_planifier"
+    },
+    {
+      "id": "offre:39",
+      "numero": "AN-00026",
+      "titre": "PAC air-eau 10 kW",
+      "client": "Gérance Morel SA",
+      "chantier_id": 18,
+      "montant": 38450.0,
+      "signee_le": "2026-09-22",
+      "recue_le": "2026-09-23",
+      "source": "courrier",
+      "document_signe": "/app/doc/fichier/signee-an-00026",
+      "document": "/app/doc/offre/39",
+      "suite": "planifiee",
+      "chantier": "Villa Morel — PAC air-eau 10 kW"
+    },
+    {
+      "id": "offre:35",
+      "numero": "AN-00022",
+      "titre": "Salle de bains complète",
+      "client": "Régie Dubois",
+      "montant": 21980.0,
+      "signee_le": "2026-09-10",
+      "recue_le": "2026-09-10T16:40:00",
+      "source": "email",
+      "expediteur": "gerance@regie-dubois.exemple",
+      "document": "/app/doc/offre/35",
+      "suite": "acompte_facture",
+      "decision_reference": "V-2M8R4T",
+      "chantier_id": 21,
+      "chantier": "Résidence Les Tilleuls — salle de bains étage"
+    }
+  ]
+}

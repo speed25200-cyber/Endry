@@ -21,6 +21,9 @@ struct ArgentView: View {
                     }
                     .padding(.top, Espace.m)
 
+                    // Le patron décrit ; l'assistant prépare dans Bexio ; rien ne part sans son Oui.
+                    RangeeNouveauDocument()
+
                     if modele.horsLigne {
                         BandeauHorsLigne(majLe: modele.majLe)
                     }
@@ -38,6 +41,9 @@ struct ArgentView: View {
                                 BlocMasqueClient(titre: "À payer").apparitionEnCascade(index: 1, visible: visible)
                             } else {
                                 payer(argent.payer).apparitionEnCascade(index: 1, visible: visible)
+                            }
+                            if let signees = app.offresSignees {
+                                SectionOffresSignees(modele: signees).apparitionEnCascade(index: 2, visible: visible)
                             }
                             offres(argent.offres).apparitionEnCascade(index: 2, visible: visible)
                             CarteOffresASuivre(offres: argent.offres.offres).apparitionEnCascade(index: 2, visible: visible)
@@ -62,6 +68,9 @@ struct ArgentView: View {
         .task {
             if modele.etat == .initial { await modele.charger() }
             visible = true
+            if let signees = app.offresSignees, signees.etat == .initial {
+                await signees.charger(chantiers: app.chantiers?.tous ?? [])
+            }
         }
     }
 

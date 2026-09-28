@@ -78,10 +78,12 @@ public final class ModeleSuiviActions {
 
     /// Saisie, question ou envoi terrain transmis (l'identifiant vient du PC quand il le donne).
     public func enregistrer(saisie id: String?, texte: String, nature: NatureSuivi = .saisie, chantierId: String? = nil,
-                            reponse: String? = nil, le: Date = Date()) {
+                            reponse: String? = nil, decisionPreparee: String? = nil, le: Date = Date()) {
         let cle = id.map { "S:" + $0 } ?? "S:" + UUID().uuidString
         var a = ActionSuivie(id: cle, nature: nature, saisieId: id, titre: Self.titreSaisie(texte), geste: "transmis", le: le,
-                             chantierId: chantierId, reponse: reponse)
+                             chantierId: chantierId, reponse: reponse, decisionPreparee: decisionPreparee)
+        // Le bureau a déjà préparé la suite (facture de régie, offre demandée) : elle attend le Oui du patron.
+        if decisionPreparee != nil { a.etat = .fait }
         a.etapes = [EtapeSuivi(id: "geste", le: le, qui: "vous", type: "geste",
                                titre: nature == .question ? "Question posée" : "Transmis au bureau", detail: texte)]
         if let reponse, !reponse.isEmpty {

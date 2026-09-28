@@ -40,6 +40,36 @@ enum ExtractionIA {
         return local
     }
 
+    /// Dictée d'une offre ou d'une facture → client, objet, lignes (prix seulement s'ils sont dits).
+    static func document(_ dictee: String, type: TypeDemandeDocument) async -> DocumentDicte {
+        let local = documentLocal(dictee)
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, *), disponible,
+           let ia = await avecDelai(12, { try await documentIA(dictee, type: type) }) {
+            var r = ia
+            if r.lignes.isEmpty { r.lignes = local.lignes }
+            return r
+        }
+        #endif
+        return local
+    }
+
+    struct DocumentDicte: Sendable {
+        var client = ""
+        var objet = ""
+        var lignes: [LigneDemandee] = []
+    }
+
+    /// Repli sans Apple Intelligence : le matériel et les heures dictés deviennent des lignes.
+    static func documentLocal(_ dictee: String) -> DocumentDicte {
+        let r = AnalyseurRegie.analyser(dictee, moi: "moi")
+        var lignes = r.materiel.map { LigneDemandee(designation: $0.designation, quantite: $0.quantite, unite: $0.unite) }
+        let heures = r.heures.reduce(0) { $0 + $1.heures }
+        if heures > 0 { lignes.append(LigneDemandee(designation: "Main-d’œuvre", quantite: heures, unite: "h")) }
+        if r.deplacement == true { lignes.append(LigneDemandee(designation: "Déplacement", quantite: 1, unite: "forfait")) }
+        return DocumentDicte(objet: r.travaux.trimmingCharacters(in: .whitespacesAndNewlines), lignes: lignes)
+    }
+
     // MARK: - Fusion
 
     /// L'IA comprend mieux la phrase ; l'analyse locale ne rate pas un chiffre. On garde le plus complet.
@@ -129,6 +159,46 @@ enum ExtractionIA {
             return .init(designation: m.designation, quantite: m.quantite, unite: m.unite.isEmpty ? "pce" : m.unite)
         }
         return .init(travaux: r.travaux, heures: heures, materiel: materiel, deplacement: r.deplacement)
+    }
+
+    @available(iOS 26.0, *)
+    @Generable
+    struct DocumentIA {
+        @Guide(description: "Nom du client tel qu’il est dit (« Mme Gander », « Régie Dubois »), vide s’il n’est pas dit")
+        var client: String
+        @Guide(description: "Objet court du document, sans le nom du client (« Remplacement du boiler 300 l »)")
+        var objet: String
+        @Guide(description: "Lignes du document : fournitures, main-d’œuvre, déplacement ; vide si rien de précis n’est dit")
+        var lignes: [LigneIA]
+    }
+
+    @available(iOS 26.0, *)
+    @Generable
+    struct LigneIA {
+        var designation: String
+        @Guide(description: "Quantité, 0 si elle n’est pas dite")
+        var quantite: Double
+        @Guide(description: "Unité : pce, m, h, forfait, kg, l ; vide si inconnue")
+        var unite: String
+        @Guide(description: "Prix unitaire en francs hors taxe seulement s’il est dit explicitement, sinon 0")
+        var prix: Double
+    }
+
+    @available(iOS 26.0, *)
+    private static func documentIA(_ dictee: String, type: TypeDemandeDocument) async throws -> DocumentDicte {
+        let session = LanguageModelSession(instructions: """
+            Tu prépares \(type == .offre ? "une offre" : "une facture") d’une entreprise de sanitaire et chauffage en Suisse romande, \
+            à partir de ce que le patron a dicté. Ne jamais inventer : ni client, ni prix, ni quantité non dits. \
+            Les prix non dits restent à 0 : le bureau appliquera ses tarifs.
+            """)
+        let r = try await session.respond(to: "Dictée : « \(dictee) »", generating: DocumentIA.self).content
+        let lignes = r.lignes.compactMap { l -> LigneDemandee? in
+            let d = l.designation.trimmingCharacters(in: .whitespaces)
+            guard !d.isEmpty else { return nil }
+            return LigneDemandee(designation: d, quantite: l.quantite > 0 ? l.quantite : nil,
+                                 unite: l.unite.isEmpty ? nil : l.unite, prixUnitaire: l.prix > 0 ? l.prix : nil)
+        }
+        return DocumentDicte(client: r.client, objet: r.objet, lignes: lignes)
     }
 
     @available(iOS 26.0, *)

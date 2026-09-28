@@ -80,6 +80,8 @@ struct DossierView: View {
                 RangeeOutilsTerrain(chantierId: dossier.id)
                     .apparitionEnCascade(index: 3, visible: visible)
 
+                RangeeNouveauDocument(chantierId: dossier.id)
+
                 // Ce que vous avez décidé pour ce chantier, et ce que le bureau en a fait.
                 ActiviteChantier(chantierId: dossier.id)
 
@@ -181,12 +183,15 @@ struct LigneElement: View {
                     HStack(spacing: 6) {
                         if let numero = element.numeroAffiche {
                             Text(numero).font(Police.reference(11)).foregroundStyle(Color.encrePale)
+                                .lineLimit(1).fixedSize()
                         }
                         if let statut = element.statut, !statut.isEmpty {
                             Text(statut).styleTexte(12, relativeTo: .caption, graisse: .medium).foregroundStyle(couleurStatut(statut))
+                                .lineLimit(1).fixedSize()
                         }
                         if let echeance = element.echeance, !echeance.isEmpty {
                             Text("éch. \(DateEndry.courte(echeance))").styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encrePale)
+                                .lineLimit(1).minimumScaleFactor(0.8)
                         }
                     }
                 }

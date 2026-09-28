@@ -18,6 +18,8 @@ public actor APIDemo: EndryAPI {
     /// v1.3 : entretiens récurrents et envois terrain reçus.
     private var entretiensDemo: [[String: Any]]
     public private(set) var terrainRecu: [String] = []
+    /// v1.4 : gestes du patron et leur exécution (compte rendu `GET /suivi`).
+    private var gestesDemo: [(decision: [String: Any], action: String, consignes: String?, depot: ContinuousClock.Instant, le: Date)] = []
     private let delaiClaude: Duration
     private let latence: Duration
     /// Tests : fait échouer `POST /actualiser` comme un Bexio indisponible.
@@ -67,6 +69,7 @@ public actor APIDemo: EndryAPI {
         if let c = route(.post, "app/api/v1/decisions/*/*") {
             return try agir(reference: c[0], action: c[1], corps: requete.corps)
         }
+        if route(.get, "app/api/v1/suivi") != nil { return json(["suivis": comptesRendus()]) }
         if route(.get, "app/api/v1/chantiers") != nil {
             let etape = requete.parametres.first { $0.nom == "etape" }?.valeur ?? "tous"
             return filtrerChantiers(etape: etape)
@@ -139,6 +142,7 @@ public actor APIDemo: EndryAPI {
         journalDemo = Self.objet(.journal)?["entrees"] as? [[String: Any]] ?? []
         entretiensDemo = Self.objet(.entretiens)?["entretiens"] as? [[String: Any]] ?? []
         terrainRecu.removeAll()
+        gestesDemo.removeAll()
         journal.removeAll()
     }
 
@@ -170,7 +174,12 @@ public actor APIDemo: EndryAPI {
         if [.corriger, .repondre].contains(actionDecision), (consignes ?? "").isEmpty {
             throw .refus("Indiquez vos consignes.")
         }
-        restantes.remove(at: index)
+        let decision = restantes.remove(at: index)
+        gestesDemo.append((decision, action, consignes, .now, Date()))
+        journalDemo.insert(["id": "J-\(3000 + journalDemo.count)", "horodatage": DateEndry.horodatage(Date()),
+                            "agent": Self.agentDemo(decision), "type": "decision",
+                            "titre": "\(actionDecision == .non ? "Écartée" : actionDecision == .corriger ? "À corriger" : "Validée") par le patron",
+                            "detail": decision["titre"] as? String ?? "", "decision_reference": reference], at: 0)
         let message = switch actionDecision {
         case .repondre: "Réponse transmise à l’assistant."
         case .oui: "Validé. L’assistant s’en occupe."
@@ -178,6 +187,73 @@ public actor APIDemo: EndryAPI {
         case .corriger: "Consignes transmises : une nouvelle version sera proposée."
         }
         return json(["ok": true, "message": message, "decisions_restantes": restantes.count])
+    }
+
+    /// Comme le PC v1.4 : chaque geste a son compte rendu. L'assistant « exécute » après `delaiClaude`.
+    private func comptesRendus() -> [[String: Any]] {
+        var liste: [[String: Any]] = []
+        for (i, g) in gestesDemo.enumerated() {
+            let reference = g.decision["reference"] as? String ?? ""
+            let titre = g.decision["titre"] as? String ?? ""
+            let agent = Self.agentDemo(g.decision)
+            let fini = ContinuousClock.now - g.depot >= delaiClaude
+            let le = DateEndry.horodatage(g.le)
+            let apres = DateEndry.horodatage(g.le.addingTimeInterval(8))
+            var etapes: [[String: Any]] = [["id": "E-\(i)-1", "horodatage": le, "agent": agent, "type": "info",
+                                            "titre": "Pris en charge par l’assistant", "decision_reference": reference]]
+            var suivi: [String: Any] = ["reference": reference, "titre": titre, "genre": g.decision["genre"] ?? "",
+                                        "outil": g.decision["outil"] ?? "", "chantier_id": g.decision["chantier_id"] ?? NSNull(),
+                                        "geste": g.action, "geste_le": le, "agent": agent]
+            switch g.action {
+            case "non":
+                suivi["etat"] = "ecarte"
+                etapes = []
+                suivi["resultat"] = ["resume": "Écartée : rien n’a été fait, rien n’est parti.", "fichiers": [], "envois": []]
+            case "corriger":
+                suivi["etat"] = fini ? "corrige" : "en_cours"
+                etapes.append(["id": "E-\(i)-2", "horodatage": apres, "agent": agent, "type": "info",
+                               "titre": "Consignes reçues : nouvelle version en préparation", "detail": g.consignes ?? ""])
+            default:
+                suivi["etat"] = fini ? "fait" : "en_cours"
+                if fini {
+                    let r = Self.resultatDemo(g.decision)
+                    etapes.append(["id": "E-\(i)-2", "horodatage": apres, "agent": agent, "type": "action", "titre": r.etape])
+                    suivi["resultat"] = ["resume": r.resume, "fichiers": r.fichiers, "envois": r.envois.map {
+                        ["destinataire": $0, "objet": g.decision["objet"] ?? titre, "canal": "email", "horodatage": apres]
+                    }]
+                }
+            }
+            suivi["etapes"] = etapes
+            liste.insert(suivi, at: 0)
+        }
+        return liste
+    }
+
+    static func agentDemo(_ decision: [String: Any]) -> String {
+        switch decision["outil"] as? String ?? "" {
+        case "envoyer_facture", "preparer_paiement": "comptabilite"
+        case "bexio_creer_offre", "envoyer_offre": "offres"
+        case let o where o.contains("commande") || o.contains("materiel"): "achats"
+        default: "secretariat"
+        }
+    }
+
+    static func resultatDemo(_ d: [String: Any]) -> (etape: String, resume: String, fichiers: [[String: Any]], envois: [String]) {
+        let titre = d["titre"] as? String ?? ""
+        let destinataires = d["destinataires"] as? [String] ?? []
+        switch d["outil"] as? String ?? "" {
+        case "mail_repondre", "mail_envoyer", "envoyer_facture", "envoyer_offre":
+            let dest = destinataires.first ?? "le client"
+            return ("E-mail envoyé à \(dest)", "Parti à \(dest). Copie classée dans Bexio.", [], destinataires)
+        case "bexio_creer_offre":
+            return ("Offre créée dans Bexio (brouillon)", "Offre AN-00031 créée dans Bexio, en brouillon : rien n’est envoyé au client.",
+                    [["nom": "Offre AN-00031 Gander.pdf", "emplacement": "Bexio › Offres", "document": "/app/doc/offre/AN-00031"]], [])
+        case "preparer_paiement":
+            return ("Paiement préparé dans Bexio", "Paiement préparé dans Bexio, à signer dans l’e-banking : rien n’est payé.",
+                    [["nom": "Paiement Meier Tobler.xml", "emplacement": "Bureau › 00 À traiter › Paiements"]], [])
+        default:
+            return ("Fait : \(titre)", "Fait : \(titre).", [], [])
+        }
     }
 
     private func enregistrerSaisie(_ corps: Requete.Corps?) -> Data {

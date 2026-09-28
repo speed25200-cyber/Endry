@@ -84,6 +84,8 @@ public final class CapacitesServeur: @unchecked Sendable {
         "/app/api/v1/evenements",
         // v1.3 : terrain, entretiens, suivi des offres, équipe.
         "/app/api/v1/terrain", "/app/api/v1/entretiens", "/app/api/v1/offres/", "/app/api/v1/equipe",
+        // v1.4 : compte rendu de chaque geste.
+        "/app/api/v1/suivi",
     ]
 
     public static func estFacultative(_ chemin: String) -> Bool {

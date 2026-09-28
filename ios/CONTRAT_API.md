@@ -308,3 +308,49 @@ Ce n’est **pas** une relance de facture (celles-ci restent interdites sans dem
 
 Fixtures fictives v1.3 : `entretiens.json`, `equipe-jour.json`, `session-ouvrier.json`, `invitation-equipe.json`,
 `terrain-ok.json` ; l’`APIDemo` implémente tout v1.3 (une régie reçue devient une facture à valider).
+
+## v1.4 — suivi de chaque geste : de la décision au résultat (à appliquer par le PC)
+
+Constat du 28.09.2026 : une commande validée à 09:12 a bien produit un fichier sur le PC, mais l’app n’en montrait
+rien (la décision disparaît de la liste). **Règle** : tout geste du patron — Oui, Non, Corriger, Répondre, saisie,
+question, envoi terrain — a un **compte rendu** que l’app lit et affiche jusqu’au résultat. L’app le montre dans
+« Fait récemment » (Aujourd’hui), dans une fiche de suivi (étapes, fichiers produits, envois à des tiers) et dans
+l’activité du chantier. Aucune route v1.4 n’agit : elles se lisent.
+
+### Ce que le PC doit garantir (même sans la route `/suivi`)
+1. **Chaque étape d’exécution est au journal avec `decision_reference`** (ou `saisie_id`) : prise en charge,
+   résultat (`type: action`), erreur (`type: erreur`). L’app rapproche le journal par ces champs.
+2. **Chaque envoi à un tiers est consigné** : entrée `type: action`, titre « E-mail envoyé à <destinataire> »,
+   `decision_reference` de la décision **qui l’a autorisé**. Un Oui sur une décision `envoi_tiers: false` ne fait
+   **jamais** partir quoi que ce soit chez un tiers ; un envoi lié (remerciement au client, etc.) est sa propre
+   décision `envoi_tiers: true`, validée à part.
+3. **Chaque fichier produit est cité** : `« Nom du fichier.ext »` dans `detail`, précédé de son dossier
+   (`Bureau › 00 À traiter › Commandes › « Commande AN-00024 ….txt »`).
+4. Un Oui exécuté hors horaires ou en file : entrée `type: info` « En file : exécution au prochain passage ».
+
+### Routes
+
+| Route | Réponse |
+| --- | --- |
+| `GET /suivi?limite=50` | `{suivis: [Suivi]}`, le plus récent d’abord (gestes des 30 derniers jours, faits dans l’app, par notification, sur la montre ou au PC) |
+| `GET /suivi/{reference}` | `Suivi` (facultatif : l’app lit la liste) |
+| `POST /decisions/{ref}/{action}` | inchangé ; champ facultatif `suivi: Suivi` dans la réponse |
+
+```
+Suivi = {reference: "V-…" | null, saisie_id?: "S-…", titre, genre?, outil?, chantier_id?,
+         geste: "oui"|"non"|"corriger"|"repondre"|"transmis", geste_le: AAAA-MM-JJTHH:MM:SS,
+         source?: "app"|"notification"|"montre"|"pc",
+         etat: "transmis"|"en_cours"|"fait"|"erreur"|"ecarte"|"corrige",
+         agent?: "secretariat"|"comptabilite"|"offres"|"chantiers"|"achats",
+         etapes: [Entree du journal],                      // mêmes champs que GET /journal
+         resultat?: {resume, fichiers: [{nom, emplacement?, document?: "/app/doc/fichier/<id>"}],
+                     envois: [{destinataire, objet?, canal: "email"|"courrier"|"bexio", horodatage}]},
+         erreur?: string, decision_preparee?: "V-…"}       // nouvelle version après « Corriger », décision issue d’une saisie
+```
+
+- `GET /app/doc/fichier/{id}` → le fichier produit (texte, PDF, tableur), pour l’ouvrir depuis la fiche de suivi.
+- SSE : `event: maj`, `data: {"quoi": "suivi"}` à chaque changement d’état d’un Suivi.
+- Push (facultatif) : catégorie `SUIVI` (`reference`, `etat`), seulement pour `fait` et `erreur`.
+
+Tant que `GET /suivi` répond 404, l’app rapproche `GET /journal?limite=80` (règles 1 à 3 ci-dessus) et
+`GET /saisies`, et l’indique (« D’après le journal du bureau »). Fixture fictive : `suivi.json`.

@@ -80,6 +80,9 @@ struct DossierView: View {
                 RangeeOutilsTerrain(chantierId: dossier.id)
                     .apparitionEnCascade(index: 3, visible: visible)
 
+                // Ce que vous avez décidé pour ce chantier, et ce que le bureau en a fait.
+                ActiviteChantier(chantierId: dossier.id)
+
                 if modele.horsLigne {
                     BandeauHorsLigne(majLe: nil)
                 }

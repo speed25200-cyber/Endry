@@ -170,6 +170,11 @@ struct DecisionsView: View {
                 VueErreur(erreur: erreur) { Task { await modele.charger() } }
             default:
                 decisions
+                if let suiviActions = app.suiviActions {
+                    SectionFaitRecemment(modele: suiviActions)
+                        .padding(.horizontal, Espace.bord)
+                        .transitionDefilement()
+                }
                 CarteBriefing()
                     .padding(.horizontal, Espace.bord)
                     .transitionDefilement()

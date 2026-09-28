@@ -78,6 +78,16 @@ struct ContenuPrincipal: View {
         .sheet(isPresented: $app.briefingPresente) {
             BriefingView()
         }
+        .sheet(item: Binding(get: { app.suiviOuvert.map(IdentifiantSuivi.init) }, set: { app.suiviOuvert = $0?.id })) { cible in
+            if let modele = app.suiviActions { FicheSuiviView(modele: modele, id: cible.id) }
+        }
+        // Une décision aboutit (fait ou erreur) : le patron le voit, même s'il a quitté l'écran.
+        .onChange(of: app.suiviActions?.derniereIssue?.id) { _, id in
+            guard id != nil, let issue = app.suiviActions?.derniereIssue else { return }
+            app.suiviActions?.oublierIssue()
+            app.toast = Toast(issue.etat == .erreur ? "Erreur : \(issue.titre)" : "Fait : \(issue.titre)",
+                              style: issue.etat == .erreur ? .erreur : .succes)
+        }
         .fullScreenCover(item: $app.outilTerrain) { demande in
             // Sans chantier précisé : celui où le patron vient d'arriver (rappel d'arrivée), s'il y en a un.
             let chantier = app.dossier(demande.chantierId ?? ArriveeChantier.chantierRecent())
@@ -156,4 +166,9 @@ struct BanniereConnexionPerdue: View {
         .buttonStyle(.plain)
         .accessibilityIdentifier("banniere-connexion-perdue")
     }
+}
+
+/// Identifiant d'une fiche de suivi présentée en feuille.
+struct IdentifiantSuivi: Identifiable, Hashable {
+    let id: String
 }

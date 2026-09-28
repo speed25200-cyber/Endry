@@ -5,6 +5,8 @@ public enum SujetMaj: String, Sendable, CaseIterable {
     case decisions, chantiers, argent, saisies
     /// v1.2 : état et journal des agents du bureau.
     case agents
+    /// v1.4 : compte rendu d'un geste (`GET /suivi`).
+    case suivi
 }
 
 /// Événement Server-Sent Events complet.

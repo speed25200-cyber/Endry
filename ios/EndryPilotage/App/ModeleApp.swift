@@ -45,6 +45,10 @@ final class ModeleApp {
     private(set) var entretiens: ModeleEntretiens?
     /// Mode équipe (lien d'ouvrier) : chantiers du jour et pointage.
     private(set) var equipe: ModeleEquipe?
+    /// Suivi de chaque geste du patron jusqu'au résultat (« Fait récemment »).
+    private(set) var suiviActions: ModeleSuiviActions?
+    /// Fiche de suivi ouverte (toucher d'une ligne, notification, Siri).
+    var suiviOuvert: String?
 
     @ObservationIgnored private var jetonAPNsEnAttente: String?
     /// File persistante des saisies faites sans réseau.
@@ -53,6 +57,7 @@ final class ModeleApp {
     /// Mises à jour poussées par le PC (SSE), avec repli sur une interrogation toutes les 60 s.
     @ObservationIgnored let flux = FluxEvenements()
     @ObservationIgnored private var dernierJetonEnvoye: String?
+    @ObservationIgnored private var tacheSuivi: Task<Void, Never>?
     /// Assistant vocal ouvert : ses questions en attente sont revérifiées à chaque `maj saisies`.
     @ObservationIgnored weak var assistantActif: AssistantVocal?
 
@@ -133,6 +138,7 @@ final class ModeleApp {
             agents = nil
             entretiens = nil
             equipe = nil
+            suiviActions = nil
             return
         }
         let cache = session.estDemo ? nil : session.cache
@@ -140,6 +146,17 @@ final class ModeleApp {
         let d = ModeleDecisions(api: api, cache: cache, rapport: rapport)
         d.surAccueil = { [weak self] accueil in self?.publier(accueil) }
         decisions = d
+        if session.estOuvrier {
+            suiviActions = nil
+        } else {
+            let dossierSuivi = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            let s = ModeleSuiviActions(api: api, fichier: session.estDemo ? nil : dossierSuivi?.appendingPathComponent("suivi-actions.json"))
+            suiviActions = s
+            d.surGeste = { [weak self] geste, carte, reponse, consignes in
+                s.enregistrer(geste, carte: carte, reponse: reponse, consignes: consignes)
+                self?.suivreApresGeste()
+            }
+        }
         chantiers = ModeleChantiers(api: api, cache: cache, rapport: rapport)
         argent = ModeleArgent(api: api, cache: cache, rapport: rapport)
         saisie = ModeleSaisie(api: api, file: session.estDemo ? FileSaisies(dossier: nil) : fileSaisies, rapport: rapport)
@@ -225,6 +242,9 @@ final class ModeleApp {
         await BriefingMatin.programmer(nil)
         await ArriveeChantier.partage.desactiver()
         BrouillonRegie.effacer()
+        if let dossier = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+            try? FileManager.default.removeItem(at: dossier.appendingPathComponent("suivi-actions.json"))
+        }
         reconstruire()
         DelegueApp.mettreAJourBadge(0)
     }
@@ -295,6 +315,7 @@ final class ModeleApp {
             groupe.addTask { await s?.viderFile() }
             groupe.addTask { await g?.charger() }
         }
+        await suiviActions?.rafraichir(saisies: s?.historique ?? [])
         await apresChargement()
     }
 
@@ -329,7 +350,28 @@ final class ModeleApp {
                 groupe.addTask { await g?.verifierEnAttente() }
             }
         }
+        if !sujets.isDisjoint(with: [.decisions, .saisies, .agents, .suivi]) {
+            await suiviActions?.rafraichir(saisies: saisie?.historique ?? [])
+        }
         if sujets.contains(.chantiers) || sujets.contains(.decisions) { await apresChargement() }
+    }
+
+    /// Après un geste : le compte rendu du bureau est relu à 3 s, 15 s, 45 s puis 2 min (en plus des événements du PC).
+    func suivreApresGeste() {
+        tacheSuivi?.cancel()
+        tacheSuivi = Task { [weak self] in
+            for delai in [3, 12, 30, 75] {
+                try? await Task.sleep(for: .seconds(delai))
+                guard !Task.isCancelled, let self, let suivi = self.suiviActions else { return }
+                await suivi.rafraichir(saisies: self.saisie?.historique ?? [])
+                if suivi.enAttente.isEmpty { return }
+            }
+        }
+    }
+
+    func ouvrirSuivi(_ id: String) {
+        reglagesPresentes = false
+        suiviOuvert = id
     }
 
     /// Flux d'événements : seulement avec un vrai serveur, au premier plan.
@@ -371,8 +413,10 @@ final class ModeleApp {
             return
         }
         do {
-            _ = try await api.agir(.oui, sur: reference)
+            let reponse = try await api.agir(.oui, sur: reference)
+            suiviActions?.enregistrer(.oui, carte: carte, reponse: reponse.message)
             await decisions?.charger()
+            suivreApresGeste()
         } catch {
             ouvrir(reference: reference)
         }

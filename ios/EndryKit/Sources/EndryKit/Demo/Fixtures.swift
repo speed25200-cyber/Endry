@@ -31,6 +31,8 @@ public enum Fixtures {
         case sessionOuvrier = "session-ouvrier"
         case invitationEquipe = "invitation-equipe"
         case terrainOk = "terrain-ok"
+        // v1.4
+        case suivi
     }
 
     public static func donnees(_ nom: Nom) -> Data {

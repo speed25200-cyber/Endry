@@ -118,6 +118,31 @@ final class EndryPilotageUITests: XCTestCase {
         XCTAssertTrue(app.buttons["apercu-V-2M8R4T"].waitForNonExistence(timeout: 5))
     }
 
+    /// Après un Oui, rien ne disparaît sans trace : « Fait récemment » montre le résultat du bureau.
+    @MainActor
+    func testSuiviApresOui() {
+        let app = lancer()
+        XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 5))
+        let oui = amener(app.buttons["oui-V-9P1X6D"], dans: app)
+        XCTAssertTrue(oui.waitForExistence(timeout: 3))
+        oui.tap()
+        XCTAssertTrue(oui.waitForNonExistence(timeout: 5))
+
+        let ligne = app.buttons["suivi-V-9P1X6D"]
+        atteindre(ligne, dans: app)
+        XCTAssertTrue(ligne.waitForExistence(timeout: 8))
+        sleep(4)
+        capturer(app, "20-fait-recemment")
+        ligne.tap()
+        let etat = app.staticTexts["suivi-etat"]
+        XCTAssertTrue(etat.waitForExistence(timeout: 5))
+        let fait = NSPredicate(format: "label == %@", "Fait")
+        expectation(for: fait, evaluatedWith: etat)
+        waitForExpectations(timeout: 20)
+        XCTAssertTrue(app.descendants(matching: .any)["suivi-aucun-envoi"].firstMatch.exists)
+        capturer(app, "21-suivi-fiche")
+    }
+
     @MainActor
     func testFicheComplete() {
         let app = lancer()

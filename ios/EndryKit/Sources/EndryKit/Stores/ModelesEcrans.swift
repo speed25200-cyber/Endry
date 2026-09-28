@@ -46,6 +46,8 @@ public final class ModeleDecisions {
     @ObservationIgnored private let cache: CacheHorsLigne?
     @ObservationIgnored private let rapport: RapportErreur?
     @ObservationIgnored public var surAccueil: (@MainActor (Accueil) -> Void)?
+    /// Geste accepté par le PC (Oui, Non, Corriger, Répondre) : il entre dans le suivi, rien ne disparaît sans trace.
+    @ObservationIgnored public var surGeste: (@MainActor (ActionDecision, Carte, String?, String?) -> Void)?
 
     public init(api: any EndryAPI, cache: CacheHorsLigne? = nil, rapport: RapportErreur? = nil) {
         self.api = api
@@ -107,7 +109,9 @@ public final class ModeleDecisions {
             let reponse = try await api.agir(action, sur: carte.reference, consignes: texte)
             cartes.removeAll { $0.reference == carte.reference }
             accueil?.decisions = cartes
-            toast = Toast(reponse.message, style: action == .non ? .info : .succes)
+            surGeste?(action, carte, reponse.message, texte)
+            toast = Toast(action == .non ? reponse.message : reponse.message + " Suivi dans « Fait récemment ».",
+                          style: action == .non ? .info : .succes)
             if let accueil { surAccueil?(accueil) }
             return true
         } catch .delaiDepasse {
@@ -116,7 +120,9 @@ public final class ModeleDecisions {
                                          : "Le PC met plus de temps que prévu : vérifiez dans un instant.", style: .info)
             try? await Task.sleep(for: .seconds(2))
             await charger()
-            return !cartes.contains { $0.reference == carte.reference }
+            let traitee = !cartes.contains { $0.reference == carte.reference }
+            if traitee { surGeste?(action, carte, nil, texte) }
+            return traitee
         } catch {
             rapport?(error)
             toast = Toast(error.message, style: .erreur)

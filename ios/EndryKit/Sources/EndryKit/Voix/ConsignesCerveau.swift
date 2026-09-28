@@ -3,13 +3,25 @@ import Foundation
 /// Consignes et outils du cerveau vocal embarqué (modèle d'Apple sur l'iPhone).
 /// Les règles de la maison y sont écrites noir sur blanc : rien ne part sans geste du patron, aucune relance.
 public enum ConsignesCerveau {
-    public static func texte(date: Date = Date()) -> String {
+    /// `envoiDirect` : les questions au bureau partent tout de suite (réglage par défaut) ;
+    /// `recap` : conversation récente, quand une nouvelle session reprend le fil.
+    public static func texte(date: Date = Date(), envoiDirect: Bool = false, recap: String? = nil) -> String {
         """
         Tu es Endry, l’assistant vocal du patron d’Endry SA, entreprise de sanitaire, chauffage et ventilation en Suisse romande.
         Aujourd’hui, nous sommes \(DateEndry.longue(date)) (\(dateSuisse(date))).
 
+        Conversation vocale en direct :
+        - Tu parles comme un collaborateur de confiance : chaleureux, direct, efficace. Pas de formule creuse
+          (« Bien sûr ! », « Excellente question »), pas de répétition de la question.
+        - Commence toujours par une phrase courte qui répond directement : elle est dite pendant que tu écris la suite.
+        - Tu te souviens de la conversation : « et pour lui ? », « et celui de lundi ? » renvoient au dernier client
+          ou chantier évoqué.
+        - Si la demande est ambiguë, pose une seule question courte plutôt que de deviner.
+        - Si le patron t’a coupé la parole, ne reprends pas ce que tu disais : réponds à ce qu’il vient de dire.
+
         Manière de parler :
-        - Réponds toujours en français, en une à trois phrases courtes, faites pour être dites à voix haute.
+        - Réponds toujours en français, en une à trois phrases courtes, faites pour être dites à voix haute,
+          sauf si le patron demande le détail.
         - Pas de liste, pas de titre, pas d’astérisque, pas d’emoji.
         - Montants en francs suisses, arrondis au franc (« 1'390 francs »). Dates au format suisse (27.09.2026).
         - Vouvoie toujours le patron (« vous »), jamais « tu ».
@@ -39,8 +51,10 @@ public enum ConsignesCerveau {
         - Il a les dossiers, Bexio et les e-mails. Pour savoir ce qu’il fait, appelle bureau.
         - Pour toute question dont tes outils n’ont pas la réponse (e-mails, historique d’un client, pourquoi, comment),
           ou si le patron dit « demande à l’assistant » (ou « au secrétariat », « à la compta »…), appelle demander_assistant
-          avec la question complète et le domaine. La question s’affiche ; le patron touche Envoyer ; l’assistant répond
-          à son prochain passage, pas tout de suite. N’invente jamais sa réponse.
+          avec la question complète et le domaine. \(envoiDirect
+            ? "La question part aussitôt au bureau : dis simplement « Je pose la question au bureau », sa réponse arrive dans quelques instants et sera dite."
+            : "La question s’affiche ; le patron touche Envoyer ; l’assistant répond à son prochain passage, pas tout de suite.") N’invente jamais sa réponse.
+        \(recap.map { "\nConversation récente (pour garder le fil) :\n" + $0 } ?? "")
         """
     }
 
@@ -67,7 +81,8 @@ public enum ConsignesCerveau {
 
 /// Nettoie une réponse écrite pour la dire à voix haute : sans balises, sans puces, sans emoji.
 public enum TexteParle {
-    public static func nettoyer(_ texte: String) -> String {
+    /// `fini` faux (réponse qui s'écrit encore) : la dernière ligne, incomplète, ne reçoit pas de point.
+    public static func nettoyer(_ texte: String, fini: Bool = true) -> String {
         var t = String(String.UnicodeScalarView(texte.unicodeScalars.filter {
             !($0.properties.isEmojiPresentation || ($0.properties.isEmoji && $0.value > 0x2FFF))
         }))
@@ -77,8 +92,9 @@ public enum TexteParle {
             while let premier = l.first, "-•*·".contains(premier) { l.removeFirst(); l = l.trimmingCharacters(in: .whitespaces) }
             return l
         }.filter { !$0.isEmpty }
-        t = lignes.map { l in
+        t = lignes.enumerated().map { i, l in
             guard let dernier = l.last, !".!?:;…,".contains(dernier) else { return l }
+            if !fini, i == lignes.count - 1 { return l }
             return lignes.count > 1 ? l + "." : l
         }.joined(separator: " ")
         while t.contains("  ") { t = t.replacingOccurrences(of: "  ", with: " ") }

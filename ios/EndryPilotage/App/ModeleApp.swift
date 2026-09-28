@@ -72,6 +72,8 @@ final class ModeleApp {
     @ObservationIgnored private var tacheSuivi: Task<Void, Never>?
     /// Assistant vocal ouvert : ses questions en attente sont revérifiées à chaque `maj saisies`.
     @ObservationIgnored weak var assistantActif: AssistantVocal?
+    /// Modèle d'Apple de l'assistant vocal (mémoire de la conversation) ; recréé quand le client API change.
+    @ObservationIgnored private var cerveauGarde: (any CerveauVocal)?
 
     // MARK: - Assistant vocal
 
@@ -101,13 +103,25 @@ final class ModeleApp {
         return moteurLocal()
     }
 
+    /// Le modèle d'Apple garde le fil d'une ouverture de l'assistant à l'autre (page blanche après 30 min),
+    /// et il est préchargé à chaque ouverture pour répondre sans délai.
+    private func cerveauVocal() -> (any CerveauVocal)? {
+        if let garde = cerveauGarde {
+            garde.prechauffer()
+            return garde
+        }
+        let nouveau = FabriqueCerveau.creer(executeur: session.api.map { ExecuteurOutils(api: $0) })
+        cerveauGarde = nouveau
+        return nouveau
+    }
+
     private func moteurLocal() -> any MoteurVoix {
         MoteurLocal(
             donnees: {
                 RepondeurLocal.Donnees(accueil: self.decisions?.accueil, argent: self.argent?.argent, chantiers: self.chantiers?.tous ?? [])
             },
             // Apple Intelligence sur l'iPhone : comprend les questions libres et lit les données par les outils.
-            cerveau: FabriqueCerveau.creer(executeur: session.api.map { ExecuteurOutils(api: $0) }),
+            cerveau: cerveauVocal(),
             executeur: session.api.map { ExecuteurOutils(api: $0) }
         )
     }
@@ -144,6 +158,7 @@ final class ModeleApp {
     /// Recrée les modèles d'écran quand le client API change (connexion, démo, déconnexion).
     func reconstruire() {
         flux.arreter()
+        cerveauGarde = nil
         guard let api = session.api else {
             decisions = nil
             chantiers = nil

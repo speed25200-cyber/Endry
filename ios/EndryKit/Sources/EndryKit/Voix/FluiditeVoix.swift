@@ -156,3 +156,34 @@ public enum Interruption {
         return p + " " + debut
     }
 }
+
+/// Réponse qui s'écrit (modèle d'Apple en flux) : la phrase suivante, dès qu'elle est complète, pour la dire
+/// pendant que le reste s'écrit encore. Décalages en UTF-16 (ceux de l'allumage des mots).
+public enum DecoupeurPhrases {
+    /// Plus courte, une phrase attend la suivante (« Oui. » seul sonnerait haché), sauf à la fin.
+    static let longueurMin = 18
+
+    /// `(phrase, fin)` : la phrase qui commence à `depuis` et se termine avant `fin` ; `nil` si rien n'est prêt.
+    public static func prochaine(_ texte: String, depuis: Int, fini: Bool) -> (phrase: String, fin: Int)? {
+        let utf = Array(texte.utf16)
+        guard depuis < utf.count else { return nil }
+        var i = depuis
+        while i < utf.count {
+            let c = utf[i]
+            // . ? ! … suivis d'une espace ou d'un retour à la ligne ; un retour à la ligne seul termine aussi.
+            let finDePhrase = c == 0x0A || ((c == 0x2E || c == 0x3F || c == 0x21 || c == 0x2026)
+                && i + 1 < utf.count && (utf[i + 1] == 0x20 || utf[i + 1] == 0x0A))
+            if finDePhrase {
+                let fin = i + 1
+                let morceau = String(decoding: utf[depuis..<fin], as: UTF16.self)
+                if morceau.trimmingCharacters(in: .whitespacesAndNewlines).count >= longueurMin {
+                    return (morceau.trimmingCharacters(in: .whitespacesAndNewlines), fin)
+                }
+            }
+            i += 1
+        }
+        guard fini else { return nil }
+        let reste = String(decoding: utf[depuis...], as: UTF16.self).trimmingCharacters(in: .whitespacesAndNewlines)
+        return reste.isEmpty ? nil : (reste, utf.count)
+    }
+}

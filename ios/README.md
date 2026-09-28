@@ -139,6 +139,15 @@ Toucher court du micro central : dictée d'une saisie terrain. **Toucher long** 
 - **Réponses longues** : dès qu'une réponse dépasse quelques lignes (ou qu'une carte s'affiche), la sphère se range
   en haut à gauche et la réponse se lit en texte courant, aligné à gauche, qui défile (fondu en haut et en bas).
   La réponse du bureau n'est plus répétée dans une carte : un lien discret « Continuer dans la conversation ».
+- **Modèle d'Apple au centre de la conversation** (`Voix/CerveauEndry.swift`, `Voix/MoteurLocal.swift`) : en envoi
+  direct aussi, ce qui n'est pas une réponse instantanée passe par le modèle embarqué (outils : accueil, décisions,
+  chantiers, argent, bureau, briefing ; il pose lui-même la question au bureau quand il le faut). Réponse **en flux** :
+  le texte s'écrit à l'écran et chaque phrase est dite dès qu'elle est complète (`DecoupeurPhrases`), sans attendre
+  la fin. **Mémoire** de la conversation d'une ouverture à l'autre (page blanche après 30 min ou « on change de
+  sujet ») ; les réponses instantanées et celles du bureau lui sont rappelées ; conversation trop longue : nouvelle
+  session qui reprend le fil. Consignes « conversation en direct » (phrase courte d'abord, pas de formule creuse,
+  une question si c'est ambigu, ne se répète pas après avoir été coupé). Modèle préchargé à chaque ouverture ;
+  « Je regarde. » quand un outil prend plus d'une seconde ; on coupe aussi Endry pendant qu'il réfléchit.
 - **Conversation continue** (gratuite, sur l'iPhone, iOS 26 et suivants ; réglage actif par défaut) : le micro reste
   ouvert pendant qu'Endry parle ; sa voix passe par le même moteur audio que le micro (annulation d'écho du système,
   `CanalAudioTempsReel`), et ce qui reste d'écho est écarté (`Interruption`). Le patron **coupe Endry en parlant**

@@ -157,3 +157,26 @@ final class InterruptionTests: XCTestCase {
         XCTAssertEqual(Interruption.suite(de: "Prépare l’offre.", nouvelle: "Répète", apres: 1), "Répète")
     }
 }
+
+final class DecoupeurTests: XCTestCase {
+    func testPhrasesDitesPendantLecriture() {
+        var texte = "Oui. Trois factures attendent un paiement"
+        XCTAssertNil(DecoupeurPhrases.prochaine(texte, depuis: 0, fini: false), "Phrase pas encore finie.")
+        texte += ", pour 12'400 francs. La plus ancienne"
+        let premiere = DecoupeurPhrases.prochaine(texte, depuis: 0, fini: false)
+        XCTAssertEqual(premiere?.phrase, "Oui. Trois factures attendent un paiement, pour 12'400 francs.")
+        let suite = premiere.map { $0.fin } ?? 0
+        XCTAssertNil(DecoupeurPhrases.prochaine(texte, depuis: suite, fini: false))
+        texte += " date de 45 jours."
+        XCTAssertEqual(DecoupeurPhrases.prochaine(texte, depuis: suite, fini: true)?.phrase, "La plus ancienne date de 45 jours.")
+        XCTAssertNil(DecoupeurPhrases.prochaine(texte, depuis: texte.utf16.count, fini: true))
+    }
+
+    func testChiffresEtQuestions() {
+        let texte = "Le chantier démarre le 12.10.2026 à Épalinges. Voulez-vous le détail ? Je peux aussi"
+        let p1 = DecoupeurPhrases.prochaine(texte, depuis: 0, fini: false)
+        XCTAssertEqual(p1?.phrase, "Le chantier démarre le 12.10.2026 à Épalinges.")
+        let p2 = DecoupeurPhrases.prochaine(texte, depuis: p1?.fin ?? 0, fini: false)
+        XCTAssertEqual(p2?.phrase, "Voulez-vous le détail ?")
+    }
+}

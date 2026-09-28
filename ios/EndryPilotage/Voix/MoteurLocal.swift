@@ -61,6 +61,10 @@ final class MoteurLocal: MoteurVoix {
     private var questionPrecedente = ""
     /// Réponse du bureau en cours d'annonce.
     private var enAnnonce = false
+    /// Une réponse est en cours (parole, ou pause entre deux phrases qui s'écrivent) : le patron peut la couper.
+    private var enReponse = false
+    /// Décalage de la phrase dite dans le texte affiché (`nil` : phrase hors texte, comme « Je regarde »).
+    private var decalagePhrase: Int? = 0
 
     init(donnees: @escaping @MainActor () -> RepondeurLocal.Donnees,
          cerveau: (any CerveauVocal)? = nil,
@@ -76,8 +80,9 @@ final class MoteurLocal: MoteurVoix {
         actif = true
         delegue.surMot = { [weak self] fin in
             // Conversation continue : la progression suit la lecture réelle, pas la synthèse.
-            guard let self, self.actif, self.canal == nil else { return }
-            self.surEvenement?(.progressionParole(min(fin, self.bornePhrase ?? fin)))
+            guard let self, self.actif, self.canal == nil, let decalage = self.decalagePhrase else { return }
+            let lu = decalage + fin
+            self.surEvenement?(.progressionParole(min(lu, self.bornePhrase ?? lu)))
         }
         // Sans micro (refusé, ou tests d'interface), la conversation continue au clavier.
         guard !Configuration.testsUI else {
@@ -128,8 +133,8 @@ final class MoteurLocal: MoteurVoix {
         guard actif else { return }
         dernierEntendu = (definitif, provisoire)
         let tout = [definitif, provisoire].filter { !$0.isEmpty }.joined(separator: " ")
-        if enParole {
-            // Endry parle : seuls de vrais mots du patron (pas l'écho de sa voix) le coupent.
+        if enParole || enReponse {
+            // Endry répond : seuls de vrais mots du patron (pas l'écho de sa voix) le coupent.
             if Interruption.couper(tout, pendant: texteEnCours) { couperEndry() }
             return
         }
@@ -150,7 +155,7 @@ final class MoteurLocal: MoteurVoix {
 
     /// Le patron parle pendant qu'Endry répond : Endry se tait aussitôt et l'écoute.
     private func couperEndry() {
-        guard enParole, !interrompu else { return }
+        guard enParole || enReponse, !interrompu else { return }
         interrompu = true
         filtreEcho = texteEnCours
         coupeApres = debutReponse.map { Date().timeIntervalSince($0) }
@@ -265,6 +270,7 @@ final class MoteurLocal: MoteurVoix {
 
     /// Réponse de Claude arrivée du PC : dite tout de suite si Endry est libre, sinon juste après le tour en cours.
     func annoncer(question: String, reponse: String, agent: String?) async {
+        cerveau?.retenir(question: question, reponse: reponse)
         let qui = agent.map { "L’assistant, côté \($0), répond : " } ?? "L’assistant répond : "
         // Longue réponse : le début est dit, tout est affiché (et gardé dans la conversation).
         let resume = ResumeOral.pourLaVoix(reponse)
@@ -292,7 +298,8 @@ final class MoteurLocal: MoteurVoix {
 
     /// Toucher la sphère pendant qu'Endry parle : il se tait et écoute.
     func interrompre() {
-        guard enParole else { return }
+        guard enParole || enReponse else { return }
+        if canal == nil { interrompu = true }
         if canal != nil {
             // Toucher : Endry se tait, sans reprendre ce que le micro a pu entendre de sa voix.
             interrompu = true
@@ -333,32 +340,43 @@ final class MoteurLocal: MoteurVoix {
             return
         }
 
-        // Envoi direct (réglage par défaut) : ce que l'iPhone sait déjà, il le dit tout de suite ; tout le reste part
-        // aussitôt au bureau, sans passer par le modèle de l'iPhone (plus rapide, et c'est Claude qui a les dossiers).
+        // Envoi direct (réglage par défaut) : ce que l'iPhone sait déjà, il le dit tout de suite (et le modèle
+        // d'Apple le saura au tour suivant) ; une demande de travail part aussitôt au bureau.
         if ReglageVoix.envoiDirect {
             switch RepondeurLocal.repondre(question, avec: donnees()) {
             case .dire(let texte, let carte):
                 surEvenement?(.effet(carte))
                 await dire(texte)
-                await terminerTour()
-                return
-            case .demanderClaude(let q):
-                await demanderClaude(q)
+                cerveau?.retenir(question: question, reponse: texte)
                 await terminerTour()
                 return
             case .transmettre(let demande):
                 surEvenement?(.effet(.saisieAConfirmer(texte: demande)))
                 await dire("J’envoie la demande au bureau.")
+                cerveau?.retenir(question: question, reponse: "Demande transmise au bureau.")
                 await terminerTour()
                 return
+            case .demanderClaude(let q):
+                // Sans modèle sur l'iPhone : directement au bureau. Avec : le modèle converse, lit les données
+                // et pose lui-même la question au bureau quand il le faut.
+                if cerveau == nil {
+                    await demanderClaude(q)
+                    await terminerTour()
+                    return
+                }
             case .etatBureau:
                 break
             }
         }
 
-        if let cerveau, let reponse = await cerveau.repondre(question, delai: .seconds(20)) {
-            for effet in reponse.effets { surEvenement?(.effet(effet)) }
-            await dire(reponse.texte)
+        // Le modèle d'Apple, sur l'iPhone : réponse dite phrase par phrase pendant qu'elle s'écrit.
+        if let cerveau, await direEnFlux(cerveau, question: question) {
+            await terminerTour()
+            return
+        }
+        if ReglageVoix.envoiDirect, cerveau != nil, !interrompu {
+            // Le modèle n'a pas su répondre : la question part au bureau.
+            await demanderClaude(question)
             await terminerTour()
             return
         }
@@ -402,6 +420,7 @@ final class MoteurLocal: MoteurVoix {
             surEvenement?(.commande(.ouvrirConversation))
             return
         case .nouvelleConversation:
+            cerveau?.oublier()
             surEvenement?(.commande(.nouvelleConversation))
             await dire("C’est noté, on change de sujet.", memoriser: false)
         case .plusLentement:
@@ -441,7 +460,8 @@ final class MoteurLocal: MoteurVoix {
 
     /// Fin du tour : réponse de Claude arrivée entre-temps, question tapée, sinon on rend le micro au patron.
     private func terminerTour() async {
-        if !annoncesEnAttente.isEmpty, actif {
+        // Le patron vient de couper Endry : on l'écoute d'abord, l'annonce attendra le tour suivant.
+        if !annoncesEnAttente.isEmpty, actif, !interrompu {
             let annonce = annoncesEnAttente.removeFirst()
             enReflexion = true
             surEvenement?(.nouveauTour)
@@ -475,9 +495,6 @@ final class MoteurLocal: MoteurVoix {
         surEvenement?(.assistant(affiche ?? texte))
         surEvenement?(.progressionParole(0))
         surEvenement?(.phase(.parole))
-        // Durée maximale : si la synthèse vocale se bloque (service audio indisponible), Endry passe à la suite
-        // au lieu d'attendre indéfiniment la fin de sa phrase.
-        let dureeMax = 3 + Double(texte.count) * 0.1
         guard !Configuration.testsUI else {
             // Tests d'interface : pas de synthèse (le simulateur de la CI n'a pas de sortie audio fiable).
             try? await Task.sleep(for: .milliseconds(300))
@@ -485,23 +502,132 @@ final class MoteurLocal: MoteurVoix {
             surEvenement?(.progressionParole((affiche ?? texte).utf16.count))
             return
         }
-        let enonce = AVSpeechUtterance(string: texte)
-        enonce.voice = Self.meilleureVoix()
-        if let canal {
-            enonce.rate = min(AVSpeechUtteranceDefaultSpeechRate * Float(ReglageVoix.debit), AVSpeechUtteranceMaximumSpeechRate)
-            enonce.pitchMultiplier = 0.98
-            await direEnContinu(enonce, texte: texte, affiche: affiche, canal: canal, dureeMax: dureeMax)
-            return
+        commencerReponse()
+        await prononcer(texte, decalage: 0)
+        finirReponse(affiche ?? texte)
+    }
+
+    /// Réponse du modèle d'Apple dite phrase par phrase pendant qu'elle s'écrit (comme une conversation en direct).
+    /// Faux : le modèle n'a rien su répondre (le moteur passe au bureau ou aux réponses locales).
+    private func direEnFlux(_ cerveau: any CerveauVocal, question: String) async -> Bool {
+        guard actif else { return false }
+        let flux = cerveau.repondreEnFlux(question)
+        let etat = EtatFlux()
+        let lecture = Task { @MainActor [weak self] in
+            do {
+                for try await partiel in flux {
+                    let propre = TexteParle.nettoyer(partiel, fini: false)
+                    guard !propre.isEmpty else { continue }
+                    etat.texte = propre
+                    self?.surEvenement?(.assistant(propre))
+                }
+                etat.texte = TexteParle.nettoyer(etat.texte)
+            } catch {
+                etat.echec = true
+            }
+            etat.fini = true
         }
+        commencerReponse()
+        // Le texte s'écrit à l'écran en pâle ; les mots s'allument quand ils sont dits.
+        surEvenement?(.progressionParole(0))
+        var dit = 0
+        var montres: Set<ExecuteurOutils.Effet> = []
+        var premier = true
+        var patienceDite = false
+        let debut = Date()
+        while actif, !interrompu {
+            for effet in cerveau.effetsEnCours() where !montres.contains(effet) {
+                montres.insert(effet)
+                surEvenement?(.effet(effet))
+            }
+            if let suivante = DecoupeurPhrases.prochaine(etat.texte, depuis: dit, fini: etat.fini) {
+                let (phrase, fin) = (suivante.phrase, suivante.fin)
+                if premier {
+                    premier = false
+                    surEvenement?(.phase(.parole))
+                }
+                if Configuration.testsUI {
+                    try? await Task.sleep(for: .milliseconds(150))
+                    surEvenement?(.progressionParole(fin))
+                } else {
+                    await prononcer(phrase, decalage: dit)
+                }
+                dit = fin
+                continue
+            }
+            if etat.fini { break }
+            let attente = Date().timeIntervalSince(debut)
+            if etat.texte.isEmpty {
+                // Un outil lit les données : un mot pour que le patron sache qu'Endry travaille.
+                if !patienceDite, attente > 1.2, cerveau.outilEnCours, !Configuration.testsUI {
+                    patienceDite = true
+                    surEvenement?(.phase(.parole))
+                    await prononcer("Je regarde.", decalage: nil)
+                    surEvenement?(.phase(.reflexion))
+                }
+                if attente > 15 {
+                    // Trop long pour une conversation : on passe la main.
+                    lecture.cancel()
+                    break
+                }
+            }
+            try? await Task.sleep(for: .milliseconds(40))
+        }
+        if interrompu || !actif { lecture.cancel() }
+        for effet in cerveau.effetsEnCours() where !montres.contains(effet) { surEvenement?(.effet(effet)) }
+        let texte = etat.texte
+        if dit == 0, !interrompu {
+            enReponse = false
+            enParole = false
+            return !texte.isEmpty
+        }
+        derniereReponse = texte
+        finirReponse(texte)
+        return true
+    }
+
+    private func commencerReponse() {
+        // Une réponse du bureau annoncée n'est pas la suite d'une phrase du patron.
+        debutReponse = enAnnonce ? nil : Date()
+        texteEnCours = ""
+        if canal != nil, !interrompu {
+            oreille?.reinitialiser()
+            dernierEntendu = ("", "")
+        }
+        interrompu = false
+        ecouteOuverte = false
+        enReponse = true
+    }
+
+    private func finirReponse(_ affiche: String) {
+        if !interrompu { surEvenement?(.progressionParole(affiche.utf16.count)) }
+        enReponse = false
+        enParole = false
+        bornePhrase = nil
+        surEvenement?(.niveauVoix(0))
+    }
+
+    /// Dit une phrase ; les mots s'allument à partir de `decalage` dans le texte affiché (`nil` : rien à allumer).
+    private func prononcer(_ phrase: String, decalage: Int?) async {
+        guard actif, !interrompu else { return }
+        let enonce = AVSpeechUtterance(string: phrase)
+        enonce.voice = Self.meilleureVoix()
         enonce.rate = min(AVSpeechUtteranceDefaultSpeechRate * Float(ReglageVoix.debit), AVSpeechUtteranceMaximumSpeechRate)
         enonce.pitchMultiplier = 0.98
-        enonce.postUtteranceDelay = 0.1
+        // Durée maximale : si la synthèse vocale se bloque (service audio indisponible), Endry passe à la suite.
+        let dureeMax = 3 + Double(phrase.count) * 0.1
+        decalagePhrase = decalage
+        if let canal {
+            await prononcerEnContinu(enonce, phrase: phrase, decalage: decalage, canal: canal, dureeMax: dureeMax)
+            return
+        }
+        enonce.postUtteranceDelay = 0.05
         delegue.termine = false
         enParole = true
         synthese.speak(enonce)
         // La synthèse ne publie pas son niveau : la sphère suit une pulsation calée sur le débit de parole.
         let debut = Date()
-        while actif, !delegue.termine || Date().timeIntervalSince(debut) < 0.3, Date().timeIntervalSince(debut) < dureeMax {
+        while actif, !interrompu, !delegue.termine || Date().timeIntervalSince(debut) < 0.3, Date().timeIntervalSince(debut) < dureeMax {
             let t = Date().timeIntervalSince(debut)
             let niveau = Float(0.45 + 0.35 * abs(sin(t * 7.3)) * (0.7 + 0.3 * sin(t * 2.1)))
             surEvenement?(.niveauVoix(niveau))
@@ -509,31 +635,20 @@ final class MoteurLocal: MoteurVoix {
         }
         if !delegue.termine { synthese.stopSpeaking(at: .immediate) }
         enParole = false
-        bornePhrase = nil
-        surEvenement?(.niveauVoix(0))
-        surEvenement?(.progressionParole((affiche ?? texte).utf16.count))
     }
-
 
     /// Conversation continue : la voix passe par le moteur audio du micro (annulation d'écho) et le patron
     /// peut la couper en parlant. Les mots s'allument au rythme de la lecture réelle.
-    private func direEnContinu(_ enonce: AVSpeechUtterance, texte: String, affiche: String?, canal: CanalAudioTempsReel,
-                               dureeMax: Double) async {
-        texteEnCours = texte
-        if !interrompu {
-            oreille?.reinitialiser()
-            dernierEntendu = ("", "")
-        }
-        interrompu = false
-        ecouteOuverte = false
-        // Une réponse du bureau annoncée n'est pas la suite d'une phrase du patron.
-        debutReponse = enAnnonce ? nil : Date()
+    private func prononcerEnContinu(_ enonce: AVSpeechUtterance, phrase: String, decalage: Int?, canal: CanalAudioTempsReel,
+                                    dureeMax: Double) async {
+        // Toute la réponse dite jusqu'ici sert à reconnaître l'écho de sa voix.
+        texteEnCours = texteEnCours.isEmpty ? phrase : texteEnCours + " " + phrase
         canal.nouvelItem()
         let lue = SyntheseLue()
         delegue.termine = false
         enParole = true
         synthese.write(enonce, toBufferCallback: Self.rappelTampons(lue: lue, canal: canal))
-        let longueur = texte.utf16.count
+        let longueur = phrase.utf16.count
         let debut = Date()
         while actif, !interrompu {
             let t = Date().timeIntervalSince(debut)
@@ -542,20 +657,15 @@ final class MoteurLocal: MoteurVoix {
             if (fini || delegue.termine) && !canal.lectureEnCours && t > 0.3 { break }
             let niveau = Float(0.45 + 0.35 * abs(sin(t * 7.3)) * (0.7 + 0.3 * sin(t * 2.1)))
             surEvenement?(.niveauVoix(niveau))
-            if total > 0 {
-                let lu = Int(Double(longueur) * min(Double(canal.framesLues) / Double(total), 1))
+            if total > 0, let decalage {
+                let lu = decalage + Int(Double(longueur) * min(Double(canal.framesLues) / Double(total), 1))
                 surEvenement?(.progressionParole(min(lu, bornePhrase ?? lu)))
             }
             try? await Task.sleep(for: .milliseconds(50))
         }
-        if !interrompu {
-            _ = canal.interrompre()
-            surEvenement?(.progressionParole((affiche ?? texte).utf16.count))
-        }
+        if !interrompu { _ = canal.interrompre() }
         synthese.stopSpeaking(at: .immediate)
         enParole = false
-        bornePhrase = nil
-        surEvenement?(.niveauVoix(0))
     }
 
     /// Rappel de la synthèse, appelé hors du fil principal : fabriqué hors de l'acteur principal
@@ -630,4 +740,12 @@ nonisolated final class SyntheseLue: @unchecked Sendable {
     func terminer() { verrou.withLock { fini = true } }
     /// Images produites (24 kHz) et fin de la synthèse.
     var etat: (Int, Bool) { verrou.withLock { (images, fini) } }
+}
+
+/// Réponse du modèle qui s'écrit (lue par la boucle de parole).
+@MainActor
+final class EtatFlux {
+    var texte = ""
+    var fini = false
+    var echec = false
 }

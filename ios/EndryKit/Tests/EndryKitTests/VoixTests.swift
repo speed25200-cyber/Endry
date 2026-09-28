@@ -100,10 +100,21 @@ final class CerveauTests: XCTestCase {
         XCTAssertTrue(t.contains("prochain passage"))
     }
 
+    func testConsignesConversationDirecte() {
+        let t = ConsignesCerveau.texte(envoiDirect: true, recap: "Q : Qui me doit ?\nR : Gérance Morel.")
+        XCTAssertTrue(t.contains("Je pose la question au bureau"))
+        XCTAssertFalse(t.contains("touche Envoyer"))
+        XCTAssertTrue(t.contains("Commence toujours par une phrase courte"))
+        XCTAssertTrue(t.contains("Gérance Morel"))
+        XCTAssertTrue(t.contains("aucune relance sans sa demande"))
+    }
+
     func testTexteParleSansBalises() {
         XCTAssertEqual(TexteParle.nettoyer("**Muller SA** vous doit 1'390 francs."), "Muller SA vous doit 1'390 francs.")
         XCTAssertEqual(TexteParle.nettoyer("Deux chantiers :\n- Rossi\n- Favre 😀"), "Deux chantiers : Rossi. Favre.")
         XCTAssertEqual(TexteParle.nettoyer("  Tout roule.  "), "Tout roule.")
+        // Réponse qui s'écrit encore : la ligne en cours ne reçoit pas de point.
+        XCTAssertEqual(TexteParle.nettoyer("Deux chantiers :\n- Rossi\n- Fav", fini: false), "Deux chantiers : Rossi. Fav")
     }
 
     func testMessageTexteRealtime() throws {

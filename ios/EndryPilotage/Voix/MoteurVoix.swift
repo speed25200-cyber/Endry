@@ -268,7 +268,8 @@ final class AssistantVocal {
             definitif = d
             provisoire = p
         case .assistant(let texte):
-            if texte != reponse { reponseLue = nil }
+            // Réponse qui s'écrit (modèle en flux) : les mots déjà dits restent allumés.
+            if !texte.hasPrefix(reponse) { reponseLue = nil }
             reponse = texte
         case .progressionParole(let lu):
             reponseLue = lu

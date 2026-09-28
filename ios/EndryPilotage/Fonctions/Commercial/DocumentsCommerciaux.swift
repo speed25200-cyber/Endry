@@ -308,6 +308,7 @@ struct SectionOffresSignees: View {
                     .surfaceCarte(rayon: 20)
                 }
             }
+            .accessibilityElement(children: .contain)
             .accessibilityIdentifier("offres-signees")
         }
     }

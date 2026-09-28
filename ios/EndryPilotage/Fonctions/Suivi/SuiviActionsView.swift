@@ -154,6 +154,7 @@ struct SectionFaitRecemment: View {
                 .surfaceCarte(rayon: 20)
                 .animation(.endry, value: recents.map(\.etat))
             }
+            .accessibilityElement(children: .contain)
             .accessibilityIdentifier("fait-recemment")
             .sheet(isPresented: $toutVoir) { JournalSuiviView(modele: modele) }
         }

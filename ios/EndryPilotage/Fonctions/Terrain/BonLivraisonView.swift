@@ -59,7 +59,7 @@ struct BonLivraisonView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Fermer") { fermer() } }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("OK") { ClavierTerrain.fermer() }.fontWeight(.semibold)
+                    Button("OK") { ClavierTerrain.fermer() }.fontWeight(.semibold).accessibilityIdentifier("clavier-ok")
                 }
             }
         }

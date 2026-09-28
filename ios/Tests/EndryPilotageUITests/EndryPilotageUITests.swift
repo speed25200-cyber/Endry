@@ -303,14 +303,19 @@ final class EndryPilotageUITests: XCTestCase {
         XCTAssertTrue(nom.waitForExistence(timeout: 5))
         nom.tap()
         nom.typeText("M. Morel\n")
+        // Trait de signature en coordonnées d'écran, au milieu de la zone blanche.
         let zone = app.descendants(matching: .any)["zone-signature"].firstMatch
-        let origine = zone.exists ? zone : app.windows.firstMatch
-        let debut = origine.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: zone.exists ? 0.5 : 0.62))
-        let fin = origine.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: zone.exists ? 0.4 : 0.6))
-        debut.press(forDuration: 0.1, thenDragTo: fin)
+        let cadre = zone.exists && zone.frame.width > 50 ? zone.frame : CGRect(x: 30, y: 520, width: 330, height: 200)
+        let origineEcran = app.coordinate(withNormalizedOffset: .zero)
+        let debut = origineEcran.withOffset(CGVector(dx: cadre.minX + cadre.width * 0.15, dy: cadre.midY + 10))
+        let milieu = origineEcran.withOffset(CGVector(dx: cadre.midX, dy: cadre.midY - 25))
+        let fin = origineEcran.withOffset(CGVector(dx: cadre.maxX - cadre.width * 0.15, dy: cadre.midY + 5))
+        debut.press(forDuration: 0.05, thenDragTo: milieu, withVelocity: .slow, thenHoldForDuration: 0)
+        milieu.press(forDuration: 0.05, thenDragTo: fin)
         capturer(app, "12-signature")
         let confirmer = app.buttons["signer"]
-        if confirmer.isEnabled {
+        XCTAssertTrue(confirmer.isEnabled, "La signature n’a pas été prise.")
+        do {
             confirmer.tap()
             fermerClavier(app)
             let transmettre = atteindre(app.buttons["transmettre-regie"], dans: app)
@@ -356,6 +361,7 @@ final class EndryPilotageUITests: XCTestCase {
             champs.element(boundBy: 1).tap()
             champs.element(boundBy: 1).typeText("1.85")
         }
+        fermerClavier(app)
         let calculer = atteindre(app.buttons["calculer-releve"], dans: app)
         if calculer.isEnabled {
             calculer.tap()

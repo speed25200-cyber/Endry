@@ -61,7 +61,8 @@ for b in builds[: max(5, demande.get("n", 1))]:
           f"branche={b.get('branch')} tag={b.get('tag')} commit={(b.get('commit') or {}).get('hash', '')[:7]} "
           f"début={b.get('startedAt')} fin={b.get('finishedAt')} message={b.get('message')}")
 
-cibles = [b for b in builds[: max(5, demande.get("n", 1))] if b.get("status") == "failed"][: demande.get("n", 1)]
+cibles = [b for b in builds[: max(5, demande.get("n", 1))]
+          if b.get("status") in ("failed", "timeout") or b.get("_id") == demande.get("build")][: demande.get("n", 1)]
 for b in cibles:
     print(f"\n==== Détail du build {b.get('_id')} ({b.get('status')})")
     detail = appel(f"/builds/{b['_id']}") or {}
@@ -81,6 +82,14 @@ for b in cibles:
                 print("  journal lu depuis", url.replace(API, "API"))
                 break
         lignes = journal.splitlines()
+        # Durée de chaque test d'interface : repère celui qui traîne.
+        durees = [l for l in lignes if "Test Case" in l and ("passed" in l or "failed" in l)]
+        print(f"  ---- {len(durees)} tests terminés ----")
+        for l in durees[:80]:
+            print("  ⏱ " + l[:300])
+        lances = [l for l in lignes if "Test Case" in l and "started" in l]
+        if lances:
+            print("  dernier test lancé :", lances[-1][:300])
         erreurs = [l for l in lignes if "error:" in l or "** BUILD FAILED" in l or "** TEST FAILED" in l or "failed" in l.lower() and "Test Case" in l]
         print(f"  ---- {len(erreurs)} lignes d'erreur ----")
         for l in erreurs[:120]:

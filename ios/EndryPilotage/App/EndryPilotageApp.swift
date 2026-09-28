@@ -17,8 +17,7 @@ struct EndryPilotageApp: App {
                     delegue.surJetonAPNs = { [modele] jeton in modele.recevoirJetonAPNs(jeton) }
                     delegue.surReference = { [modele] reference in modele.ouvrir(reference: reference) }
                     delegue.surNotificationRecue = { [modele] in Task { await modele.rafraichirTout() } }
-                    delegue.surOui = { [modele] reference in Task { await modele.accepterDepuisNotification(reference) } }
-                    delegue.surSaisieTraitee = { [modele] in modele.onglet = .saisie }
+                    delegue.surSaisieTraitee = { [modele] saisieId in modele.ouvrirHistoriqueSaisies(saisieId) }
                     delegue.surLocale = { [modele] locale, action in modele.traiter(locale, action: action) }
                     if let enAttente = delegue.consommerLocaleEnAttente() { modele.traiter(enAttente.0, action: enAttente.1) }
                     // Le jeton APNs peut changer : on le réenregistre à chaque lancement.

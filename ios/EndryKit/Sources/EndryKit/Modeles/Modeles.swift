@@ -147,6 +147,8 @@ public struct Carte: Decodable, Sendable, Hashable, Identifiable {
     public var modifiable: Bool
     /// v1.1 : vrai si « Oui » envoie quelque chose à un tiers (fait foi s'il est présent).
     public var envoiTiers: Bool?
+    /// Geste exigé pour « Oui » (`"glisser"`, v4) ; absent : la règle s'applique quand même.
+    public var gesteRequis: String?
     /// v1.1 : chantier concerné (regroupement des notifications, lien vers le dossier).
     public var chantierId: String?
     /// Noms des documents joints (v1.0).
@@ -202,6 +204,7 @@ public struct Carte: Decodable, Sendable, Hashable, Identifiable {
         outil = c.texte("outil")
         modifiable = c.booleen("modifiable") ?? true
         envoiTiers = c.booleen("envoi_tiers")
+        gesteRequis = c.texte("geste_requis")
         chantierId = c.texte("chantier_id")
         documents = c.textes("documents")
     }
@@ -211,15 +214,28 @@ public struct Carte: Decodable, Sendable, Hashable, Identifiable {
         type == .question || reference.uppercased().hasPrefix("Q-")
     }
 
-    /// Vrai si « Oui » envoie un e-mail ou un document à un tiers : geste « Glisser pour envoyer » obligatoire.
+    /// Règle de la direction (28.09.2026) : **tout « Oui » se fait en glissant**, envoi à un tiers ou non.
+    /// Seules les questions (`Q-…`) se répondent autrement (par écrit ou dicté).
+    public var exigeGlisser: Bool { !estQuestion }
+
+    /// « Glisser pour envoyer » quand quelque chose part chez un tiers, « Glisser pour valider » sinon.
+    public var libelleGlisser: String { partChezUnTiers ? "Glisser pour envoyer" : "Glisser pour valider" }
+
+    /// Vrai si « Oui » envoie un e-mail ou un document à un tiers.
     /// `envoi_tiers` (v1.1) fait foi ; à défaut, liste d'outils connus.
-    public var exigeGlisser: Bool {
+    public var partChezUnTiers: Bool {
         if let envoiTiers { return envoiTiers }
         guard let outil else { return false }
         return Self.outilsEnvoi.contains(outil)
     }
 
     public var dateCreation: Date? { cree.flatMap(DateEndry.lire) }
+}
+
+/// Le geste qui autorise un « Oui » : il n'y en a qu'un, le glissement à l'écran.
+/// Ni la voix, ni Siri, ni une notification, ni un bouton ne peuvent en produire un.
+public enum GesteValidation: Sendable, Equatable {
+    case glissement
 }
 
 public enum ActionDecision: String, Sendable, CaseIterable {

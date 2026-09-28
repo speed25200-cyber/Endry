@@ -32,7 +32,8 @@
       "outil": "mail_repondre",
       "modifiable": true,
       "envoi_tiers": true,
-      "chantier_id": 27
+      "chantier_id": 27,
+      "geste_requis": "glisser"
     },
     {
       "type": "validation",
@@ -69,7 +70,8 @@
       "outil": "envoyer_facture",
       "modifiable": true,
       "envoi_tiers": true,
-      "chantier_id": 31
+      "chantier_id": 31,
+      "geste_requis": "glisser"
     },
     {
       "type": "validation",
@@ -98,7 +100,8 @@
       "outil": "bexio_creer_offre",
       "modifiable": true,
       "envoi_tiers": false,
-      "chantier_id": 29
+      "chantier_id": 29,
+      "geste_requis": "glisser"
     },
     {
       "type": "question",
@@ -138,7 +141,8 @@
       "outil": "preparer_paiement",
       "modifiable": false,
       "envoi_tiers": false,
-      "chantier_id": 18
+      "chantier_id": 18,
+      "geste_requis": "glisser"
     }
   ],
   "encaisser": {

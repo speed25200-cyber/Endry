@@ -69,15 +69,15 @@ public struct AnalyseurSSE: Sendable {
 
 /// Catégories de notifications envoyées par le PC (v1.1).
 public enum CategorieNotification: String, Sendable, CaseIterable {
-    /// Décision sans envoi à un tiers : actions « Voir » et « Oui ».
+    /// Décision : action « Voir » seulement (le « Oui » se fait en glissant, dans l'app).
     case decision = "DECISION"
     /// Décision qui envoie quelque chose à un tiers : « Voir » seulement (le geste se fait dans l'app).
     case decisionEnvoi = "DECISION_ENVOI"
     case saisieTraitee = "SAISIE_TRAITEE"
     case info = "INFO"
 
-    /// « Oui » depuis la notification : seulement si rien ne part chez un tiers.
-    public var permetOui: Bool { self == .decision }
+    /// « Oui » depuis une notification : jamais (règle du 28.09.2026 : tout « Oui » se fait en glissant).
+    public var permetOui: Bool { false }
 }
 
 /// Charge utile APNs lue de façon tolérante.
@@ -85,11 +85,14 @@ public struct ChargeNotification: Equatable, Sendable {
     public var categorie: CategorieNotification
     public var reference: String?
     public var fil: String?
+    /// Saisie traitée (v4) : identifiant envoyé par le PC.
+    public var saisieId: String?
 
-    public init(categorie: CategorieNotification, reference: String?, fil: String?) {
+    public init(categorie: CategorieNotification, reference: String?, fil: String?, saisieId: String? = nil) {
         self.categorie = categorie
         self.reference = reference
         self.fil = fil
+        self.saisieId = saisieId
     }
 
     public init(userInfo: [AnyHashable: Any]) {
@@ -99,6 +102,15 @@ public struct ChargeNotification: Equatable, Sendable {
         let ref = (userInfo["reference"] as? String)?.trimmingCharacters(in: .whitespaces)
         reference = (ref?.isEmpty ?? true) ? nil : ref
         fil = aps["thread-id"] as? String
+        let saisie = (userInfo["saisie_id"] as? String) ?? (userInfo["saisie_id"] as? Int).map(String.init)
+        saisieId = saisie.flatMap { $0.trimmingCharacters(in: .whitespaces).isEmpty ? nil : $0 }
+    }
+
+    /// Saisie traitée sans décision liée : ouvrir l'historique des saisies (pas une carte).
+    public var ouvreHistoriqueSaisies: Bool {
+        guard categorie == .saisieTraitee else { return false }
+        guard let reference else { return true }
+        return !(reference.hasPrefix("V-") || reference.hasPrefix("Q-"))
     }
 
     /// Action « Oui » autorisée pour cette notification : catégorie DECISION et référence de validation (V-…).

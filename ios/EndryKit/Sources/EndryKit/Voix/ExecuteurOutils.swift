@@ -38,7 +38,7 @@ public struct ExecuteurOutils: Sendable {
                 let a = try await api.accueil()
                 return (json([
                     "salut": a.salut, "date": a.date, "pause": a.pause,
-                    "decisions": a.decisions.map { ["reference": $0.reference, "genre": $0.genre, "titre": $0.titre, "envoi_tiers": $0.exigeGlisser] },
+                    "decisions": a.decisions.map { ["reference": $0.reference, "genre": $0.genre, "titre": $0.titre, "envoi_tiers": $0.partChezUnTiers] },
                     "a_encaisser": a.encaisser.total, "en_retard_plus_30_jours": a.encaisser.anciennete.plus30,
                     // Achats fournisseurs : nombre seulement, jamais de montant (à ne pas dire à voix haute).
                     "factures_fournisseurs_7_jours": a.payer.cetteSemaine.count,
@@ -46,7 +46,7 @@ public struct ExecuteurOutils: Sendable {
                 ]), .aucun)
             case "decisions":
                 let d = try await api.decisions()
-                return (json(d.decisions.map { ["reference": $0.reference, "titre": $0.titre, "motif": $0.motif, "envoi_tiers": $0.exigeGlisser] }), .aucun)
+                return (json(d.decisions.map { ["reference": $0.reference, "titre": $0.titre, "motif": $0.motif, "envoi_tiers": $0.partChezUnTiers] }), .aucun)
             case "chantiers":
                 let c = try await api.chantiers()
                 return (json(c.chantiers.map { chantierResume($0) }), .aucun)
@@ -123,7 +123,7 @@ public struct ExecuteurOutils: Sendable {
                 return (json(["briefing": b.texteParle]), .aucun)
             case "proposer_decision":
                 let reference = args["reference"] as? String ?? ""
-                return (json(["affichee": true, "message": "La carte est affichée ; le patron doit valider lui-même par un geste à l’écran."]),
+                return (json(["affichee": true, "message": "La carte est affichée ; le patron la valide lui-même en glissant le curseur à l’écran."]),
                         .afficherDecision(reference))
             default:
                 return (json(["erreur": "Outil inconnu : \(nom)"]), .aucun)

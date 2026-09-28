@@ -616,8 +616,9 @@ struct CarteContexte: View {
                         actionsPossibles: modele.actionsPossibles,
                         enCours: modele.enCours.contains(carte.reference),
                         enAvant: false,
-                        agir: { action, consignes in
-                            let ok = await modele.agir(action, sur: carte, consignes: consignes)
+                        // La voix affiche la carte ; seul le glissement à l'écran dit « Oui ».
+                        agir: { action, consignes, geste in
+                            let ok = await modele.agir(action, sur: carte, consignes: consignes, geste: geste)
                             if ok { retirer() }
                             return ok
                         },

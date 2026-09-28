@@ -111,11 +111,21 @@ final class EndryPilotageUITests: XCTestCase {
         let app = lancer()
         XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 5))
 
-        // Oui directement sur la carte (offre Bexio : rien ne part chez un tiers).
-        let oui = amener(app.buttons["oui-V-9P1X6D"], dans: app)
-        XCTAssertTrue(oui.waitForExistence(timeout: 3))
-        oui.tap()
-        XCTAssertTrue(oui.waitForNonExistence(timeout: 5))
+        // Règle du 28.09.2026 : aucun bouton « Oui », même quand rien ne part chez un tiers (offre Bexio).
+        let carte = app.descendants(matching: .any)["carte-V-9P1X6D"]
+        let curseur = amener(app.descendants(matching: .any)["glisser-V-9P1X6D"].firstMatch, dans: app)
+        XCTAssertTrue(curseur.waitForExistence(timeout: 3))
+        XCTAssertFalse(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "oui-")).firstMatch.exists,
+                       "Il ne doit plus exister de bouton « Oui ».")
+        XCTAssertTrue(curseur.label.contains("Glisser pour valider"))
+        capturer(app, "27-glisser-pour-valider")
+        // Un simple toucher ne valide rien.
+        curseur.tap()
+        sleep(1)
+        XCTAssertTrue(carte.exists, "Un toucher ne doit pas valider la décision.")
+        // Glisser jusqu'au bout valide.
+        glisser(curseur)
+        XCTAssertTrue(carte.waitForNonExistence(timeout: 5))
 
         // Non : depuis la fiche complète, confirmation obligatoire.
         ouvrirFiche("V-5T7B2N", dans: app)
@@ -145,10 +155,10 @@ final class EndryPilotageUITests: XCTestCase {
     func testSuiviApresOui() {
         let app = lancer()
         XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 5))
-        let oui = amener(app.buttons["oui-V-9P1X6D"], dans: app)
-        XCTAssertTrue(oui.waitForExistence(timeout: 3))
-        oui.tap()
-        XCTAssertTrue(oui.waitForNonExistence(timeout: 5))
+        let curseur = amener(app.descendants(matching: .any)["glisser-V-9P1X6D"].firstMatch, dans: app)
+        XCTAssertTrue(curseur.waitForExistence(timeout: 3))
+        glisser(curseur)
+        XCTAssertTrue(app.descendants(matching: .any)["carte-V-9P1X6D"].waitForNonExistence(timeout: 5))
 
         let ligne = app.buttons["suivi-V-9P1X6D"]
         atteindre(ligne, dans: app)
@@ -229,12 +239,18 @@ final class EndryPilotageUITests: XCTestCase {
         let app = lancer()
         XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 5))
         let carte = app.descendants(matching: .any)["carte-V-7K3F9Q"]
-        let curseur = amener(app.descendants(matching: .any)["glisser-pour-envoyer"].firstMatch, dans: app)
+        let curseur = amener(app.descendants(matching: .any)["glisser-V-7K3F9Q"].firstMatch, dans: app)
         XCTAssertTrue(curseur.waitForExistence(timeout: 3))
+        XCTAssertTrue(curseur.label.contains("Glisser pour envoyer"))
+        glisser(curseur)
+        XCTAssertTrue(carte.waitForNonExistence(timeout: 5))
+    }
+
+    /// Le geste qui dit « Oui » : du début à la fin du curseur.
+    private func glisser(_ curseur: XCUIElement) {
         let depart = curseur.coordinate(withNormalizedOffset: CGVector(dx: 0.08, dy: 0.5))
         let arrivee = curseur.coordinate(withNormalizedOffset: CGVector(dx: 0.99, dy: 0.5))
         depart.press(forDuration: 0.1, thenDragTo: arrivee)
-        XCTAssertTrue(carte.waitForNonExistence(timeout: 5))
     }
 
     @MainActor

@@ -245,7 +245,7 @@ final class SuiviCommercialTests: XCTestCase {
         let s = try await demo.preparerSuivi(a[0], consignes: "")
         XCTAssertEqual(s.decisionReference, "V-SU37")
         let cartes = try await demo.decisions().decisions
-        XCTAssertTrue(cartes.first { $0.reference == "V-SU37" }?.exigeGlisser ?? false, "un suivi est un envoi à un tiers")
+        XCTAssertTrue(cartes.first { $0.reference == "V-SU37" }?.partChezUnTiers ?? false, "un suivi est un envoi à un tiers")
     }
 
     func testRepliSaisieEntretien() async throws {

@@ -263,7 +263,7 @@ struct DecisionsView: View {
                                 actionsPossibles: modele.actionsPossibles,
                                 enCours: modele.enCours.contains(carte.reference),
                                 ouvrir: { fiche = carte },
-                                agir: { action in await modele.agir(action, sur: carte) }
+                                agir: { action, geste in await modele.agir(action, sur: carte, geste: geste) }
                             )
                             .containerRelativeFrame(.horizontal) { largeur, _ in min(largeur * 0.82, 440) }
                             .matchedTransitionSource(id: carte.reference, in: zoom)

@@ -87,7 +87,7 @@ public enum RepondeurLocal {
         if q.contains("m attend") || q.contains("aujourd hui") || q.contains("programme") || q.contains("ma journee") || q.contains("quoi de neuf") {
             guard let a = d.accueil else { return .dire("Je n’ai pas encore les données du jour.", carte: .aucun) }
             var morceaux: [String] = []
-            let envois = a.decisions.filter(\.exigeGlisser).count
+            let envois = a.decisions.filter(\.partChezUnTiers).count
             morceaux.append(a.decisions.isEmpty ? "Rien à décider, tout roule"
                             : "\(a.decisions.count) décision\(a.decisions.count > 1 ? "s" : "") à prendre\(envois > 0 ? ", dont \(envois) envoi\(envois > 1 ? "s" : "") à un client" : "")")
             if !a.chantiers7Jours.isEmpty {

@@ -39,8 +39,8 @@ struct FicheDecision: View {
                     enCours: modele.enCours.contains(carte.reference),
                     enAvant: false,
                     enFiche: true,
-                    agir: { action, consignes in
-                        let ok = await modele.agir(action, sur: carte, consignes: consignes)
+                    agir: { action, consignes, geste in
+                        let ok = await modele.agir(action, sur: carte, consignes: consignes, geste: geste)
                         if ok { fermer() }
                         return ok
                     },

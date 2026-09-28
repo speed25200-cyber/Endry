@@ -89,8 +89,14 @@ public final class ModeleDecisions {
     }
 
     /// Oui / Non / Corriger. Retourne `true` si la carte a été traitée (elle disparaît).
+    /// « Oui » exige le glissement à l'écran (`geste`) : sans lui, rien ne part.
     @discardableResult
-    public func agir(_ action: ActionDecision, sur carte: Carte, consignes: String? = nil) async -> Bool {
+    public func agir(_ action: ActionDecision, sur carte: Carte, consignes: String? = nil,
+                     geste: GesteValidation? = nil) async -> Bool {
+        if action == .oui, !carte.estQuestion, geste != .glissement {
+            toast = Toast("Pour valider, glissez le curseur de la carte.", style: .info)
+            return false
+        }
         guard actionsPossibles else {
             toast = Toast(horsLigne ? ErreurAPI.horsLigne.message : "Les décisions sont en lecture seule.", style: .erreur)
             return false

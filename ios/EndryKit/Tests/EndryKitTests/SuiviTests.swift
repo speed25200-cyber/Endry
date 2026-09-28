@@ -102,7 +102,7 @@ final class ModeleSuiviActionsTests: XCTestCase {
         decisions.surGeste = { geste, carte, reponse, consignes in suivi.enregistrer(geste, carte: carte, reponse: reponse, consignes: consignes) }
         await decisions.charger()
         let carte = try XCTUnwrap(decisions.cartes.first { $0.reference == "V-9P1X6D" })
-        let ok = await decisions.agir(.oui, sur: carte)
+        let ok = await decisions.agir(.oui, sur: carte, geste: .glissement)
         XCTAssertTrue(ok)
         XCTAssertEqual(suivi.actions.first?.etat, .transmis)
         XCTAssertEqual(suivi.actions.first?.etapes.map(\.qui), ["vous", "bureau"])

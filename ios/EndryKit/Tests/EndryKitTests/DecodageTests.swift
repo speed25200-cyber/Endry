@@ -25,13 +25,13 @@ final class ContratV10Tests: XCTestCase {
         XCTAssertTrue(r.decisionsAutorisees)
         let mail = try XCTUnwrap(r.decisions.first { $0.reference == "V-7K3F9Q" })
         XCTAssertNil(mail.envoiTiers)
-        XCTAssertTrue(mail.exigeGlisser, "repli sur la liste d’outils : mail_repondre")
+        XCTAssertTrue(mail.partChezUnTiers, "repli sur la liste d’outils : mail_repondre")
         XCTAssertEqual(mail.documents, ["OF-00037-B.pdf"])
         let facture = try XCTUnwrap(r.decisions.first { $0.reference == "V-2M8R4T" })
-        XCTAssertTrue(facture.exigeGlisser, "envoyer_facture")
+        XCTAssertTrue(facture.partChezUnTiers, "envoyer_facture")
         XCTAssertEqual(facture.controle?.pointsAVerifier.count, 1)
         let bexio = try XCTUnwrap(r.decisions.first { $0.reference == "V-9P1X6D" })
-        XCTAssertFalse(bexio.exigeGlisser)
+        XCTAssertFalse(bexio.partChezUnTiers)
         XCTAssertEqual(bexio.texte, "")
         let question = try XCTUnwrap(r.decisions.first { $0.reference == "Q-4HD2XP" })
         XCTAssertTrue(question.estQuestion)
@@ -111,9 +111,21 @@ final class ContratV11Tests: XCTestCase {
     func testEnvoiTiersFaitFoi() throws {
         let json = #"{"reference":"V-X","outil":"mail_envoyer","envoi_tiers":false}"#
         let carte = try JSONDecoder().decode(Carte.self, from: Data(json.utf8))
-        XCTAssertFalse(carte.exigeGlisser)
+        XCTAssertFalse(carte.partChezUnTiers)
         let rappel = try JSONDecoder().decode(Carte.self, from: Data(#"{"reference":"V-Y","outil":"envoyer_rappel"}"#.utf8))
-        XCTAssertTrue(rappel.exigeGlisser)
+        XCTAssertTrue(rappel.partChezUnTiers)
+    }
+
+    func testGesteRequisGlisser() throws {
+        let json = #"{"reference":"V-Z","outil":"commande_passer","envoi_tiers":false,"geste_requis":"glisser"}"#
+        let carte = try JSONDecoder().decode(Carte.self, from: Data(json.utf8))
+        XCTAssertEqual(carte.gesteRequis, "glisser")
+        XCTAssertTrue(carte.exigeGlisser)
+        XCTAssertEqual(carte.libelleGlisser, "Glisser pour valider")
+        // Absent : la règle s'applique quand même.
+        let sans = try JSONDecoder().decode(Carte.self, from: Data(#"{"reference":"V-W","outil":"note_ajouter"}"#.utf8))
+        XCTAssertNil(sans.gesteRequis)
+        XCTAssertTrue(sans.exigeGlisser)
     }
 
     func testSessionAppareilsSaisiesEtat() throws {

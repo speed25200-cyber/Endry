@@ -27,14 +27,16 @@ final class EvenementsTests: XCTestCase {
 }
 
 final class ChargeNotificationTests: XCTestCase {
-    func testDecisionSansEnvoiPermetOui() {
+    func testAucunOuiDepuisUneNotification() {
+        // Règle du 28.09.2026 : tout « Oui » se fait en glissant, dans l'app ; la notification ne propose que « Voir ».
         let charge = ChargeNotification(userInfo: [
             "aps": ["alert": ["title": "Offre prête"], "category": "DECISION", "thread-id": "chantier-18"],
             "reference": "V-9P1X6D",
         ])
         XCTAssertEqual(charge.categorie, .decision)
         XCTAssertEqual(charge.fil, "chantier-18")
-        XCTAssertTrue(charge.ouiAutorise)
+        XCTAssertFalse(charge.ouiAutorise)
+        XCTAssertTrue(CategorieNotification.allCases.allSatisfy { !$0.permetOui })
     }
 
     func testEnvoiATiersJamaisDepuisLaNotification() {
@@ -43,6 +45,15 @@ final class ChargeNotificationTests: XCTestCase {
         XCTAssertFalse(charge.ouiAutorise)
         // Une question attend une réponse écrite : pas de « Oui » non plus.
         XCTAssertFalse(ChargeNotification(userInfo: ["aps": ["category": "DECISION"], "reference": "Q-4HD2XP"]).ouiAutorise)
+    }
+
+    func testSaisieTraiteeOuvreLHistorique() {
+        let sansDecision = ChargeNotification(userInfo: ["aps": ["category": "SAISIE_TRAITEE"], "saisie_id": 42])
+        XCTAssertTrue(sansDecision.ouvreHistoriqueSaisies)
+        XCTAssertEqual(sansDecision.saisieId, "42")
+        let avecDecision = ChargeNotification(userInfo: ["aps": ["category": "SAISIE_TRAITEE"], "reference": "V-9P1X6D", "saisie_id": "S-7"])
+        XCTAssertFalse(avecDecision.ouvreHistoriqueSaisies, "la décision préparée s'ouvre, à glisser")
+        XCTAssertFalse(ChargeNotification(userInfo: ["aps": ["category": "DECISION"], "reference": "V-1"]).ouvreHistoriqueSaisies)
     }
 
     func testChargeInconnueToleree() {

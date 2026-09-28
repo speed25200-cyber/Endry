@@ -59,6 +59,8 @@ final class ModeleApp {
     private(set) var conversation: ModeleConversation?
     /// Écran « Conversation » ouvert.
     var conversationPresentee = false
+    /// Saisie à mettre en avant dans l'historique (notification « saisie traitée »).
+    var saisieCiblee: String?
     /// Recherche globale ouverte (loupe d'Aujourd'hui, ⌘F).
     var recherchePresentee = false
 
@@ -462,25 +464,12 @@ final class ModeleApp {
         }
     }
 
-    /// Action « Oui » d'une notification DECISION (appareil déverrouillé).
-    /// Défense en profondeur : la décision est relue ; un envoi à un tiers ou une question n'est jamais validé
-    /// hors de l'app, la carte est alors simplement ouverte.
-    func accepterDepuisNotification(_ reference: String) async {
-        guard let api = session.api, session.estConnecte else { return }
-        guard let liste = try? await api.decisions(),
-              let carte = liste.decisions.first(where: { $0.reference == reference }),
-              !carte.exigeGlisser, !carte.estQuestion else {
-            ouvrir(reference: reference)
-            return
-        }
-        do {
-            let reponse = try await api.agir(.oui, sur: reference)
-            suiviActions?.enregistrer(.oui, carte: carte, reponse: reponse.message)
-            await decisions?.charger()
-            suivreApresGeste()
-        } catch {
-            ouvrir(reference: reference)
-        }
+    /// Notification « saisie traitée » sans décision : l'onglet Dicter et son historique (la saisie mise en avant).
+    func ouvrirHistoriqueSaisies(_ saisieId: String?) {
+        reglagesPresentes = false
+        saisieCiblee = saisieId
+        onglet = .saisie
+        Task { await saisie?.chargerHistorique() }
     }
 
     func recevoirJetonAPNs(_ jeton: String) {

@@ -61,7 +61,7 @@ public struct Briefing: Sendable, Hashable {
 
         // Décisions
         if let decisions = accueil?.decisions, !decisions.isEmpty {
-            let envois = decisions.filter(\.exigeGlisser).count
+            let envois = decisions.filter(\.partChezUnTiers).count
             let questions = decisions.filter(\.estQuestion).count
             var detail = "\(decisions.count) en attente"
             var phrase = "\(decisions.count == 1 ? "Une décision vous attend" : "\(decisions.count) décisions vous attendent")"

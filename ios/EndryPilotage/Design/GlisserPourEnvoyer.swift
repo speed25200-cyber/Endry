@@ -1,12 +1,15 @@
 import SwiftUI
 
-/// Curseur « Glisser pour envoyer » : geste de confirmation obligatoire quand « Oui » fait partir
-/// un e-mail ou un document chez un tiers.
+/// Curseur « Glisser pour envoyer » / « Glisser pour valider » : le seul geste qui dit « Oui » à une décision
+/// (règle de la direction, 28.09.2026), qu'elle envoie quelque chose à un tiers ou non.
 ///
 /// Le pouce rencontre une résistance physique (plus on approche du bout, plus il faut tirer),
 /// la piste se remplit d'or au fil du geste et le retour haptique monte en crescendo jusqu'au seuil.
 struct GlisserPourEnvoyer: View {
     var libelle = "Glisser pour envoyer"
+    /// Faux : validation sans envoi à un tiers (« Validation… », « Validé »).
+    var envoi = true
+    var identifiant = "glisser-pour-envoyer"
     var enCours = false
     var actif = true
     /// Posé sur une carte papier crème : piste claire, curseur brun, texte brun.
@@ -51,7 +54,7 @@ struct GlisserPourEnvoyer: View {
                     .frame(width: decalage + diametre + marge * 2)
 
                 HStack(spacing: Espace.xs) {
-                    Text(enCours ? "Envoi…" : valide ? "Envoyé" : libelle)
+                    Text(enCours ? (envoi ? "Envoi…" : "Validation…") : valide ? (envoi ? "Envoyé" : "Validé") : libelle)
                         .styleTexte(15, relativeTo: .body, graisse: .semibold)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
@@ -130,14 +133,14 @@ struct GlisserPourEnvoyer: View {
         // VoiceOver : une action explicite remplace le glissement.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(libelle))
-        .accessibilityHint(Text("Envoie immédiatement au destinataire."))
+        .accessibilityHint(Text(envoi ? "Envoie immédiatement au destinataire." : "Valide la décision."))
         .accessibilityAddTraits(.isButton)
-        .accessibilityAction(named: Text("Envoyer")) {
+        .accessibilityAction(named: Text(envoi ? "Envoyer" : "Valider")) {
             guard actif, !enCours else { return }
             valide = true
             action()
         }
-        .accessibilityIdentifier("glisser-pour-envoyer")
+        .accessibilityIdentifier(identifiant)
     }
 }
 

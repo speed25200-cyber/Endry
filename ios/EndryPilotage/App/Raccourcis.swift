@@ -143,7 +143,7 @@ struct DecisionsEndry: AppIntent {
         let cartes = reponse.decisions
         guard !cartes.isEmpty else { return .result(dialog: "Aucune décision ne vous attend.") }
         let titres = cartes.prefix(3).map(\.titre)
-        let envois = cartes.filter(\.exigeGlisser).count
+        let envois = cartes.filter(\.partChezUnTiers).count
         let debut = cartes.count == 1 ? "Une décision vous attend" : "\(cartes.count) décisions vous attendent"
         let detail = envois > 0 ? ", dont \(envois == 1 ? "un envoi" : "\(envois) envois") à un tiers" : ""
         return .result(dialog: "\(debut)\(detail) : \(Briefing.enPhrase(titres)). Ouvrez Endry pour décider.")

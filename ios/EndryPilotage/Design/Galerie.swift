@@ -95,7 +95,7 @@ struct CarteApercuDecision: View {
     var actionsPossibles: Bool
     var enCours: Bool
     var ouvrir: () -> Void
-    var agir: @MainActor (ActionDecision) async -> Bool
+    var agir: @MainActor (ActionDecision, GesteValidation?) async -> Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: Espace.xs) {
@@ -104,7 +104,7 @@ struct CarteApercuDecision: View {
                     HStack(alignment: .firstTextBaseline) {
                         Text(ligneGenre)
                             .styleTexte(12, relativeTo: .caption, graisse: .semibold)
-                            .foregroundStyle(carte.exigeGlisser ? Color.bronzePapier : Color(hex: 0x4F6B4A))
+                            .foregroundStyle(carte.partChezUnTiers ? Color.bronzePapier : Color(hex: 0x4F6B4A))
                             .lineLimit(1)
                         Spacer(minLength: Espace.xs)
                         Text(carte.reference)
@@ -157,7 +157,7 @@ struct CarteApercuDecision: View {
 
     private var ligneGenre: String {
         if carte.estQuestion { return "\(carte.genre) · à répondre" }
-        return carte.exigeGlisser ? "\(carte.genre) · part chez un tiers" : "\(carte.genre) · sans envoi"
+        return carte.partChezUnTiers ? "\(carte.genre) · part chez un tiers" : "\(carte.genre) · sans envoi"
     }
 
     private var resume: String? {
@@ -174,24 +174,12 @@ struct CarteApercuDecision: View {
             }
             .buttonStyle(BoutonPapier(principal: true))
             .accessibilityIdentifier("repondre-apercu-\(carte.reference)")
-        } else if carte.exigeGlisser {
-            GlisserPourEnvoyer(libelle: "Glisser pour envoyer", enCours: enCours, actif: actionsPossibles, surPapier: true) {
-                Task { _ = await agir(.oui) }
-            }
         } else {
-            HStack(spacing: Espace.xs) {
-                Button {
-                    Task { _ = await agir(.oui) }
-                } label: {
-                    HStack(spacing: 6) {
-                        if enCours { ProgressView().tint(Color.or) }
-                        Text("Oui")
-                    }
-                }
-                .buttonStyle(BoutonPapier(principal: true))
-                .accessibilityIdentifier("oui-\(carte.reference)")
-                Button("Détails", action: ouvrir)
-                    .buttonStyle(BoutonPapier(principal: false))
+            // Tout « Oui » se fait en glissant (règle du 28.09.2026) : aucun bouton « Oui ».
+            GlisserPourEnvoyer(libelle: carte.libelleGlisser, envoi: carte.partChezUnTiers,
+                               identifiant: "glisser-\(carte.reference)", enCours: enCours, actif: actionsPossibles,
+                               surPapier: true) {
+                Task { _ = await agir(.oui, .glissement) }
             }
         }
     }

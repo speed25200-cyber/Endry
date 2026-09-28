@@ -16,7 +16,13 @@ final class ModelesTests: XCTestCase {
 
         let cartes = modele.cartes
         let mail = try XCTUnwrap(cartes.first { $0.reference == "V-7K3F9Q" })
-        let ok = await modele.agir(.oui, sur: mail)
+        // Sans glissement, aucun « Oui » : rien ne part, la carte reste.
+        let sansGeste = await modele.agir(.oui, sur: mail)
+        XCTAssertFalse(sansGeste)
+        XCTAssertEqual(modele.nombreDecisions, 5)
+        let appels = await demo.journal
+        XCTAssertFalse(appels.contains("POST /app/api/v1/decisions/V-7K3F9Q/oui"))
+        let ok = await modele.agir(.oui, sur: mail, geste: .glissement)
         XCTAssertTrue(ok)
         XCTAssertEqual(modele.nombreDecisions, 4)
         XCTAssertEqual(modele.toast?.style, .succes)
@@ -42,7 +48,7 @@ final class ModelesTests: XCTestCase {
         XCTAssertEqual(modele.nombreDecisions, 1)
 
         // Une carte déjà traitée : refus du serveur, puis rechargement.
-        let deja = await modele.agir(.oui, sur: mail)
+        let deja = await modele.agir(.oui, sur: mail, geste: .glissement)
         XCTAssertFalse(deja)
         XCTAssertEqual(modele.toast?.style, .erreur)
         XCTAssertEqual(modele.nombreDecisions, 1)
@@ -65,7 +71,7 @@ final class ModelesTests: XCTestCase {
         XCTAssertEqual(DateEndry.ilYa(try XCTUnwrap(modele.majLe)), "il y a 10 min")
         XCTAssertEqual(erreurs.count, 1)
 
-        let refuse = await modele.agir(.oui, sur: modele.cartes[0])
+        let refuse = await modele.agir(.oui, sur: modele.cartes[0], geste: .glissement)
         XCTAssertFalse(refuse)
         XCTAssertEqual(modele.toast?.message, ErreurAPI.horsLigne.message)
     }
@@ -189,18 +195,25 @@ final class ModelesTests: XCTestCase {
         modele.appliquerPause(true)
         XCTAssertTrue(modele.enPause)
         XCTAssertTrue(modele.actionsPossibles)
-        let traite = await modele.agir(.oui, sur: modele.cartes[2])
+        let traite = await modele.agir(.oui, sur: modele.cartes[2], geste: .glissement)
         XCTAssertTrue(traite)
         XCTAssertEqual(modele.nombreDecisions, 4)
     }
 
     func testEnvoisATiersRepli() {
         for outil in ["rappel_courrier", "relances_reactiver", "mail_envoyer", "envoyer_offre"] {
-            XCTAssertTrue(Carte(type: .validation, reference: "V-1", genre: "E-mail", titre: "t", motif: "", outil: outil).exigeGlisser, outil)
+            XCTAssertTrue(Carte(type: .validation, reference: "V-1", genre: "E-mail", titre: "t", motif: "", outil: outil).partChezUnTiers, outil)
         }
-        XCTAssertFalse(Carte(type: .validation, reference: "V-1", genre: "Note", titre: "t", motif: "", outil: "note_ajouter").exigeGlisser)
+        XCTAssertFalse(Carte(type: .validation, reference: "V-1", genre: "Note", titre: "t", motif: "", outil: "note_ajouter").partChezUnTiers)
         // `envoi_tiers` fait foi, même contre la liste.
-        XCTAssertFalse(Carte(type: .validation, reference: "V-1", genre: "E-mail", titre: "t", motif: "", outil: "mail_envoyer", envoiTiers: false).exigeGlisser)
+        XCTAssertFalse(Carte(type: .validation, reference: "V-1", genre: "E-mail", titre: "t", motif: "", outil: "mail_envoyer", envoiTiers: false).partChezUnTiers)
+        // Tout « Oui » se glisse : envoi à un tiers ou non ; seules les questions se répondent autrement.
+        let commande = Carte(type: .validation, reference: "V-2", genre: "Commande", titre: "t", motif: "", outil: "commande_passer", envoiTiers: false)
+        XCTAssertTrue(commande.exigeGlisser)
+        XCTAssertEqual(commande.libelleGlisser, "Glisser pour valider")
+        let mail = Carte(type: .validation, reference: "V-3", genre: "E-mail", titre: "t", motif: "", outil: "mail_envoyer", envoiTiers: true)
+        XCTAssertEqual(mail.libelleGlisser, "Glisser pour envoyer")
+        XCTAssertFalse(Carte(type: .question, reference: "Q-1", genre: "Question", titre: "t", motif: "").exigeGlisser)
     }
 }
 

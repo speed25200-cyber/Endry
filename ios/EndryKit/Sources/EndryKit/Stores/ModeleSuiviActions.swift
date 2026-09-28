@@ -66,7 +66,7 @@ public final class ModeleSuiviActions {
         }
         var a = ActionSuivie(id: id, nature: carte.estQuestion ? .question : .decision, reference: carte.reference,
                              titre: carte.titre, genre: carte.genre, outil: carte.outil, geste: geste.rawValue, le: le,
-                             chantierId: carte.chantierId, envoiTiersPrevu: carte.exigeGlisser,
+                             chantierId: carte.chantierId, envoiTiersPrevu: carte.partChezUnTiers,
                              destinatairesPrevus: carte.destinataires, consignes: consignes, reponse: reponse, etat: etat)
         var etapes = [EtapeSuivi(id: "geste", le: le, qui: "vous", type: "geste", titre: Self.titreGeste(geste, question: carte.estQuestion),
                                  detail: consignes)]

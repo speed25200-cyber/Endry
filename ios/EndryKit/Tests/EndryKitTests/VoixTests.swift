@@ -41,7 +41,7 @@ final class OutilsVoixTests: XCTestCase {
         XCTAssertTrue(chantier.sortie.contains("OF-00031"))
         let proposition = await executeur.executer(nom: "proposer_decision", arguments: #"{"reference":"V-2M8R4T"}"#)
         XCTAssertEqual(proposition.effet, .afficherDecision("V-2M8R4T"))
-        XCTAssertTrue(proposition.sortie.contains("geste"))
+        XCTAssertTrue(proposition.sortie.contains("glissant"), "validée seulement en glissant à l’écran")
         let saisie = await executeur.executer(nom: "saisie", arguments: #"{"texte":"Prépare une facture pour la régie Dubois"}"#)
         XCTAssertTrue(saisie.sortie.contains("Transmettre"), "préparée, jamais transmise d'ici")
         let inconnu = await executeur.executer(nom: "virer_argent", arguments: "{}")
@@ -343,7 +343,7 @@ final class ContratPC270926Tests: XCTestCase {
         let accueil = try JSONDecoder().decode(Accueil.self, from: Fixtures.donnees(.accueil))
         XCTAssertEqual(accueil.salut, "Bonjour")
         XCTAssertEqual(accueil.chantiers7Jours.first?.etape, "planifie")
-        XCTAssertTrue(accueil.decisions.filter { $0.estQuestion }.allSatisfy { !$0.exigeGlisser })
+        XCTAssertTrue(accueil.decisions.filter { $0.estQuestion }.allSatisfy { !$0.partChezUnTiers })
     }
 
     func testRenvoiIdentiqueMemeIdentifiant() async throws {

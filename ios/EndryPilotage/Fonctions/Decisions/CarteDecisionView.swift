@@ -11,7 +11,8 @@ struct CarteDecisionView: View {
     var demandeNon = 0
     /// Présentée en fiche plein écran : pas de cadre de carte, texte complet déplié, grand titre.
     var enFiche = false
-    var agir: @MainActor (ActionDecision, String?) async -> Bool
+    /// `GesteValidation` : seul le glissement à l'écran peut dire « Oui ».
+    var agir: @MainActor (ActionDecision, String?, GesteValidation?) async -> Bool
     var ouvrirPiece: (Piece) -> Void
 
     @State private var texteDeplie = false
@@ -89,15 +90,15 @@ struct CarteDecisionView: View {
         .sensoryFeedback(.warning, trigger: confirmationNon) { _, nouveau in nouveau }
         .confirmationDialog("Écarter cette proposition ?", isPresented: $confirmationNon, titleVisibility: .visible) {
             Button("Écarter", role: .destructive) {
-                Task { _ = await agir(.non, nil) }
+                Task { _ = await agir(.non, nil, nil) }
             }
             Button("Annuler", role: .cancel) {}
         } message: {
-            Text(carte.exigeGlisser ? "Rien ne sera envoyé." : "L’assistant ne fera rien pour cette carte.")
+            Text(carte.partChezUnTiers ? "Rien ne sera envoyé." : "L’assistant ne fera rien pour cette carte.")
         }
         .sheet(item: $feuille) { mode in
             ConsignesSheet(mode: mode, carte: carte) { texte in
-                await agir(mode == .corriger ? .corriger : .repondre, texte)
+                await agir(mode == .corriger ? .corriger : .repondre, texte, nil)
             }
         }
         .onChange(of: demandeNon) { _, _ in
@@ -191,24 +192,12 @@ struct CarteDecisionView: View {
             .disabled(!actionsPossibles || enCours)
         } else {
             VStack(spacing: Espace.s) {
-                if carte.exigeGlisser {
-                    GlisserPourEnvoyer(libelle: "Glisser pour envoyer", enCours: enCours, actif: actionsPossibles) {
-                        Task { _ = await agir(.oui, nil) }
-                    }
+                // Tout « Oui » se fait en glissant (règle du 28.09.2026) : aucun bouton « Oui ».
+                GlisserPourEnvoyer(libelle: carte.libelleGlisser, envoi: carte.partChezUnTiers,
+                                   identifiant: "glisser-\(carte.reference)", enCours: enCours, actif: actionsPossibles) {
+                    Task { _ = await agir(.oui, nil, .glissement) }
                 }
                 HStack(spacing: Espace.s) {
-                    if !carte.exigeGlisser {
-                        Button {
-                            Task { _ = await agir(.oui, nil) }
-                        } label: {
-                            HStack(spacing: 6) {
-                                if enCours { ProgressView().tint(Color.fond) }
-                                Text("Oui")
-                            }
-                        }
-                        .buttonStyle(BoutonPrincipal(couleur: .vertControle))
-                        .accessibilityIdentifier("oui-\(carte.reference)")
-                    }
                     // « Corriger » sur toute validation ; `modifiable` ne fait que pré-remplir le texte à retoucher.
                     Button {
                         feuille = .corriger
@@ -256,7 +245,7 @@ extension ConsignesSheet.Mode: Identifiable {
     ScrollView {
         VStack(spacing: 16) {
             ForEach(Fixtures.cartes) { carte in
-                CarteDecisionView(carte: carte, actionsPossibles: true, enCours: false, enAvant: false) { _, _ in true } ouvrirPiece: { _ in }
+                CarteDecisionView(carte: carte, actionsPossibles: true, enCours: false, enAvant: false) { _, _, _ in true } ouvrirPiece: { _ in }
             }
         }
         .padding()

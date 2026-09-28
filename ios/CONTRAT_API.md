@@ -435,3 +435,39 @@ L’app a un écran « Conversation » (Aujourd’hui › Écrire, Entreprise �
 - **Demande** (« prépare… », « rédige… ») : `POST /saisie` comme aujourd’hui, avec `[Pour l’agent X] ` en tête
   quand le patron a choisi un domaine ; son avancement vient du Suivi (v1.4) et s’affiche sous la demande.
 - Aucun envoi à un tiers ne part d’une conversation : il reste une décision à valider à l’écran.
+
+## v1.7 — tout « Oui » en glissant, mode direct complet, suivi fiable (28.09.2026)
+
+### Décisions : `geste_requis`
+- Chaque décision peut porter `geste_requis: "glisser"`. L’app l’honore et **applique la même règle s’il est absent** :
+  toute décision se valide par « Glisser pour valider » (« Glisser pour envoyer » quand `envoi_tiers` vaut true).
+  Il n’existe plus de « Oui » à simple toucher.
+- Aucun « Oui » ne part de la voix, de Siri, des raccourcis, de la montre, des App Intents ni des notifications.
+  La voix peut afficher une carte (`proposer_decision`), jamais la valider. `POST /decisions/{ref}` avec
+  `action: "oui"` n’est émis qu’après le glissement à l’écran.
+- « Non » (avec confirmation) et « Corriger » restent des boutons.
+
+### Notifications
+- Aucune catégorie n’a d’action « Oui ». Seule reste « Voir », qui ouvre la carte à glisser.
+- `SAISIE_TRAITEE` : la charge peut porter `saisie_id` (texte ou nombre). Sans `decision_reference`, l’app ouvre
+  l’historique des saisies sur cette saisie.
+
+### Mode direct : plus de lecture seule
+- Une question ou une demande (`/assistant/question`, `/agents/{id}/question`, `/saisie`) est traitée tout de suite
+  et le PC fait ce qui est demandé ; les envois deviennent des décisions à glisser.
+- Quand `GET /questions/{id}` ne renvoie pas de `message`, l’app n’écrit plus « lecture seule » ni « au prochain
+  passage » : elle affiche « Le bureau s’en occupe », puis la réponse. Un `message` (hors horaires, délai) reste
+  affiché tel quel.
+- Préfixe des questions repliées en saisie : « Question du patron (depuis l’app). Traite-la tout de suite… ».
+
+### Repli d’une question sur `/saisie` (sans doublon)
+- L’app ne passe à la route suivante (`/agents/{id}/question` → `/assistant/question` → `/saisie`) que sur **404 ou
+  405**. Une erreur 5xx, un délai dépassé, un 2xx illisible ou `en_cours` sans `question_id` : la question est
+  considérée comme reçue, **aucun nouvel envoi** (pas de question en double).
+
+### Suivi (v1.4) : le compte rendu arrive toujours
+- Une route marquée absente (404) est réessayée **toutes les 5 minutes** et au retour au premier plan.
+- L’app lit toujours `GET /saisies` pour rapprocher les saisies ; sur `event: reponse`, elle relit la fiche concernée.
+- Journal : une entrée `type: "reponse"` avec `saisie_id` marque l’action correspondante « Fait ».
+- Plus de sondage périodique de l’écran Bureau ni de la voix : les événements SSE (`/evenements`) suffisent ; l’app
+  relit aussi au retour au premier plan.

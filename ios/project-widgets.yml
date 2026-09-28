@@ -16,6 +16,8 @@ targets:
     info:
       properties:
         EndryGroupeTrousseau: "$(AppIdentifierPrefix)com.endrysa.endry.partage"
+        # Live Activity du pointage (mode équipe), affichée par l'extension.
+        NSSupportsLiveActivities: true
 
   EndryWidgets:
     type: app-extension

@@ -37,6 +37,7 @@ struct EspaceOuvrier: View {
                     outils
                     Button {
                         modele.arreter()
+                        LiveActivitePointage.synchroniser(modele)
                         journeePresentee = true
                     } label: {
                         Label(modele.envoyee ? "Corriger et renvoyer ma journée" : "Envoyer ma journée", systemImage: "paperplane.fill")
@@ -102,6 +103,7 @@ struct EspaceOuvrier: View {
             Spacer()
             Button {
                 withAnimation(.endry) { modele.arreter() }
+                LiveActivitePointage.synchroniser(modele)
             } label: {
                 Image(systemName: "stop.fill")
                     .font(.system(size: 20, weight: .bold))
@@ -146,6 +148,7 @@ struct EspaceOuvrier: View {
                 let actif = modele.enCours?.chantierId == c.id
                 Button {
                     withAnimation(.endry) { actif ? modele.arreter() : modele.commencer(c) }
+                    LiveActivitePointage.synchroniser(modele)
                 } label: {
                     Text(actif ? "Arrêter" : "Commencer ici")
                         .styleTexte(14, graisse: .semibold)

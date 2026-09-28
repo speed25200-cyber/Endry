@@ -9,6 +9,7 @@ import WidgetKit
 struct EndryWidgets: WidgetBundle {
     var body: some Widget {
         WidgetAujourdhui()
+        LiveActivitePointageWidget()
         ControleRegie()
         ControleBonLivraison()
         ControleAssistant()
@@ -242,5 +243,52 @@ struct ControleAssistant: ControlWidget {
         }
         .displayName("Parler à Endry")
         .description("Ouvre l’assistant vocal.")
+    }
+}
+
+// MARK: - Live Activity du pointage (mode équipe)
+
+struct LiveActivitePointageWidget: Widget {
+    var body: some WidgetConfiguration {
+        ActivityConfiguration(for: ActivitePointage.self) { contexte in
+            HStack(spacing: 14) {
+                Image(systemName: "timer")
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(Teinte.or)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(contexte.state.chantier).font(.headline).foregroundStyle(Teinte.orPale).lineLimit(1)
+                    Text("\(contexte.attributes.ouvrier) · aujourd’hui \(FormatSuisse.heures(contexte.state.totalJour))")
+                        .font(.caption).foregroundStyle(Teinte.orPale.opacity(0.7))
+                }
+                Spacer()
+                Text(contexte.state.debut, style: .timer)
+                    .font(.system(.title, design: .serif, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(Teinte.or)
+                    .frame(maxWidth: 110, alignment: .trailing)
+            }
+            .padding(16)
+            .activityBackgroundTint(Teinte.espresso)
+            .activitySystemActionForegroundColor(Teinte.or)
+        } dynamicIsland: { contexte in
+            DynamicIsland {
+                DynamicIslandExpandedRegion(.leading) {
+                    Label("Pointage", systemImage: "timer").font(.caption).foregroundStyle(Teinte.or)
+                }
+                DynamicIslandExpandedRegion(.trailing) {
+                    Text(contexte.state.debut, style: .timer).monospacedDigit().foregroundStyle(Teinte.or)
+                }
+                DynamicIslandExpandedRegion(.bottom) {
+                    Text(contexte.state.chantier).font(.subheadline).lineLimit(1)
+                }
+            } compactLeading: {
+                Image(systemName: "timer").foregroundStyle(Teinte.or)
+            } compactTrailing: {
+                Text(contexte.state.debut, style: .timer).monospacedDigit().frame(maxWidth: 52).foregroundStyle(Teinte.or)
+            } minimal: {
+                Image(systemName: "timer").foregroundStyle(Teinte.or)
+            }
+            .widgetURL(URL(string: "endrypilotage://decisions"))
+        }
     }
 }

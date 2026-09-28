@@ -784,7 +784,7 @@ nonisolated final class ReponseUnique: @unchecked Sendable {
     private var donnee = false
 
     /// Vrai si cette réponse est la première (la suite reprend avec elle).
-    func donner<T>(_ valeur: T, a suite: CheckedContinuation<T, Never>) -> Bool {
+    func donner<T: Sendable>(_ valeur: T, a suite: CheckedContinuation<T, Never>) -> Bool {
         let premiere = verrou.withLock { () -> Bool in
             if donnee { return false }
             donnee = true

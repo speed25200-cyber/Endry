@@ -55,6 +55,10 @@ final class ModeleApp {
     var creation: DemandeCreation?
     /// Un chantier est ouvert dans l'espace Chantiers (le sélecteur Pipeline / Planning s'efface).
     var dossierOuvert = false
+    /// Fil de conversation avec l'assistant du bureau (écrit, dicté, ou venu de l'assistant vocal).
+    private(set) var conversation: ModeleConversation?
+    /// Écran « Conversation » ouvert.
+    var conversationPresentee = false
 
     @ObservationIgnored private var jetonAPNsEnAttente: String?
     /// File persistante des saisies faites sans réseau.
@@ -81,7 +85,8 @@ final class ModeleApp {
             transmettre: { [weak self] demande in
                 guard let saisie = self?.saisie else { return .refusee("Connectez d’abord l’app au bureau.") }
                 return await saisie.transmettre(demande: demande)
-            }
+            },
+            conversation: conversation
         )
         assistantActif = assistant
         return assistant
@@ -146,6 +151,7 @@ final class ModeleApp {
             equipe = nil
             suiviActions = nil
             offresSignees = nil
+            conversation = nil
             return
         }
         let cache = session.estDemo ? nil : session.cache
@@ -176,6 +182,18 @@ final class ModeleApp {
             return await saisie.transmettre(demande: demande)
         }
         entretiens = ModeleEntretiens(api: api)
+        if session.estOuvrier {
+            conversation = nil
+        } else {
+            let dossier = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            conversation = ModeleConversation(
+                bureau: BureauClaude(api: api),
+                transmettre: { [weak self] demande in
+                    guard let saisie = self?.saisie else { return .refusee("Connectez d’abord l’app au bureau.") }
+                    return await saisie.transmettre(demande: demande)
+                },
+                fichier: session.estDemo ? nil : dossier?.appendingPathComponent("conversation.json"))
+        }
         if session.estOuvrier {
             let dossier = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             equipe = ModeleEquipe(api: api, ouvrier: session.nomOuvrier ?? "Équipe",
@@ -252,6 +270,7 @@ final class ModeleApp {
         BrouillonRegie.effacer()
         if let dossier = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
             try? FileManager.default.removeItem(at: dossier.appendingPathComponent("suivi-actions.json"))
+            try? FileManager.default.removeItem(at: dossier.appendingPathComponent("conversation.json"))
         }
         reconstruire()
         DelegueApp.mettreAJourBadge(0)
@@ -325,6 +344,7 @@ final class ModeleApp {
         }
         await suiviActions?.rafraichir(saisies: s?.historique ?? [])
         await offresSignees?.charger(chantiers: c?.tous ?? [])
+        await conversation?.verifierEnAttente()
         await apresChargement()
     }
 
@@ -357,6 +377,8 @@ final class ModeleApp {
                 let assistant = assistantActif
                 groupe.addTask { await assistant?.verifierEnAttente() }
                 groupe.addTask { await g?.verifierEnAttente() }
+                let fil = conversation
+                groupe.addTask { await fil?.verifierEnAttente() }
             }
         }
         if !sujets.isDisjoint(with: [.decisions, .saisies, .agents, .suivi]) {

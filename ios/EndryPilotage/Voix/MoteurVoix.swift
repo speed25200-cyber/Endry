@@ -103,11 +103,17 @@ final class AssistantVocal {
     /// Même conversation pour les questions qui se suivent ; nouvelle après 30 min de silence.
     @ObservationIgnored private var conversation = UUID().uuidString
     @ObservationIgnored private var derniereQuestion = Date.distantPast
+    /// Fil partagé avec l'écran « Conversation » : même `conversation_id`, même historique.
+    @ObservationIgnored let partagee: ModeleConversation?
+    /// Message du fil correspondant à chaque question en attente.
+    @ObservationIgnored private var messagesSuivis: [SuiviQuestion: String] = [:]
     @ObservationIgnored private let fabrique: @MainActor () async -> any MoteurVoix
     @ObservationIgnored private let repli: @MainActor () -> any MoteurVoix
 
     init(fabrique: @escaping @MainActor () async -> any MoteurVoix, repli: @escaping @MainActor () -> any MoteurVoix,
-         bureau: BureauClaude? = nil, transmettre: (@MainActor (String) async -> ModeleSaisie.ResultatDemande)? = nil) {
+         bureau: BureauClaude? = nil, transmettre: (@MainActor (String) async -> ModeleSaisie.ResultatDemande)? = nil,
+         conversation: ModeleConversation? = nil) {
+        self.partagee = conversation
         self.fabrique = fabrique
         self.repli = repli
         self.bureau = bureau
@@ -261,7 +267,9 @@ final class AssistantVocal {
                 await moteur?.signaler("Connectez d’abord l’app au bureau.")
                 return
             }
-            switch await transmettre(propre) {
+            let resultat = await transmettre(propre)
+            partagee?.consignerDemande(propre, source: .voix, resultat: resultat)
+            switch resultat {
             case .transmise: await moteur?.signaler("Transmis au bureau. Je vous préviens dès que c’est prêt.")
             case .gardee: await moteur?.signaler("Pas de réseau : la demande est gardée et partira toute seule.")
             case .refusee(let raison): await moteur?.signaler("La demande n’est pas partie. \(raison)")
@@ -273,19 +281,30 @@ final class AssistantVocal {
                 fil.removeAll()
             }
             derniereQuestion = Date()
+            // Le fil partagé passe d'abord : ce qui est dit ici se retrouve dans « Conversation », et inversement.
+            let contexteEnvoye = partagee?.contexte ?? contexte
+            let idMessage = partagee?.consignerQuestion(propre, source: .voix, agent: agent)
+            let idFil = idMessage.flatMap { id in partagee?.messages.first { $0.id == id }?.conversation } ?? conversation
             do {
-                let posee = try await bureau.poser(propre, agentId: agentId, nomAgent: agent, conversation: conversation, contexte: contexte)
+                let posee = try await bureau.poser(propre, agentId: agentId, nomAgent: agent, conversation: idFil, contexte: contexteEnvoye)
                 retirer(effet)
                 switch posee {
                 case .reponse(let r):
                     fil.append((propre, r.reponse ?? ""))
+                    if let idMessage { partagee?.repondre(idMessage, avec: r) }
                     let finale = ExecuteurOutils.Effet.reponseClaude(question: propre, reponse: r.reponse ?? "", agent: agent)
                     ajouter(finale)
                     await moteur?.annoncer(question: propre, reponse: r.reponse ?? "", agent: agent)
                 case .enAttente(let suivi, let message):
+                    if let idMessage {
+                        messagesSuivis[suivi] = idMessage
+                        partagee?.attendre(idMessage, suivi: suivi, message: message)
+                        if message != nil { partagee?.differer(idMessage, message: message) }
+                    }
                     recevoir(.effet(.questionClaude(suivi: suivi, question: propre, agent: agent, message: message)))
                 }
             } catch {
+                if let idMessage { partagee?.repondre(idMessage, texte: "La question n’est pas partie. \(error.message)", etat: .erreur) }
                 await moteur?.signaler("La question n’est pas partie. \(error.message)")
             }
         default:
@@ -319,6 +338,7 @@ final class AssistantVocal {
             self.suivis[cle] = nil
             guard let resultat else {
                 self.enAttente[suivi] = (question, agent)
+                if let id = self.messagesSuivis[suivi] { self.partagee?.differer(id, message: nil) }
                 let attente = ExecuteurOutils.Effet.questionClaude(suivi: suivi, question: question, agent: agent, message: nil)
                 if let index = self.cartes.firstIndex(of: attente) {
                     self.cartes[index] = .questionClaude(suivi: suivi, question: question, agent: agent,
@@ -343,6 +363,7 @@ final class AssistantVocal {
         }
         fil.append((question, reponse))
         if fil.count > 20 { fil.removeFirst(fil.count - 20) }
+        if let id = messagesSuivis.removeValue(forKey: suivi) { partagee?.repondre(id, avec: resultat) }
         ajouter(.reponseClaude(question: question, reponse: reponse, agent: agent))
         await moteur?.annoncer(question: question, reponse: reponse, agent: agent)
         if let bureau { etatBureau = await bureau.etat() ?? etatBureau }

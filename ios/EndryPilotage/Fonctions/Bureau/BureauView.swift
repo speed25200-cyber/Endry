@@ -31,11 +31,34 @@ struct PointEtat: View {
 
 /// « Le bureau » : l'assistant du PC, domaine par domaine (un seul assistant), ce qu'il fait, et le journal du jour.
 struct SectionBureau: View {
+    @Environment(ModeleApp.self) private var app
     var modele: ModeleAgents
 
     var body: some View {
         VStack(alignment: .leading, spacing: Espace.s) {
             EnTeteSection(titre: "Le bureau", detail: modele.libelle)
+            if let conversation = app.conversation {
+                Button { app.ouvrirConversation() } label: {
+                    HStack(spacing: Espace.s) {
+                        Image(systemName: "text.bubble.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.espressoProfond)
+                            .frame(width: 38, height: 38)
+                            .background(.degradeOr, in: Circle())
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Conversation").styleTexte(16, graisse: .semibold).foregroundStyle(Color.encre)
+                            Text(conversation.reflechit ? "L’assistant réfléchit…" : "Écrire ou dicter au bureau, réponse ici")
+                                .styleTexte(13, relativeTo: .footnote).foregroundStyle(Color.encreDouce)
+                        }
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right").font(.system(size: 13, weight: .bold)).foregroundStyle(Color.encrePale)
+                    }
+                    .padding(Espace.m)
+                    .surfaceCarte(rayon: Espace.rayonPetit)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("ouvrir-conversation-bureau")
+            }
             if let service = modele.service {
                 Label(service, systemImage: service.hasPrefix("Hors") ? "moon.zzz.fill" : "clock")
                     .styleTexte(12, relativeTo: .caption, graisse: .medium)

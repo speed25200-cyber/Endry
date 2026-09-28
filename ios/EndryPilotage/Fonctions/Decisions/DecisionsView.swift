@@ -127,9 +127,14 @@ struct DecisionsView: View {
                     .apparitionEnCascade(index: 3, visible: visible)
                     .accessibilityIdentifier("resume-du-jour")
             }
-            BoutonParlerEndry { app.ouvrirAssistant() }
-                .padding(.top, Espace.s)
-                .apparitionEnCascade(index: 4, visible: visible)
+            HStack(spacing: Espace.xs) {
+                BoutonParlerEndry { app.ouvrirAssistant() }
+                if app.conversation != nil {
+                    BoutonEcrireBureau { app.ouvrirConversation() }
+                }
+            }
+            .padding(.top, Espace.s)
+            .apparitionEnCascade(index: 4, visible: visible)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Espace.bord + 4)
@@ -328,6 +333,30 @@ struct BoutonParlerEndry: View {
         .buttonStyle(.plain)
         .accessibilityHint(Text("Ouvre l’assistant vocal : posez une question ou dictez une demande"))
         .accessibilityIdentifier("parler-endry")
+    }
+}
+
+/// « Écrire » : la conversation écrite ou dictée avec l'assistant du bureau, comme une session ouverte.
+struct BoutonEcrireBureau: View {
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: Espace.xs) {
+                Image(systemName: "text.bubble")
+                    .font(.system(size: 15, weight: .semibold))
+                Text("Écrire")
+                    .styleTexte(15, relativeTo: .subheadline, graisse: .semibold)
+            }
+            .foregroundStyle(Color.orClair)
+            .padding(.horizontal, Espace.m)
+            .frame(minHeight: 44)
+            .background(Color.white.opacity(0.1), in: Capsule())
+            .overlay(Capsule().stroke(Color.or.opacity(0.35), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(Text("Ouvre la conversation avec l’assistant du bureau : écrivez ou dictez"))
+        .accessibilityIdentifier("ecrire-bureau")
     }
 }
 

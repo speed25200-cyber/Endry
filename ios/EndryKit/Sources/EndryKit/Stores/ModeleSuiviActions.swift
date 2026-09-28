@@ -17,6 +17,8 @@ public final class ModeleSuiviActions {
     @ObservationIgnored private let api: any EndryAPI
     @ObservationIgnored private let fichier: URL?
     @ObservationIgnored private var routePCAbsente = false
+    /// Écritures enchaînées : la dernière version reste sur le disque.
+    @ObservationIgnored private var sauvegarde: Task<Void, Never>?
 
     static let conservation: TimeInterval = 30 * 24 * 3600
     static let maximum = 200
@@ -189,7 +191,9 @@ public final class ModeleSuiviActions {
     private func sauvegarder() {
         guard let fichier else { return }
         let actions = actions
-        Task.detached(priority: .utility) {
+        let precedente = sauvegarde
+        sauvegarde = Task.detached(priority: .utility) {
+            await precedente?.value
             guard let data = try? Self.encodeur.encode(actions) else { return }
             try? FileManager.default.createDirectory(at: fichier.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? data.write(to: fichier, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])

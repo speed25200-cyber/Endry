@@ -300,6 +300,27 @@ final class EndryPilotageUITests: XCTestCase {
         XCTAssertTrue(bouton.waitForExistence(timeout: 5))
     }
 
+    /// Conversation : une question écrite part tout de suite au bureau, la réponse s'affiche dans le fil.
+    @MainActor
+    func testConversationEcrite() {
+        let app = lancer()
+        let bouton = app.buttons["ecrire-bureau"]
+        XCTAssertTrue(bouton.waitForExistence(timeout: 8), "Le bouton « Écrire » est absent.")
+        toucher(bouton)
+        let champ = app.descendants(matching: .any)["champ-conversation"].firstMatch
+        XCTAssertTrue(champ.waitForExistence(timeout: 8), "La conversation ne s’est pas ouverte.")
+        capturer(app, "11-conversation-vide")
+        champ.tap()
+        champ.typeText("Mme Gander a-t-elle rappelé ?")
+        app.buttons["envoyer-conversation"].tap()
+        let reponse = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", "jeudi")).firstMatch
+        let repondu = reponse.waitForExistence(timeout: 30)
+        capturer(app, repondu ? "11-conversation" : "11-conversation-sans-reponse")
+        XCTAssertTrue(repondu, "La réponse du bureau n’est pas arrivée dans la conversation.")
+        app.buttons["fermer-conversation"].tap()
+        XCTAssertTrue(bouton.waitForExistence(timeout: 5))
+    }
+
     /// Le bureau : l'agent Secrétariat répond à une question posée depuis sa fiche.
     @MainActor
     func testBureauAgentRepond() {

@@ -423,3 +423,15 @@ demande que ses questions partent et soient traitées **tout de suite**, comme d
   envois restent des décisions validées à l’écran.
 - Côté app : ce qui est dit part après un court délai d’annulation (réglage « Envoi direct au bureau », actif par
   défaut) ; `GET /questions/{id}` chaque seconde pendant 20 s puis toutes les 2 s jusqu’à 3 min.
+
+### Conversation (écrite ou dictée) — mêmes routes, rien de nouveau à exposer
+L’app a un écran « Conversation » (Aujourd’hui › Écrire, Entreprise › Le bureau, assistant vocal, raccourci
+« Écrire au bureau ») : un fil écrit comme une session Claude ouverte, partagé avec l’assistant vocal (même
+`conversation_id`, mêmes `contexte`). Il utilise uniquement les routes v1.6 :
+- **Question** (lecture seule) : `POST /assistant/question` ou `POST /agents/{id}/question` en `mode: "direct"` ;
+  la réponse s’affiche dans le fil, mise en forme. Le PC peut répondre en **Markdown léger** (titres `##`, listes
+  `-` ou `1.`, **gras**, liens) : l’app le met en forme à l’écran et le retire pour la voix. `decision_reference`
+  dans la réponse ajoute un bouton « Voir la décision … à valider ».
+- **Demande** (« prépare… », « rédige… ») : `POST /saisie` comme aujourd’hui, avec `[Pour l’agent X] ` en tête
+  quand le patron a choisi un domaine ; son avancement vient du Suivi (v1.4) et s’affiche sous la demande.
+- Aucun envoi à un tiers ne part d’une conversation : il reste une décision à valider à l’écran.

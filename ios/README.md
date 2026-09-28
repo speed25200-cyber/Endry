@@ -128,6 +128,17 @@ Toucher court du micro central : dictée d'une saisie terrain. **Toucher long** 
   les mots pendant la phrase ; la transcription du serveur fait foi à la fin. Texte en SF Pro.
 - **Écrire plutôt que parler** : suggestions à toucher et champ « Écrire à Endry… » dans l'assistant
   (mêmes outils, mêmes règles). Toucher la sphère pendant qu'Endry parle l'interrompt.
+- **Réponses longues** : dès qu'une réponse dépasse quelques lignes (ou qu'une carte s'affiche), la sphère se range
+  en haut à gauche et la réponse se lit en texte courant, aligné à gauche, qui défile (fondu en haut et en bas).
+  La réponse du bureau n'est plus répétée dans une carte : un lien discret « Continuer dans la conversation ».
+- **Conversation** (`Fonctions/Conversation/`, `EndryKit/Voix/ConversationBureau.swift`) : l'endroit réservé pour
+  parler au bureau **par écrit ou en dictée**, comme une session Claude ouverte (Aujourd'hui › « Écrire »,
+  Entreprise › Le bureau, bouton en haut de l'assistant vocal, raccourci « Écrire au bureau »). Fil partagé avec
+  l'assistant vocal (même `conversation_id`), gardé sur l'iPhone (effacé à la déconnexion). **Question** : part
+  tout de suite en lecture seule, « L'assistant réfléchit… » puis la réponse mise en forme (titres, listes, gras),
+  à copier. **Demande** (« prépare… », deviné d'après la tournure, modifiable d'un toucher) : part en saisie et
+  son avancement (Suivi) s'affiche dessous jusqu'au résultat. Choix du domaine (Secrétariat, Offres…) en haut.
+  Rien ne part chez un tiers depuis la conversation.
 - **Entrées** : bouton « Parler à Endry » sur Aujourd'hui, toucher long du micro central, et Siri
   (« Parler à Endry », raccourci App Intents ; l'assistant ne s'ouvre qu'après Face ID).
 - **La voix ne valide jamais un envoi** : `proposer_decision` affiche la carte, le patron fait le geste

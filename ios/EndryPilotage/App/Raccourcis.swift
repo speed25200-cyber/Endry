@@ -15,8 +15,12 @@ final class DemandesRaccourcis {
     var briefingDemande = false
     /// « Dis Siri, nouvelle offre Endry » : la rédaction s'ouvre, dictée prête.
     var creation: TypeDemandeDocument?
+    /// « Écrire au bureau » : la conversation s'ouvre, clavier prêt.
+    var conversationDemande = false
 
-    var enAttente: Bool { assistantDemande || outil != nil || chantier != nil || briefingDemande || creation != nil }
+    var enAttente: Bool {
+        assistantDemande || outil != nil || chantier != nil || briefingDemande || creation != nil || conversationDemande
+    }
 }
 
 // MARK: - Ouvrir l'app sur une fonction
@@ -30,6 +34,19 @@ struct ParlerAEndry: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult {
         DemandesRaccourcis.partage.assistantDemande = true
+        return .result()
+    }
+}
+
+/// « Écrire au bureau » : la conversation avec l'assistant du bureau (écrite ou dictée), comme un chat ouvert.
+struct EcrireAuBureau: AppIntent {
+    static let title: LocalizedStringResource = "Écrire au bureau"
+    static let description: IntentDescription? = IntentDescription("Ouvre la conversation avec l’assistant du bureau : écrivez ou dictez, il répond ici.")
+    static let openAppWhenRun = true
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        DemandesRaccourcis.partage.conversationDemande = true
         return .result()
     }
 }

@@ -31,6 +31,10 @@ struct ContenuPrincipal: View {
             demandes.creation = nil
             app.nouveauDocument(type)
         }
+        if demandes.conversationDemande {
+            demandes.conversationDemande = false
+            app.ouvrirConversation()
+        }
     }
 
     var body: some View {
@@ -78,6 +82,9 @@ struct ContenuPrincipal: View {
         }
         .fullScreenCover(isPresented: $app.assistantPresente) {
             VueAssistantVocal()
+        }
+        .sheet(isPresented: $app.conversationPresentee) {
+            if let modele = app.conversation { ConversationView(modele: modele) }
         }
         .sheet(isPresented: $app.briefingPresente) {
             BriefingView()
@@ -145,6 +152,21 @@ extension ModeleApp {
         var transaction = Transaction()
         transaction.disablesAnimations = true
         withTransaction(transaction) { assistantPresente = false }
+    }
+
+    /// La conversation écrite / dictée avec l'assistant du bureau (depuis l'assistant vocal : il se ferme d'abord).
+    func ouvrirConversation() {
+        guard conversation != nil else { return }
+        reglagesPresentes = false
+        guard assistantPresente else {
+            conversationPresentee = true
+            return
+        }
+        fermerAssistant()
+        Task {
+            try? await Task.sleep(for: .milliseconds(450))
+            conversationPresentee = true
+        }
     }
 }
 

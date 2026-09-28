@@ -34,23 +34,38 @@ struct VueAssistantVocal: View {
             VStack(spacing: 0) {
                 barreHaute
                     .opacity(apparu ? 1 : 0)
-                Spacer(minLength: Espace.s)
-                sphere
-                EtatAssistant(phase: assistant?.phase ?? .preparation)
-                    .padding(.top, Espace.xs)
+                if !compact { Spacer(minLength: Espace.s) }
+                // Réponse longue ou carte à l'écran : la sphère se range en haut à gauche, le texte prend la place.
+                let disposition = compact ? AnyLayout(HStackLayout(alignment: .center, spacing: Espace.m))
+                                          : AnyLayout(VStackLayout(spacing: 0))
+                disposition {
+                    sphere
+                    VStack(alignment: compact ? .leading : .center, spacing: 0) {
+                        EtatAssistant(phase: assistant?.phase ?? .preparation)
+                            .padding(.top, compact ? 0 : Espace.xs)
+                        if let nom = assistant?.nomMoteur, !nom.isEmpty {
+                            Label(nom, systemImage: nom.contains("Apple Intelligence") ? "sparkles" : "waveform")
+                                .font(PoliceAssistant.texte(11, .medium, relativeTo: .caption2))
+                                .foregroundStyle(Color.orClair.opacity(0.4))
+                                .padding(.top, 6)
+                                .accessibilityLabel(Text("Moteur vocal : \(nom)"))
+                                .transition(.opacity)
+                        }
+                    }
                     .opacity(apparu ? 1 : 0)
-                if let nom = assistant?.nomMoteur, !nom.isEmpty {
-                    Label(nom, systemImage: nom.contains("Apple Intelligence") ? "sparkles" : "waveform")
-                        .font(PoliceAssistant.texte(11, .medium, relativeTo: .caption2))
-                        .foregroundStyle(Color.orClair.opacity(0.4))
-                        .padding(.top, 6)
-                        .accessibilityLabel(Text("Moteur vocal : \(nom)"))
-                        .transition(.opacity)
+                    if compact { Spacer(minLength: 0) }
                 }
-                TranscriptionAssistant(assistant: assistant)
-                    .padding(.top, Espace.l)
-                    .opacity(apparu ? 1 : 0)
-                Spacer(minLength: Espace.s)
+                .padding(.top, compact ? Espace.s : 0)
+                if compact {
+                    ReponseLisible(assistant: assistant)
+                        .frame(maxHeight: .infinity)
+                        .transition(.opacity)
+                } else {
+                    TranscriptionAssistant(assistant: assistant)
+                        .padding(.top, Espace.l)
+                        .opacity(apparu ? 1 : 0)
+                    Spacer(minLength: Espace.s)
+                }
                 cartes
                 if assistant?.cartes.isEmpty ?? true, assistant?.reponse.isEmpty ?? true, !clavier {
                     suggestions
@@ -67,6 +82,7 @@ struct VueAssistantVocal: View {
         .environment(\.colorScheme, .dark)
         .presentationBackground(.clear)
         .animation(.endry(reduire: reduireAnimations), value: assistant?.cartes ?? [])
+        .animation(.spring(response: 0.55, dampingFraction: 0.86), value: compact)
         .task {
             withAnimation(reduireAnimations ? .fonduDoux : .spring(response: 0.7, dampingFraction: 0.82)) { apparu = true }
             let nouvel = app.nouvelAssistant()
@@ -78,13 +94,21 @@ struct VueAssistantVocal: View {
         .toast(Binding(get: { app.decisions?.toast }, set: { nouveau in if let modele = app.decisions { modele.toast = nouveau } }), decalageBas: Espace.l)
     }
 
+    /// Réponse longue ou carte à l'écran : disposition « lecture » (sphère réduite, texte à gauche, défilant).
+    private var compact: Bool {
+        guard let assistant else { return false }
+        return !assistant.cartes.isEmpty || assistant.reponse.count > 150
+    }
+
     /// L'app reste devinée derrière un voile espresso profond : l'assistant se pose au-dessus, sans rupture.
     private var fond: some View {
         ZStack {
             Rectangle().fill(.ultraThinMaterial)
             Color(hex: 0x0E0A06).opacity(0.9)
-            RadialGradient(colors: [Color(hex: 0x9F722A).opacity(0.22), .clear], center: UnitPoint(x: 0.5, y: 0.36),
-                           startRadius: 10, endRadius: 360)
+            // Le halo suit la sphère : au centre, ou en haut à gauche quand la réponse prend la place.
+            RadialGradient(colors: [Color(hex: 0x9F722A).opacity(0.22), .clear],
+                           center: compact ? UnitPoint(x: 0.12, y: 0.1) : UnitPoint(x: 0.5, y: 0.36),
+                           startRadius: 10, endRadius: compact ? 260 : 360)
         }
         .opacity(apparu ? 1 : 0)
         .ignoresSafeArea()
@@ -110,6 +134,21 @@ struct VueAssistantVocal: View {
             }
             .disabled(!(assistant?.pret ?? false))
             Spacer()
+            if app.conversation != nil {
+                Button {
+                    assistant?.arreter()
+                    app.ouvrirConversation()
+                } label: {
+                    Image(systemName: "text.bubble")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.orClair)
+                        .frame(width: 40, height: 40)
+                        .background(Color.white.opacity(0.08), in: Circle())
+                        .overlay(Circle().stroke(Color.or.opacity(0.2), lineWidth: Espace.filet))
+                }
+                .accessibilityLabel(Text("Ouvrir la conversation écrite"))
+                .accessibilityIdentifier("ouvrir-conversation")
+            }
             Button(action: fermer) {
                 Image(systemName: "xmark")
                     .font(.system(size: 14, weight: .semibold))
@@ -126,7 +165,7 @@ struct VueAssistantVocal: View {
 
     private var sphere: some View {
         OrbeEndry(assistant: assistant)
-            .frame(maxWidth: 330, maxHeight: 330)
+            .frame(maxWidth: compact ? 64 : 330, maxHeight: compact ? 64 : 330)
             .scaleEffect(apparu ? 1 : 0.35)
             .blur(radius: apparu ? 0 : 24)
             .opacity(apparu ? 1 : 0)
@@ -329,6 +368,98 @@ private struct TranscriptionAssistant: View {
     }
 }
 
+/// Disposition « lecture » : votre question en petit, puis la réponse alignée à gauche, en texte courant,
+/// qui défile doucement (fondu en haut et en bas) ; les mots déjà dits s'allument au rythme de la voix.
+private struct ReponseLisible: View {
+    var assistant: AssistantVocal?
+    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
+
+    var body: some View {
+        let reponse = assistant?.reponse ?? ""
+        ScrollView {
+            VStack(alignment: .leading, spacing: Espace.m) {
+                if let assistant, !(assistant.definitif.isEmpty && assistant.provisoire.isEmpty) {
+                    Text([assistant.definitif, assistant.provisoire].filter { !$0.isEmpty }.joined(separator: " "))
+                        .font(PoliceAssistant.texte(15, .medium, relativeTo: .subheadline))
+                        .foregroundStyle(Color.orClair.opacity(0.5))
+                        .lineLimit(3)
+                        .accessibilityIdentifier("transcription-patron")
+                }
+                if let assistant, !reponse.isEmpty {
+                    let (dit, reste) = TranscriptionAssistant.decouper(reponse, lu: assistant.reponseLue)
+                    Text("\(Text(BlocTexte.sansBalises(dit)).foregroundStyle(Color(hex: 0xFBEBD0)))\(Text(BlocTexte.sansBalises(reste)).foregroundStyle(Color.orClair.opacity(0.35)))")
+                        .font(PoliceAssistant.texte(19, .regular, relativeTo: .body))
+                        .lineSpacing(6)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .animation(.easeOut(duration: 0.18), value: assistant.reponseLue)
+                        .accessibilityLabel(Text(reponse))
+                        .accessibilityIdentifier("reponse-assistant")
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, Espace.m)
+        }
+        .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize)
+        .mask(
+            LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.05),
+                                   .init(color: .black, location: 0.92), .init(color: .clear, location: 1)],
+                           startPoint: .top, endPoint: .bottom)
+        )
+        .animation(.endry(reduire: reduireAnimations), value: reponse.isEmpty)
+    }
+}
+
+/// Réponse du bureau arrivée : discrète, elle mène au fil complet (écrit, mis en forme, à copier).
+private struct LienConversation: View {
+    @Environment(ModeleApp.self) private var app
+    var agent: String?
+    var retirer: () -> Void
+
+    var body: some View {
+        HStack(spacing: Espace.s) {
+            Button {
+                app.ouvrirConversation()
+            } label: {
+                HStack(spacing: Espace.s) {
+                    Image(systemName: agent.flatMap { AgentBureau(nom: $0)?.icone } ?? "text.bubble")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.or)
+                        .frame(width: 34, height: 34)
+                        .background(Color.or.opacity(0.14), in: Circle())
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(agent.map { "Réponse · \($0)" } ?? "Réponse de l’assistant du bureau")
+                            .font(PoliceAssistant.texte(14, .semibold, relativeTo: .subheadline))
+                            .foregroundStyle(Color.orClair)
+                        Text("Continuer dans la conversation")
+                            .font(PoliceAssistant.texte(12, relativeTo: .caption))
+                            .foregroundStyle(Color.orClair.opacity(0.55))
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Color.or.opacity(0.8))
+                }
+            }
+            .buttonStyle(.plain)
+            Button(action: retirer) {
+                Image(systemName: "xmark").font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color.orClair.opacity(0.45))
+                    .frame(width: 28, height: 28)
+            }
+            .accessibilityLabel(Text("Masquer"))
+        }
+        .padding(.horizontal, Espace.m)
+        .padding(.vertical, 10)
+        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.or.opacity(0.2), lineWidth: Espace.filet))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("carte-claude")
+    }
+}
+
 /// Chaque mot reconnu apparaît en fondu, en remontant légèrement et en se précisant (flou → net) ;
 /// les mots encore provisoires restent plus pâles jusqu'à ce que la reconnaissance les confirme.
 private struct MotsEnDirect: View {
@@ -488,8 +619,9 @@ struct CarteContexte: View {
             CarteConfirmation(titre: "Demande pour le bureau", texte: texte, bouton: "Transmettre",
                               note: "L’assistant prépare ; rien ne part chez un tiers sans votre geste.",
                               envoiAuto: envoiAuto, confirmer: confirmer, annuler: retirer, garder: garder)
-        case .reponseClaude(let question, let reponse, let agent):
-            CarteClaude(question: question, reponse: reponse, agent: agent, retirer: retirer)
+        case .reponseClaude(_, _, let agent):
+            // La réponse est déjà à l'écran (et dite) : ici, seulement le lien vers le fil complet.
+            LienConversation(agent: agent, retirer: retirer)
         case .ouvrirOutil(let nom, let chantierId):
             let outil: OutilTerrain = nom == "bon_livraison" ? .bonLivraison : nom == "releve" ? .releve : .regie
             Button {
@@ -820,7 +952,7 @@ struct OrbeEndry: View {
             Circle()
                 .fill(RadialGradient(colors: [Color.orClair, Color.or, Color(hex: 0x3A2A14)], center: UnitPoint(x: 0.35, y: 0.3),
                                      startRadius: 4, endRadius: 150))
-                .padding(40)
+                .scaleEffect(0.76)
                 .aspectRatio(1, contentMode: .fit)
                 .accessibilityHidden(true)
         } else {

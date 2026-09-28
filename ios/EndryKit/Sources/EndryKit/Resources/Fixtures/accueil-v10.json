@@ -191,13 +191,13 @@
       {
         "facture_id": 415,
         "numero": "RE-00415",
-        "titre": "Boiler 300 L — mise en service",
+        "titre": "Chauffe-eau 300 L — mise en service",
         "contact_id": 60,
         "montant": 4215.4,
         "echeance": "2026-10-26",
         "retard_jours": 0,
         "relance": "",
-        "client": "M. et Mme Favre"
+        "client": "M. et Mme Lambert"
       }
     ],
     "total": 49673.35,

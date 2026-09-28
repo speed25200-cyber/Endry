@@ -139,7 +139,7 @@ struct CarteEntretiens: View {
     }
 
     private var detail: String {
-        if !modele.disponible { return "Chaudières, boilers, adoucisseurs : bientôt fournis par le bureau" }
+        if !modele.disponible { return "Chaudières, chauffe-eau, adoucisseurs : bientôt fournis par le bureau" }
         let n = modele.aPlanifier.count
         return n == 0 ? "Rien à planifier ce mois" : "\(n) à planifier d’ici un mois"
     }
@@ -167,7 +167,7 @@ struct EntretiensView: View {
                                  icone: "wrench.and.screwdriver")
                         Button("Demander la liste au bureau") {
                             Task {
-                                let r = await app.saisie?.transmettre(demande: "[Pour l’agent Secrétariat] Dresser la liste des entretiens périodiques à venir (chaudières, boilers, adoucisseurs, pompes à chaleur) à partir de Bexio, avec les échéances. Ne rien envoyer aux clients.")
+                                let r = await app.saisie?.transmettre(demande: "[Pour l’agent Secrétariat] Dresser la liste des entretiens périodiques à venir (chaudières, chauffe-eau, adoucisseurs, pompes à chaleur) à partir de Bexio, avec les échéances. Ne rien envoyer aux clients.")
                                 app.toast = Toast(r == .transmise ? "Demandé au bureau." : "Gardé : partira au retour du réseau.")
                             }
                         }

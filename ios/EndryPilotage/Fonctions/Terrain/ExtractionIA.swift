@@ -166,7 +166,7 @@ enum ExtractionIA {
     struct DocumentIA {
         @Guide(description: "Nom du client tel qu’il est dit (« Mme Gander », « Régie Dubois »), vide s’il n’est pas dit")
         var client: String
-        @Guide(description: "Objet court du document, sans le nom du client (« Remplacement du boiler 300 l »)")
+        @Guide(description: "Objet court du document, sans le nom du client (« Remplacement du chauffe-eau 300 l »)")
         var objet: String
         @Guide(description: "Lignes du document : fournitures, main-d’œuvre, déplacement ; vide si rien de précis n’est dit")
         var lignes: [LigneIA]

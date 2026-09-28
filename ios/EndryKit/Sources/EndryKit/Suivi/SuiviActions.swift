@@ -316,7 +316,7 @@ extension EndryAPI {
 // MARK: - Rapprochement
 
 public enum RapprochementSuivi {
-    /// Numéros de documents cités dans un titre : « AN-00024 », « RE-00036 », « RG-20260928-1432 ».
+    /// Numéros de documents cités dans un titre : « AN-00024 », « RE-00990 », « RG-20260928-1432 ».
     public static func reperes(_ texte: String) -> [String] {
         guard let re = try? NSRegularExpression(pattern: #"\b[A-Z]{1,4}-[0-9]{3,}(?:-[0-9]+)?\b"#) else { return [] }
         let ns = texte as NSString

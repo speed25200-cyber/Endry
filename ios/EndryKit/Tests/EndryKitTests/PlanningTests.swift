@@ -10,7 +10,7 @@ final class PlanningTests: XCTestCase {
         let mercredi = Planning.actifs(le: jour("2026-09-30"), dans: dossiers).map(\.id)
         XCTAssertEqual(Set(mercredi), ["12", "18"])
         let lundiSuivant = Planning.actifs(le: jour("2026-10-05"), dans: dossiers).map(\.id)
-        XCTAssertEqual(Set(lundiSuivant), ["12", "24"], "Morel est fini, Le Mont commence")
+        XCTAssertEqual(Set(lundiSuivant), ["12", "24"], "Morel est fini, Les Pâquerets commencent")
         XCTAssertTrue(Planning.actifs(le: jour("2026-10-03"), dans: dossiers).contains { $0.id == "12" }, "un chantier long couvre le week-end")
     }
 

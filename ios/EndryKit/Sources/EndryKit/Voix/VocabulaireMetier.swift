@@ -9,7 +9,7 @@ public enum VocabulaireMetier {
         "Endry", "SN 592000", "Mapress", "Sanipex", "Geberit", "Buderus", "Meier Tobler", "Debrunner Acifer", "Hoval", "Viessmann",
         "boiler", "nourrice", "vase d’expansion", "chauffage au sol", "régie", "débouchage", "TVA", "Bexio", "Zoho",
         "secrétariat", "comptabilité", "offre", "acompte", "métré",
-        "Bussy", "Estavayer", "Epalinges", "Neuchâtel", "Moudon", "Payerne", "Romont", "Le Mont-sur-Lausanne",
+        "Bussy", "Estavayer", "Epalinges", "Neuchâtel", "Moudon", "Payerne", "Romont", "Lausanne",
     ]
 
     /// Limite d'Apple pour l'ensemble des expressions.

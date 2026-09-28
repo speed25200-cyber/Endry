@@ -83,8 +83,8 @@ final class RapprochementSuiviTests: XCTestCase {
     }
 
     func testReperesEtFichiers() {
-        XCTAssertEqual(RapprochementSuivi.reperes("Commande AN-00024 et facture RE-00036, bon RG-20260928-1432"),
-                       ["AN-00024", "RE-00036", "RG-20260928-1432"])
+        XCTAssertEqual(RapprochementSuivi.reperes("Commande AN-00024 et facture RE-00990, bon RG-20260928-1432"),
+                       ["AN-00024", "RE-00990", "RG-20260928-1432"])
         XCTAssertEqual(RapprochementSuivi.fichiers(dans: "Le résultat est un fichier : Bureau › 00 À traiter › Commandes › « Commande X.txt ».").first,
                        FichierProduit(nom: "Commande X.txt", emplacement: "Bureau › 00 À traiter › Commandes"))
         XCTAssertEqual(ModeleSuiviActions.titreSaisie("[Pour l’agent Chantiers] Remarque de Marco. Chantier Villa Morel : manque 2 raccords"),

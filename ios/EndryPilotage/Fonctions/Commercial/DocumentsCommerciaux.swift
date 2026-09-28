@@ -146,7 +146,7 @@ struct NouveauDocumentView: View {
         }
 
         SectionTerrain(titre: "Objet", icone: "text.alignleft") {
-            TextField(demande.type == .offre ? "Ex. Remplacement du boiler 300 l" : "Ex. Travaux de la salle de bains", text: $demande.objet, axis: .vertical)
+            TextField(demande.type == .offre ? "Ex. Remplacement du chauffe-eau 300 l" : "Ex. Travaux de la salle de bains", text: $demande.objet, axis: .vertical)
                 .focused($saisieActive).styleTexte(16, graisse: .medium).lineLimit(1...3)
                 .accessibilityIdentifier("champ-objet")
         }

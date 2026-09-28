@@ -66,7 +66,7 @@ public enum StatutEntretien: String, Sendable, Hashable {
     }
 }
 
-/// Appareil sous entretien périodique (chaudière, boiler, adoucisseur…), repéré par l'assistant dans Bexio.
+/// Appareil sous entretien périodique (chaudière, chauffe-eau, adoucisseur…), repéré par l'assistant dans Bexio.
 public struct Entretien: Decodable, Sendable, Hashable, Identifiable {
     public var id: String
     public var client: String

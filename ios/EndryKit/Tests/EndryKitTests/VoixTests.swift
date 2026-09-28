@@ -64,10 +64,10 @@ final class RepondeurLocalTests: XCTestCase {
         XCTAssertTrue(dette.hasPrefix("Gérance Morel SA vous doit 15 640 francs"), dette)
         XCTAssertTrue(dette.contains("aucune relance"))
 
-        guard case .dire(let mont, let carteMont) = RepondeurLocal.repondre("Où en est le chantier du Mont ?", avec: donnees) else { return XCTFail() }
-        XCTAssertTrue(mont.contains("boiler"), mont)
-        XCTAssertTrue(mont.contains("05.10"))
-        XCTAssertEqual(carteMont, .afficherChantier("24"))
+        guard case .dire(let paquerets, let cartePaquerets) = RepondeurLocal.repondre("Où en est le chantier des Pâquerets ?", avec: donnees) else { return XCTFail() }
+        XCTAssertTrue(paquerets.contains("chauffe-eau"), paquerets)
+        XCTAssertTrue(paquerets.contains("05.10"))
+        XCTAssertEqual(cartePaquerets, .afficherChantier("24"))
     }
 
     func testActionsTransmises() {
@@ -112,7 +112,7 @@ final class CerveauTests: XCTestCase {
 
     func testTexteParleSansBalises() {
         XCTAssertEqual(TexteParle.nettoyer("**Muller SA** vous doit 1'390 francs."), "Muller SA vous doit 1'390 francs.")
-        XCTAssertEqual(TexteParle.nettoyer("Deux chantiers :\n- Rossi\n- Favre 😀"), "Deux chantiers : Rossi. Favre.")
+        XCTAssertEqual(TexteParle.nettoyer("Deux chantiers :\n- Rossi\n- Lambert 😀"), "Deux chantiers : Rossi. Lambert.")
         XCTAssertEqual(TexteParle.nettoyer("  Tout roule.  "), "Tout roule.")
         // Réponse qui s'écrit encore : la ligne en cours ne reçoit pas de point.
         XCTAssertEqual(TexteParle.nettoyer("Deux chantiers :\n- Rossi\n- Fav", fini: false), "Deux chantiers : Rossi. Fav")

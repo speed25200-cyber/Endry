@@ -146,7 +146,7 @@ public enum RepondeurLocal {
         let q = jetons(question)
         let notes = dossiers.map { d -> (Dossier, Int) in
             let cible = jetons([d.titre, d.client, d.lieu ?? ""].joined(separator: " "))
-            // « du Mont » doit trouver « Le Mont-sur-Lausanne » : correspondance par préfixe.
+            // « Pâquer… » (dictée tronquée) doit trouver « Les Pâquerets » : correspondance par préfixe.
             let n = q.filter { mot in cible.contains { $0 == mot || ($0.hasPrefix(mot) && mot.count >= 4) } }.count
             return (d, n)
         }

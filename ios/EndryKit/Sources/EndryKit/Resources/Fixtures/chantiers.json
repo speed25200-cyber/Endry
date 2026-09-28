@@ -90,9 +90,9 @@
     },
     {
       "id": 24,
-      "titre": "Le Mont — boiler 300 L",
-      "client": "M. et Mme Favre",
-      "lieu": "Le Mont-sur-Lausanne",
+      "titre": "Les Pâquerets — chauffe-eau 300 L",
+      "client": "M. et Mme Lambert",
+      "lieu": "Les Pâquerets",
       "etape": "acceptee",
       "etape_libelle": "Acceptée",
       "etape_index": 2,

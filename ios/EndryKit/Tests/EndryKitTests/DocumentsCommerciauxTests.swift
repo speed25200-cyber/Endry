@@ -3,27 +3,27 @@ import XCTest
 
 final class DemandeDocumentTests: XCTestCase {
     func testOffreDicteeEtResume() throws {
-        var d = DemandeDocument(type: .offre, chantierId: "24", chantier: "Le Mont — boiler 300 L", client: "M. et Mme Favre",
-                                clientEmail: "favre@exemple.ch", objet: "Remplacement du boiler")
+        var d = DemandeDocument(type: .offre, chantierId: "24", chantier: "Les Pâquerets — chauffe-eau 300 L", client: "M. et Mme Lambert",
+                                clientEmail: "lambert@exemple.ch", objet: "Remplacement du chauffe-eau")
         XCTAssertEqual(d.manques, [])
-        d.lignes = [LigneDemandee(designation: "Boiler 300 L", quantite: 1, unite: "pce"),
+        d.lignes = [LigneDemandee(designation: "Chauffe-eau 300 L", quantite: 1, unite: "pce"),
                     LigneDemandee(designation: "Main-d’œuvre", quantite: 6, unite: "h", prixUnitaire: 98)]
         let r = d.resume
-        XCTAssertTrue(r.hasPrefix("Nouvelle offre à préparer pour M. et Mme Favre : Remplacement du boiler."))
-        XCTAssertTrue(r.contains("1 pce Boiler 300 L ; 6 h Main-d’œuvre à CHF 98.00 HT"), r)
+        XCTAssertTrue(r.hasPrefix("Nouvelle offre à préparer pour M. et Mme Lambert : Remplacement du chauffe-eau."))
+        XCTAssertTrue(r.contains("1 pce Chauffe-eau 300 L ; 6 h Main-d’œuvre à CHF 98.00 HT"), r)
         XCTAssertTrue(r.contains("Validité 30 jours."))
         XCTAssertTrue(r.hasSuffix("rien ne part au client sans mon accord."))
         let envoi = d.envoi()
         XCTAssertEqual(envoi.type, .demandeOffre)
         XCTAssertTrue(envoi.texteSaisie.hasPrefix("[Pour l’agent Offres] Nouvelle offre depuis l’iPhone."))
         let json = String(decoding: envoi.donnees, as: UTF8.self)
-        XCTAssertTrue(json.contains(#""client_email":"favre@exemple.ch""#), json)
+        XCTAssertTrue(json.contains(#""client_email":"lambert@exemple.ch""#), json)
         XCTAssertTrue(json.contains(#""prix_unitaire":98"#), json)
     }
 
     func testManques() {
         XCTAssertEqual(DemandeDocument(type: .facture).manques, ["le client ou le chantier", "ce qu’il faut facturer"])
-        let depuisOffre = DemandeDocument.facture(depuis: OffreSignee(id: "o", numero: "AN-00028", client: "Favre"), acompte: 30)
+        let depuisOffre = DemandeDocument.facture(depuis: OffreSignee(id: "o", numero: "AN-00028", client: "Lambert"), acompte: 30)
         XCTAssertEqual(depuisOffre.manques, [])
         XCTAssertTrue(depuisOffre.resume.contains("Sur la base de l’offre AN-00028. Facture d’acompte de 30 %."))
         XCTAssertTrue(depuisOffre.envoi().texteSaisie.hasPrefix("[Pour l’agent Comptabilité] Nouvelle facture"))

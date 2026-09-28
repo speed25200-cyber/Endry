@@ -26,18 +26,18 @@ final class TransportRoutes: TransportHTTP, @unchecked Sendable {
 final class AnalyseurRegieTests: XCTestCase {
     func testDicteeComplete() {
         let r = AnalyseurRegie.analyser(
-            "Marco et moi trois heures chacun. Posé un boiler 300 litres, 4 mètres de tube multicouche 16 et puis 2 raccords Mapress 22. Déplacement compris.",
+            "Marco et moi trois heures chacun. Posé un chauffe-eau 300 litres, 4 mètres de tube multicouche 16 et puis 2 raccords Mapress 22. Déplacement compris.",
             moi: "Luc")
         XCTAssertEqual(r.heures.map(\.intervenant), ["Luc", "Marco"])
         XCTAssertEqual(r.heures.map(\.heures), [3, 3])
         XCTAssertEqual(r.deplacement, true)
         XCTAssertEqual(r.materiel.count, 3)
-        XCTAssertEqual(r.materiel[0].designation, "Boiler 300 litres")
+        XCTAssertEqual(r.materiel[0].designation, "Chauffe-eau 300 litres")
         XCTAssertEqual(r.materiel[1].quantite, 4)
         XCTAssertEqual(r.materiel[1].unite, "m")
         XCTAssertEqual(r.materiel[1].designation, "Tube multicouche 16")
         XCTAssertEqual(r.materiel[2].designation, "Raccords Mapress 22")
-        XCTAssertTrue(r.travaux.contains("Posé un boiler 300 litres"))
+        XCTAssertTrue(r.travaux.contains("Posé un chauffe-eau 300 litres"))
     }
 
     func testDurees() {

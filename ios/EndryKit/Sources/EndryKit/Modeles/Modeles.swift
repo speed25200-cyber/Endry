@@ -770,7 +770,7 @@ public struct ElementDossier: Decodable, Sendable, Hashable, Identifiable {
     public var statut: String?
     public var echeance: String?
     public var pdf: String?
-    /// v1.1 : numéro lisible (« RE-00036 »). `ref` (« offre:37 ») est une clé interne.
+    /// v1.1 : numéro lisible (« RE-00990 »). `ref` (« offre:37 ») est une clé interne.
     public var numero: String?
 
     public var id: String { "\(type.rawValue)-\(ref)" }

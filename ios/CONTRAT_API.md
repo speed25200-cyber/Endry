@@ -38,7 +38,7 @@ le 27.09.2026 au soir ; l'app s'y conforme exactement (fixtures fictives au mêm
 
 **Argent et chantiers**
 - `a_refacturer.achats[]` : `id` unique (`achat:12`), `libelle`, `fournisseur`, `chantier`, en plus des anciens champs.
-- `heures_secretariat.heures_decimal: number`. `elements[].numero` (« RE-00036 », vide pour les achats).
+- `heures_secretariat.heures_decimal: number`. `elements[].numero` (« RE-00990 », vide pour les achats).
 - `semaine[]` et `chantiers_7_jours[]` : `client`, `date_debut`, `date_fin`, `etape`.
 - `POST /actualiser` en échec → `503 {ok:false, erreur:"bexio_indisponible", message}`.
 - `GET /app/doc/offre/{id}` en échec → `503 {erreur:"pdf_indisponible", message}` en JSON (pas un PDF) ; l'aperçu
@@ -131,7 +131,7 @@ Erreurs : 401 {erreur: "non_authentifie"|"lien_invalide", message}
 | `Decision` | `envoi_tiers: bool`, `chantier_id: number\|null` | `envoi_tiers` fait foi pour « Glisser pour envoyer » ; sinon liste d’outils (`mail_envoyer`, `mail_repondre`, `mail_transferer`, `envoyer_facture`, `envoyer_offre`, `envoyer_rappel`) |
 | `a_refacturer.achats[]` | `id, libelle, fournisseur, chantier` | sinon `achat`, `dossier`, `dossier_id` |
 | `heures_secretariat` | `heures_decimal: number` | sinon conversion de `heures` (« 31 h 30 ») |
-| `elements[]` | `numero: string` (« RE-00036 ») | affiché à la place de `ref` (clé interne « offre:37 ») |
+| `elements[]` | `numero: string` (« RE-00990 ») | affiché à la place de `ref` (clé interne « offre:37 ») |
 | `POST /actualiser` | échec : `503 {erreur: "bexio_indisponible", message}` | « Bexio ne répond pas, réessayez dans un instant » (502 v1.0 idem) |
 | `POST /session` | `{acces, appareil: {nom, modele}}` → `{jeton, appareil_id, valable_jours, entreprise}` | jeton par appareil ; l’ancien jeton commun reste accepté |
 | `GET /appareils` | `[{id, nom, modele, cree, vu, actuel: bool}]` | Réglages › Appareils |
@@ -273,7 +273,7 @@ seules images en `photos[]`.
 
 | Route | Réponse |
 | --- | --- |
-| `GET /entretiens` | `{entretiens: [Entretien]}` — repérés par le PC dans Bexio (chaudières, boilers, adoucisseurs, PAC…) |
+| `GET /entretiens` | `{entretiens: [Entretien]}` — repérés par le PC dans Bexio (chaudières, chauffe-eau, adoucisseurs, PAC…) |
 | `POST /entretiens/{id}/proposer` | corps `{consignes?}` → `{ok, message, decision_reference}` : le PC **prépare** une proposition de rendez-vous (e-mail, `envoi_tiers: true`) |
 
 ```

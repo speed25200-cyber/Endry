@@ -2,11 +2,11 @@
   "entretiens": [
     {"id": "E-104", "client": "Famille Rochat", "lieu": "Payerne", "appareil": "Chaudière gaz Hoval UltraGas 20", "periodicite": "annuel",
      "dernier": "2025-09-18", "echeance": "2026-09-18", "statut": "a_planifier", "decision_reference": null, "chantier_id": null},
-    {"id": "E-112", "client": "M. et Mme Pittet", "lieu": "Romont", "appareil": "Détartrage boiler 300 l", "periodicite": "tous les 2 ans",
+    {"id": "E-112", "client": "M. et Mme Pittet", "lieu": "Romont", "appareil": "Détartrage chauffe-eau 300 l", "periodicite": "tous les 2 ans",
      "dernier": "2024-10-06", "echeance": "2026-10-06", "statut": "a_planifier", "decision_reference": null, "chantier_id": null},
     {"id": "E-118", "client": "PPE Les Cèdres", "lieu": "Bussy", "appareil": "Adoucisseur Kinetico", "periodicite": "annuel",
      "dernier": "2025-10-14", "echeance": "2026-10-14", "statut": "propose", "decision_reference": "V-8M2E71", "chantier_id": 12},
-    {"id": "E-121", "client": "Boulangerie Favre", "lieu": "Estavayer", "appareil": "Pompe à chaleur Viessmann Vitocal", "periodicite": "annuel",
+    {"id": "E-121", "client": "Boulangerie du Tilleul", "lieu": "Estavayer", "appareil": "Pompe à chaleur Viessmann Vitocal", "periodicite": "annuel",
      "dernier": "2025-11-03", "echeance": "2026-11-03", "statut": "a_planifier", "decision_reference": null, "chantier_id": null},
     {"id": "E-127", "client": "Commune de Moudon", "lieu": "Moudon", "appareil": "Chaufferie du collège — brûleur", "periodicite": "annuel",
      "dernier": "2025-12-01", "echeance": "2026-12-01", "statut": "planifie", "decision_reference": null, "chantier_id": null}

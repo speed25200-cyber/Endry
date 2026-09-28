@@ -234,7 +234,7 @@ final class DocumentsEtErreursTests: XCTestCase {
     func testNomDeFichierGardeLExtensionReelle() {
         let pdf = Data("%PDF-1.7".utf8)
         XCTAssertEqual(NomDocument.nomFichier("Liste entreprises.xlsx", donnees: Data([0x50, 0x4B, 0x03, 0x04])), "Liste entreprises.xlsx")
-        XCTAssertEqual(NomDocument.nomFichier("RE-00036", donnees: pdf), "RE-00036.pdf")
+        XCTAssertEqual(NomDocument.nomFichier("RE-00990", donnees: pdf), "RE-00990.pdf")
         XCTAssertEqual(NomDocument.nomFichier("Photo chantier", donnees: Data([0xFF, 0xD8, 0xFF, 0xE0])), "Photo chantier.jpg")
         XCTAssertEqual(NomDocument.nomFichier("Facture 2026.09", donnees: pdf), "Facture 2026.09.pdf")
         XCTAssertEqual(NomDocument.nomFichier("a/b.pdf", donnees: pdf), "a-b.pdf")

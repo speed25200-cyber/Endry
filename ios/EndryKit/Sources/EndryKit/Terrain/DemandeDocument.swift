@@ -57,7 +57,7 @@ public struct DemandeDocument: Codable, Sendable, Hashable {
     public var client: String
     public var clientEmail: String?
     public var clientAdresse: String?
-    /// Objet du document (« Remplacement du boiler 300 l »).
+    /// Objet du document (« Remplacement du chauffe-eau 300 l »).
     public var objet: String
     public var lignes: [LigneDemandee]
     /// Ce que le patron a dit ou écrit, tel quel : l'assistant s'en sert pour tout ce qui n'est pas dans les lignes.

@@ -444,3 +444,11 @@ struct BoutonMicroCompact: View {
         .accessibilityIdentifier("micro-terrain")
     }
 }
+
+/// Ferme le clavier (pavé numérique compris, qui n'a pas de touche retour).
+@MainActor
+enum ClavierTerrain {
+    static func fermer() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+}

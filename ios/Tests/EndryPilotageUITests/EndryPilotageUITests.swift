@@ -292,8 +292,10 @@ final class EndryPilotageUITests: XCTestCase {
         XCTAssertTrue(travaux.waitForExistence(timeout: 5))
         travaux.tap()
         travaux.typeText("Remplacement du mitigeur de la douche")
+        fermerClavier(app)
         app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Ajouter une personne")).firstMatch.tap()
         capturer(app, "11-regie")
+        fermerClavier(app)
         let signer = atteindre(app.buttons["faire-signer"], dans: app)
         XCTAssertTrue(signer.waitForExistence(timeout: 3))
         signer.tap()
@@ -310,6 +312,7 @@ final class EndryPilotageUITests: XCTestCase {
         let confirmer = app.buttons["signer"]
         if confirmer.isEnabled {
             confirmer.tap()
+            fermerClavier(app)
             let transmettre = atteindre(app.buttons["transmettre-regie"], dans: app)
             XCTAssertTrue(transmettre.waitForExistence(timeout: 5))
             transmettre.tap()
@@ -413,6 +416,15 @@ final class EndryPilotageUITests: XCTestCase {
         confirmer.tap()
         XCTAssertTrue(app.descendants(matching: .any)["resultat-terrain"].firstMatch.waitForExistence(timeout: 10))
         capturer(app, "19-ouvrier-journee")
+    }
+
+    /// Clavier fermé (et aide « glisser pour écrire » d'iOS écartée) avant de toucher le bas de l'écran.
+    @MainActor
+    private func fermerClavier(_ app: XCUIApplication) {
+        let continuer = app.buttons["Continue"]
+        if continuer.exists { continuer.tap() }
+        let ok = app.buttons["clavier-ok"]
+        if ok.exists, ok.isHittable { ok.tap() }
     }
 
     @MainActor

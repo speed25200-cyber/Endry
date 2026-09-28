@@ -48,7 +48,13 @@ struct Releve3DView: View {
             .background(FondAmbiant())
             .navigationTitle("Relevé 3D")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Fermer") { fermer() } } }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Fermer") { fermer() } }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("OK") { ClavierTerrain.fermer() }.fontWeight(.semibold)
+                }
+            }
         }
         .fullScreenCover(isPresented: $capture) {
             CaptureRoomPlan { salle in

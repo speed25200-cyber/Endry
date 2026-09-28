@@ -20,6 +20,7 @@ struct RegieView: View {
     @State private var envoi = false
     @State private var resultat: ModeleSaisie.ResultatTerrain?
     @State private var pdf: URL?
+    @FocusState private var saisieActive: Bool
 
     init(chantier: Dossier?) {
         _bon = State(initialValue: BrouillonRegie.lire(pour: chantier) ?? BonRegie.nouveau(pour: chantier))
@@ -50,6 +51,12 @@ struct RegieView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Fermer") { dictee.arreter(); fermer() }
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("OK") { saisieActive = false }
+                        .fontWeight(.semibold)
+                        .accessibilityIdentifier("clavier-ok")
                 }
                 if resultat == nil, bon.estSigne {
                     ToolbarItem(placement: .primaryAction) {
@@ -109,6 +116,7 @@ struct RegieView: View {
             TextField("Ce qui a été fait", text: $bon.travaux, axis: .vertical)
                 .styleTexte(16)
                 .lineLimit(3...8)
+                .focused($saisieActive)
                 .accessibilityIdentifier("regie-travaux")
         }
         .disabled(bon.estSigne)
@@ -187,6 +195,7 @@ struct RegieView: View {
             TextField("Remarques (facultatif)", text: $bon.remarques, axis: .vertical)
                 .styleTexte(15)
                 .lineLimit(1...4)
+                .focused($saisieActive)
         }
         .disabled(bon.estSigne)
 
@@ -274,6 +283,8 @@ struct RegieView: View {
                 }
                 Button {
                     dictee.arreter()
+                    // Le clavier ne revient pas sur le formulaire au retour de la signature.
+                    saisieActive = false
                     signaturePresentee = true
                 } label: {
                     Label("Faire signer le client", systemImage: "signature")

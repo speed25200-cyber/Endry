@@ -57,6 +57,10 @@ struct BonLivraisonView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Fermer") { fermer() } }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("OK") { ClavierTerrain.fermer() }.fontWeight(.semibold)
+                }
             }
         }
         .fullScreenCover(isPresented: $scanner) {

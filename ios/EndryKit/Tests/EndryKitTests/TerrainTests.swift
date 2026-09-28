@@ -69,7 +69,8 @@ final class BonRegieTests: XCTestCase {
     func testResumeSigneEtEnvoi() throws {
         let dossier = Fixtures.dossierDetaille
         var bon = BonRegie.nouveau(pour: dossier, le: DateEndry.lire("2026-09-28T14:32:00")!)
-        XCTAssertTrue(bon.numero.hasPrefix("RG-20260928-"))
+        XCTAssertEqual(bon.numero, "RG-20260928-1432")
+        XCTAssertEqual(BonRegie.nouveau(pour: nil, le: DateEndry.lire("2026-09-28T02:05:00")!).numero, "RG-20260928-0205")
         XCTAssertFalse(bon.manques.isEmpty)
         bon.travaux = "Remplacement du mitigeur de la douche."
         bon.heures = [LigneHeures(intervenant: "Marco", heures: 1.5)]

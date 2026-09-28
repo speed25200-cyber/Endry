@@ -73,9 +73,8 @@ public struct BonRegie: Codable, Sendable, Hashable {
     /// Nouveau bon pour un chantier (numéro local unique : `RG-AAAAMMJJ-HHMM`).
     public static func nouveau(pour dossier: Dossier?, le date: Date = Date()) -> BonRegie {
         let jour = DateEndry.iso(date)
-        let heure = DateEndry.heure(date).replacingOccurrences(of: " h ", with: "")
         return BonRegie(
-            numero: "RG-\(jour.replacingOccurrences(of: "-", with: ""))-\(heure)",
+            numero: "RG-\(jour.replacingOccurrences(of: "-", with: ""))-\(DateEndry.hhmm(date))",
             chantierId: dossier?.id, chantier: dossier?.titre ?? "", client: dossier?.client ?? "", lieu: dossier?.lieu, date: jour
         )
     }

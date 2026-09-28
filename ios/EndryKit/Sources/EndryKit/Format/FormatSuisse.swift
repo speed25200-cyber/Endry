@@ -166,6 +166,12 @@ public enum DateEndry {
                       c.hour ?? 0, c.minute ?? 0, c.second ?? 0)
     }
 
+    /// `0932` (heure et minutes sur quatre chiffres, pour les numéros de documents).
+    public static func hhmm(_ date: Date) -> String {
+        let c = calendrier.dateComponents([.hour, .minute], from: date)
+        return String(format: "%02d%02d", c.hour ?? 0, c.minute ?? 0)
+    }
+
     /// `14 h 32`
     public static func heure(_ date: Date) -> String {
         let c = calendrier.dateComponents([.hour, .minute], from: date)

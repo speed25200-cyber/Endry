@@ -313,8 +313,9 @@ final class EndryPilotageUITests: XCTestCase {
             let transmettre = atteindre(app.buttons["transmettre-regie"], dans: app)
             XCTAssertTrue(transmettre.waitForExistence(timeout: 5))
             transmettre.tap()
-            XCTAssertTrue(app.descendants(matching: .any)["resultat-terrain"].firstMatch.waitForExistence(timeout: 10))
-            capturer(app, "13-regie-transmise")
+            let resultat = app.descendants(matching: .any)["resultat-terrain"].firstMatch.waitForExistence(timeout: 10)
+            capturer(app, resultat ? "13-regie-transmise" : "13-regie-apres-envoi")
+            XCTAssertTrue(resultat, "Le résultat de l’envoi de la régie ne s’affiche pas.")
         }
     }
 

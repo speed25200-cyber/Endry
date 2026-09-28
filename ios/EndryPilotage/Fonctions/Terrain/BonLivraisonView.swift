@@ -46,6 +46,7 @@ struct BonLivraisonView: View {
                         formulaire
                     }
                 }
+                .largeurLisible()
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, Espace.xxl)
                 .animation(.endry, value: resultat)

@@ -39,98 +39,103 @@ struct DossierView: View {
                 .padding(.horizontal, -Espace.bord)
                 .apparitionEnCascade(index: 0, visible: visible)
 
-                // Avancement
-                VStack(alignment: .leading, spacing: Espace.m) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(dossier.etapeLibelle).styleTitre(20, relativeTo: .title3).foregroundStyle(Color.encre)
-                        Spacer()
-                        if let montant = dossier.montant {
-                            MontantView(montant: montant, taille: 22, style: .title3)
-                        }
-                    }
-                    RailAvancement(index: dossier.etapeIndex, compact: false)
-                    if dossier.dateDebut != nil || dossier.dates != nil {
-                        HStack(spacing: Espace.l) {
-                            if let debut = dossier.dateDebut {
-                                infoDate("Début", DateEndry.courte(debut))
-                            }
-                            if let fin = dossier.dateFin {
-                                infoDate("Fin", DateEndry.courte(fin))
-                            }
-                            if dossier.dateDebut == nil, let dates = dossier.dates {
-                                infoDate("Travaux", dates)
+                // iPad : l'avancement et les outils à gauche, les documents et les achats à droite.
+                Colonnes {
+                    // Avancement
+                    VStack(alignment: .leading, spacing: Espace.m) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(dossier.etapeLibelle).styleTitre(20, relativeTo: .title3).foregroundStyle(Color.encre)
+                            Spacer()
+                            if let montant = dossier.montant {
+                                MontantView(montant: montant, taille: 22, style: .title3)
                             }
                         }
-                    }
-                }
-                .padding(Espace.l)
-                .surfaceCarte()
-                .apparitionEnCascade(index: 1, visible: visible)
-
-                Button {
-                    app.dicter(pour: dossier)
-                } label: {
-                    Label("Dicter pour ce chantier", systemImage: "mic.fill")
-                }
-                .buttonStyle(BoutonPrincipal())
-                .accessibilityIdentifier("dicter-chantier")
-                .apparitionEnCascade(index: 2, visible: visible)
-
-                // Sur place : régie à faire signer, bon du fournisseur, relevé pour l'offre.
-                RangeeOutilsTerrain(chantierId: dossier.id)
-                    .apparitionEnCascade(index: 3, visible: visible)
-
-                RangeeNouveauDocument(chantierId: dossier.id)
-
-                // Ce que vous avez décidé pour ce chantier, et ce que le bureau en a fait.
-                ActiviteChantier(chantierId: dossier.id)
-
-                if modele.horsLigne {
-                    BandeauHorsLigne(majLe: nil)
-                }
-
-                if case .chargement = modele.etat, dossier.elements.isEmpty {
-                    SqueletteCarte()
-                }
-
-                if !dossier.documents.isEmpty {
-                    section("Documents") {
-                        ForEach(dossier.documents) { element in
-                            LigneElement(element: element, chargement: app.documents.chargement == element.pdf) {
-                                if let pdf = element.pdf {
-                                    Task { await app.documents.ouvrir(pdf, nom: "\(element.numeroAffiche ?? element.libelle).pdf", api: app.session.api) }
+                        RailAvancement(index: dossier.etapeIndex, compact: false)
+                        if dossier.dateDebut != nil || dossier.dates != nil {
+                            HStack(spacing: Espace.l) {
+                                if let debut = dossier.dateDebut {
+                                    infoDate("Début", DateEndry.courte(debut))
+                                }
+                                if let fin = dossier.dateFin {
+                                    infoDate("Fin", DateEndry.courte(fin))
+                                }
+                                if dossier.dateDebut == nil, let dates = dossier.dates {
+                                    infoDate("Travaux", dates)
                                 }
                             }
                         }
                     }
-                    .apparitionEnCascade(index: 3, visible: visible)
-                }
+                    .padding(Espace.l)
+                    .surfaceCarte()
+                    .apparitionEnCascade(index: 1, visible: visible)
 
-                if devantClient, !dossier.achats.isEmpty || !dossier.facturesFournisseurs.isEmpty {
-                    BlocMasqueClient(titre: "Achats fournisseurs")
+                    Button {
+                        app.dicter(pour: dossier)
+                    } label: {
+                        Label("Dicter pour ce chantier", systemImage: "mic.fill")
+                    }
+                    .buttonStyle(BoutonPrincipal())
+                    .accessibilityIdentifier("dicter-chantier")
+                    .apparitionEnCascade(index: 2, visible: visible)
+
+                    // Sur place : régie à faire signer, bon du fournisseur, relevé pour l'offre.
+                    RangeeOutilsTerrain(chantierId: dossier.id)
+                        .apparitionEnCascade(index: 3, visible: visible)
+
+                    RangeeNouveauDocument(chantierId: dossier.id)
+
+                    // Ce que vous avez décidé pour ce chantier, et ce que le bureau en a fait.
+                    ActiviteChantier(chantierId: dossier.id)
+
+                    if modele.horsLigne {
+                        BandeauHorsLigne(majLe: nil)
+                    }
+
+                    if case .chargement = modele.etat, dossier.elements.isEmpty {
+                        SqueletteCarte()
+                    }
+
+                } droite: {
+                    if !dossier.documents.isEmpty {
+                        section("Documents") {
+                            ForEach(dossier.documents) { element in
+                                LigneElement(element: element, chargement: app.documents.chargement == element.pdf) {
+                                    if let pdf = element.pdf {
+                                        Task { await app.documents.ouvrir(pdf, nom: "\(element.numeroAffiche ?? element.libelle).pdf", api: app.session.api) }
+                                    }
+                                }
+                            }
+                        }
+                        .apparitionEnCascade(index: 3, visible: visible)
+                    }
+
+                    if devantClient, !dossier.achats.isEmpty || !dossier.facturesFournisseurs.isEmpty {
+                        BlocMasqueClient(titre: "Achats fournisseurs")
+                            .apparitionEnCascade(index: 4, visible: visible)
+                    } else if !dossier.achats.isEmpty || !dossier.facturesFournisseurs.isEmpty {
+                        section("Achats fournisseurs") {
+                            ForEach(dossier.achats) { element in
+                                LigneElement(element: element, chargement: false, action: nil)
+                            }
+                            ForEach(dossier.facturesFournisseurs.filter { f in !dossier.achats.contains { $0.ref == f.numero } }) { f in
+                                LigneFournisseur(facture: f)
+                            }
+                        }
                         .apparitionEnCascade(index: 4, visible: visible)
-                } else if !dossier.achats.isEmpty || !dossier.facturesFournisseurs.isEmpty {
-                    section("Achats fournisseurs") {
-                        ForEach(dossier.achats) { element in
-                            LigneElement(element: element, chargement: false, action: nil)
-                        }
-                        ForEach(dossier.facturesFournisseurs.filter { f in !dossier.achats.contains { $0.ref == f.numero } }) { f in
-                            LigneFournisseur(facture: f)
-                        }
                     }
-                    .apparitionEnCascade(index: 4, visible: visible)
-                }
 
-                if let note = dossier.note, !note.isEmpty {
-                    section("Notes") {
-                        Text(note)
-                            .styleTexte(15)
-                            .foregroundStyle(Color.encre)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.vertical, Espace.s)
+                    if let note = dossier.note, !note.isEmpty {
+                        section("Notes") {
+                            Text(note)
+                                .styleTexte(15)
+                                .foregroundStyle(Color.encre)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, Espace.s)
+                        }
+                        .apparitionEnCascade(index: 5, visible: visible)
                     }
-                    .apparitionEnCascade(index: 5, visible: visible)
                 }
+                .largeurLisible(Adaptatif.ecran)
             }
             .padding(.horizontal, Espace.bord)
             .padding(.bottom, 120)

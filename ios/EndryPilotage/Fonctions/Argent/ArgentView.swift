@@ -37,27 +37,32 @@ struct ArgentView: View {
                         VueErreur(erreur: erreur) { Task { await modele.charger() } }
                     default:
                         if let argent = modele.argent {
-                            encaisser(argent.encaisser).apparitionEnCascade(index: 0, visible: visible)
-                            if devantClient {
-                                BlocMasqueClient(titre: "À payer").apparitionEnCascade(index: 1, visible: visible)
-                            } else {
-                                payer(argent.payer).apparitionEnCascade(index: 1, visible: visible)
-                            }
-                            if let signees = app.offresSignees {
-                                SectionOffresSignees(modele: signees).apparitionEnCascade(index: 2, visible: visible)
-                            }
-                            offres(argent.offres).apparitionEnCascade(index: 2, visible: visible)
-                            CarteOffresASuivre(offres: argent.offres.offres).apparitionEnCascade(index: 2, visible: visible)
-                            if !devantClient {
-                                refacturer(argent.aRefacturer).apparitionEnCascade(index: 3, visible: visible)
-                            }
-                            versements(argent.versementsNonIdentifies).apparitionEnCascade(index: 4, visible: visible)
-                            if let heures = argent.heuresSecretariat {
-                                secretariat(heures).apparitionEnCascade(index: 5, visible: visible)
+                            // iPad : l'argent (encaisser, payer, refacturer) à gauche ; offres et secrétariat à droite.
+                            Colonnes(espacement: Espace.xl) {
+                                encaisser(argent.encaisser).apparitionEnCascade(index: 0, visible: visible)
+                                if devantClient {
+                                    BlocMasqueClient(titre: "À payer").apparitionEnCascade(index: 1, visible: visible)
+                                } else {
+                                    payer(argent.payer).apparitionEnCascade(index: 1, visible: visible)
+                                }
+                                if !devantClient {
+                                    refacturer(argent.aRefacturer).apparitionEnCascade(index: 3, visible: visible)
+                                }
+                                versements(argent.versementsNonIdentifies).apparitionEnCascade(index: 4, visible: visible)
+                            } droite: {
+                                if let signees = app.offresSignees {
+                                    SectionOffresSignees(modele: signees).apparitionEnCascade(index: 2, visible: visible)
+                                }
+                                offres(argent.offres).apparitionEnCascade(index: 2, visible: visible)
+                                CarteOffresASuivre(offres: argent.offres.offres).apparitionEnCascade(index: 2, visible: visible)
+                                if let heures = argent.heuresSecretariat {
+                                    secretariat(heures).apparitionEnCascade(index: 5, visible: visible)
+                                }
                             }
                         }
                     }
                 }
+                .largeurLisible(Adaptatif.ecran)
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, 120)
             }

@@ -381,6 +381,18 @@ final class EndryPilotageUITests: XCTestCase {
                     app.buttons["segment-pipeline"].tap()
                 }
             }
+            // iPad : les mêmes espaces à l'horizontale (deux colonnes, grille de chantiers).
+            if appareil == "-ipad" {
+                XCUIDevice.shared.orientation = .landscapeLeft
+                sleep(2)
+                for (onglet, nom) in [("onglet-aujourdhui", "6-paysage-aujourdhui"), ("onglet-chantiers", "6-paysage-chantiers"),
+                                      ("onglet-finances", "6-paysage-finances"), ("onglet-entreprise", "6-paysage-entreprise")] {
+                    app.buttons[onglet].tap()
+                    sleep(1)
+                    capturer(app, "\(nom)\(suffixe)")
+                }
+                XCUIDevice.shared.orientation = .portrait
+            }
             app.terminate()
         }
     }

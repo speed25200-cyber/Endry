@@ -50,6 +50,7 @@ struct EspaceOuvrier: View {
                         .styleTexte(14, graisse: .medium)
                         .frame(maxWidth: .infinity)
                 }
+                .largeurLisible()
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, Espace.xxl)
             }

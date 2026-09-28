@@ -76,6 +76,8 @@ struct VueAssistantVocal: View {
                     .opacity(apparu ? 1 : 0)
                     .offset(y: apparu ? 0 : 30)
             }
+            // iPad : une colonne centrée, la sphère et la lueur gardent tout l'écran.
+            .largeurLisible(Adaptatif.assistant)
             .padding(.horizontal, Espace.bord)
             .padding(.bottom, Espace.s)
         }
@@ -157,6 +159,7 @@ struct VueAssistantVocal: View {
                     .background(Color.white.opacity(0.08), in: Circle())
                     .overlay(Circle().stroke(Color.or.opacity(0.2), lineWidth: Espace.filet))
             }
+            .keyboardShortcut(.cancelAction)
             .accessibilityLabel(Text("Fermer l’assistant vocal"))
             .accessibilityIdentifier("fermer-assistant")
         }

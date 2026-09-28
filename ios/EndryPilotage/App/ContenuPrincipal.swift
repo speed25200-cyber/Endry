@@ -52,6 +52,8 @@ struct ContenuPrincipal: View {
             BarreOnglets(selection: $app.onglet, badgeDecisions: app.decisions?.nombreDecisions ?? 0) {
                 app.ouvrirAssistant()
             }
+                // iPad : un dock flottant centré, pas une barre étirée sur toute la largeur.
+                .frame(maxWidth: 520)
                 .padding(.bottom, 4)
                 .ignoresSafeArea(.keyboard)
         }
@@ -84,7 +86,8 @@ struct ContenuPrincipal: View {
             VueAssistantVocal()
         }
         .sheet(isPresented: $app.conversationPresentee) {
-            if let modele = app.conversation { ConversationView(modele: modele) }
+            // iPad : une grande feuille (format page), pas un petit formulaire.
+            if let modele = app.conversation { ConversationView(modele: modele).presentationSizing(.page) }
         }
         .sheet(isPresented: $app.briefingPresente) {
             BriefingView()

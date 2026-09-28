@@ -30,9 +30,11 @@ struct DecisionsView: View {
                 ScrollView {
                     VStack(spacing: 0) {
                         entete
+                            .largeurLisible(Adaptatif.ecran)
                             .frame(height: hauteurPhoto - 150, alignment: .bottom)
                         FeuilleMaison {
                             feuille
+                                .largeurLisible(Adaptatif.ecran)
                         }
                     }
                 }
@@ -46,7 +48,7 @@ struct DecisionsView: View {
                 }
             }
             .overlay(alignment: .top) {
-                BarreHauteAccueil(suivi: suivi) { barreHaute }
+                BarreHauteAccueil(suivi: suivi) { barreHaute.largeurLisible(Adaptatif.ecran) }
             }
             .toolbar(.hidden, for: .navigationBar)
         }
@@ -175,30 +177,34 @@ struct DecisionsView: View {
                 VueErreur(erreur: erreur) { Task { await modele.charger() } }
             default:
                 decisions
-                if let suiviActions = app.suiviActions {
-                    SectionFaitRecemment(modele: suiviActions)
+                // iPad : ce qui a été fait et le briefing à gauche ; le bureau, l'argent et la semaine à droite.
+                Colonnes(ecart: 0) {
+                    if let suiviActions = app.suiviActions {
+                        SectionFaitRecemment(modele: suiviActions)
+                            .padding(.horizontal, Espace.bord)
+                            .transitionDefilement()
+                    }
+                    CarteBriefing()
                         .padding(.horizontal, Espace.bord)
                         .transitionDefilement()
-                }
-                CarteBriefing()
-                    .padding(.horizontal, Espace.bord)
-                    .transitionDefilement()
-                if let agents = app.agents {
-                    BandeauBureau(modele: agents) { app.onglet = .entreprise }
-                        .padding(.horizontal, Espace.bord)
-                        .transitionDefilement()
-                        .task { if !agents.charge { await agents.charger() } }
-                }
-                if let accueil = modele.accueil {
-                    ResumeArgent(accueil: accueil) { app.onglet = .finances }
-                        .padding(.horizontal, Espace.bord)
-                        .transitionDefilement()
-                    if !accueil.chantiers7Jours.isEmpty {
-                        ChantiersSemaine(semaine: accueil.chantiers7Jours) {
-                            app.vueChantiers = .planning
-                            app.onglet = .chantiers
+                } droite: {
+                    if let agents = app.agents {
+                        BandeauBureau(modele: agents) { app.onglet = .entreprise }
+                            .padding(.horizontal, Espace.bord)
+                            .transitionDefilement()
+                            .task { if !agents.charge { await agents.charger() } }
+                    }
+                    if let accueil = modele.accueil {
+                        ResumeArgent(accueil: accueil) { app.onglet = .finances }
+                            .padding(.horizontal, Espace.bord)
+                            .transitionDefilement()
+                        if !accueil.chantiers7Jours.isEmpty {
+                            ChantiersSemaine(semaine: accueil.chantiers7Jours) {
+                                app.vueChantiers = .planning
+                                app.onglet = .chantiers
+                            }
+                            .transitionDefilement()
                         }
-                        .transitionDefilement()
                     }
                 }
             }
@@ -247,7 +253,7 @@ struct DecisionsView: View {
                                 ouvrir: { fiche = carte },
                                 agir: { action in await modele.agir(action, sur: carte) }
                             )
-                            .containerRelativeFrame(.horizontal) { largeur, _ in largeur * 0.82 }
+                            .containerRelativeFrame(.horizontal) { largeur, _ in min(largeur * 0.82, 440) }
                             .matchedTransitionSource(id: carte.reference, in: zoom)
                             .scrollTransition(.interactive, axis: .horizontal) { contenu, phase in
                                 contenu

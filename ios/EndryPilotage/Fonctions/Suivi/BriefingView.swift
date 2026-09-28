@@ -118,6 +118,7 @@ struct BriefingView: View {
                     .padding(Espace.m)
                     .surfaceCarte(rayon: 20)
                 }
+                .largeurLisible()
                 .padding(Espace.bord)
             }
             .background(FondAmbiant())

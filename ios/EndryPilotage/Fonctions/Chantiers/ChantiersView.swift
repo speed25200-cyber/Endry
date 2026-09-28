@@ -111,16 +111,21 @@ struct ChantiersView: View {
             if modele.chantiers.isEmpty {
                 EtatVide(titre: "Aucun chantier.", message: "Aucun dossier à cette étape pour le moment.", icone: "hammer")
             } else {
-                ForEach(Array(modele.chantiers.enumerated()), id: \.element.id) { index, dossier in
-                    NavigationLink(value: dossier) {
-                        LigneChantier(dossier: dossier)
-                            .matchedTransitionSource(id: dossier.id, in: espaceZoom)
+                // Une colonne sur iPhone ; sur iPad, autant de cartes de front que la largeur le permet.
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: Adaptatif.carteChantier), spacing: Espace.m, alignment: .top)],
+                          alignment: .leading, spacing: Espace.m) {
+                    ForEach(Array(modele.chantiers.enumerated()), id: \.element.id) { index, dossier in
+                        NavigationLink(value: dossier) {
+                            LigneChantier(dossier: dossier)
+                                .matchedTransitionSource(id: dossier.id, in: espaceZoom)
+                        }
+                        .buttonStyle(.plain)
+                        .hoverEffect(.lift)
+                        .transitionDefilement()
+                        .apparitionEnCascade(index: index, visible: visible)
+                        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                        .accessibilityIdentifier("chantier-\(dossier.id)")
                     }
-                    .buttonStyle(.plain)
-                    .transitionDefilement()
-                    .apparitionEnCascade(index: index, visible: visible)
-                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
-                    .accessibilityIdentifier("chantier-\(dossier.id)")
                 }
             }
         }

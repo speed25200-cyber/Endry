@@ -45,6 +45,7 @@ struct SaisieView: View {
 
                     HistoriqueSaisies(modele: modele)
                 }
+                .largeurLisible()
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, 130)
                 .animation(.endry, value: modele.etat)

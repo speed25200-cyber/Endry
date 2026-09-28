@@ -224,6 +224,7 @@ struct FicheAgentView: View {
                         .surfaceCarte(rayon: 22)
                     }
                 }
+                .largeurLisible()
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, 130)
             }

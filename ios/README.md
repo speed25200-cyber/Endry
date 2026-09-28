@@ -55,6 +55,14 @@ saisie (`POST /saisie`) : tout fonctionne déjà, en moins structuré.
 
 ## Design et performance
 
+**iPhone et iPad (app universelle).** Sur iPad (`Design/Adaptatif.swift`) : toutes les orientations, Split View et
+Stage Manager ; dock flottant centré ; Aujourd'hui, Finances, Entreprise et la fiche chantier en **deux colonnes** ;
+chantiers en **grille** (autant de cartes de front que la largeur le permet) ; carrousel de décisions à cartes de
+largeur fixe (plusieurs visibles) ; formulaires, outils de terrain, conversation et assistant vocal en colonne
+centrée de largeur lisible. En Split View étroit, l'app reprend la mise en page iPhone. Clavier : ⌘1…⌘5 (espaces),
+⌘K (Parler à Endry), ⌘N (Écrire au bureau), ⌘R (Actualiser), ⌘↩ (envoyer dans la conversation), Échap (fermer
+l'assistant) ; maintenir ⌘ les affiche. La CI capture aussi l'iPad Pro 13 pouces, en portrait et en paysage.
+
 **Identité : la maison Endry SA (style « Galerie »).** Couleurs du logo et du site : brun `#211A13`, crème dorée
 `#F9DBA3`, bronze `#9F722A`, papier `#F6F5F2`. Monogramme EY et logo détourés (`Assets.xcassets`), photos de
 réalisations d'Endry SA en plein écran (`PhotosMarque`, voir `CREDITS.md`). L'écran Aujourd'hui est une photo sous

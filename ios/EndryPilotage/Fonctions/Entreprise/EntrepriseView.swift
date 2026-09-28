@@ -112,6 +112,8 @@ struct EntrepriseView: View {
 
     private var fournisseurs: [FicheFournisseur] { Annuaire.fournisseurs(argent: app.argent?.argent) }
 
+    @Environment(\.horizontalSizeClass) private var classe
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -122,35 +124,40 @@ struct EntrepriseView: View {
                         .apparitionEnCascade(index: 1, visible: visible)
                     BasculeModeClient()
                         .apparitionEnCascade(index: 1, visible: visible)
-                    if let agents = app.agents {
-                        SectionBureau(modele: agents)
-                            .apparitionEnCascade(index: 2, visible: visible)
-                    }
-                    if let entretiens = app.entretiens {
-                        CarteEntretiens(modele: entretiens)
-                            .apparitionEnCascade(index: 2, visible: visible)
-                    }
-                    CarteEquipe()
-                        .apparitionEnCascade(index: 2, visible: visible)
-                    if let pilotage = app.pilotage, pilotage.disponible {
-                        VStack(alignment: .leading, spacing: Espace.s) {
-                            EnTeteSection(titre: "Claude, sur le PC")
-                            CarteAssistantBureau(pilotage: pilotage)
+                    // iPad : le bureau, l'équipe et l'assistant à gauche ; clients, fournisseurs et compte à droite.
+                    Colonnes(espacement: Espace.xl) {
+                        if let agents = app.agents {
+                            SectionBureau(modele: agents)
+                                .apparitionEnCascade(index: 2, visible: visible)
                         }
-                        .apparitionEnCascade(index: 2, visible: visible)
+                        if let entretiens = app.entretiens {
+                            CarteEntretiens(modele: entretiens)
+                                .apparitionEnCascade(index: 2, visible: visible)
+                        }
+                        CarteEquipe()
+                            .apparitionEnCascade(index: 2, visible: visible)
+                        if let pilotage = app.pilotage, pilotage.disponible {
+                            VStack(alignment: .leading, spacing: Espace.s) {
+                                EnTeteSection(titre: "Claude, sur le PC")
+                                CarteAssistantBureau(pilotage: pilotage)
+                            }
+                            .apparitionEnCascade(index: 2, visible: visible)
+                        }
+                    } droite: {
+                        sectionClients
+                            .apparitionEnCascade(index: 2, visible: visible)
+                        if devantClient {
+                            BlocMasqueClient(titre: "Fournisseurs")
+                                .apparitionEnCascade(index: 3, visible: visible)
+                        } else {
+                            sectionFournisseurs
+                                .apparitionEnCascade(index: 3, visible: visible)
+                        }
+                        sectionCompte
+                            .apparitionEnCascade(index: 4, visible: visible)
                     }
-                    sectionClients
-                        .apparitionEnCascade(index: 2, visible: visible)
-                    if devantClient {
-                        BlocMasqueClient(titre: "Fournisseurs")
-                            .apparitionEnCascade(index: 3, visible: visible)
-                    } else {
-                        sectionFournisseurs
-                            .apparitionEnCascade(index: 3, visible: visible)
-                    }
-                    sectionCompte
-                        .apparitionEnCascade(index: 4, visible: visible)
                 }
+                .largeurLisible(Adaptatif.ecran)
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, 130)
             }
@@ -218,7 +225,9 @@ struct EntrepriseView: View {
     private var indicateurs: some View {
         let argent = app.argent?.argent
         let actifs = (app.chantiers?.tous ?? []).filter { (2...4).contains($0.etapeIndex) }.count
-        return LazyVGrid(columns: [GridItem(.flexible(), spacing: Espace.s), GridItem(.flexible(), spacing: Espace.s)], spacing: Espace.s) {
+        // Deux tuiles de front sur iPhone, quatre sur iPad.
+        let colonnes = Array(repeating: GridItem(.flexible(), spacing: Espace.s), count: classe == .regular ? 4 : 2)
+        return LazyVGrid(columns: colonnes, spacing: Espace.s) {
             TuileIndicateur(titre: "Chantiers en cours", valeur: "\(actifs)", detail: "acceptés → réalisés", icone: "hammer.fill")
             TuileIndicateur(titre: "Clients suivis", valeur: "\(clients.count)", detail: "chantiers, factures, offres", icone: "person.2.fill")
             TuileIndicateur(titre: "Secrétariat", valeur: argent?.heuresSecretariat.map { FormatSuisse.heures($0.heures) } ?? "—",

@@ -49,6 +49,7 @@ struct ConversationView: View {
                         }
                         Color.clear.frame(height: 1).id("fin")
                     }
+                    .largeurLisible()
                     .padding(.horizontal, Espace.bord)
                     .padding(.top, Espace.s)
                     .padding(.bottom, Espace.m)
@@ -241,6 +242,7 @@ struct ConversationView: View {
             .shadow(color: Color.ombre, radius: 16, y: 6)
             .animation(.endryVif, value: clavier)
         }
+        .largeurLisible()
         .padding(.horizontal, Espace.bord)
         .padding(.top, Espace.xs)
         .padding(.bottom, Espace.xs)
@@ -320,6 +322,8 @@ struct ConversationView: View {
         .opacity(vide ? 0.35 : 1)
         .scaleEffect(vide ? 0.9 : 1)
         .animation(.endryVif, value: vide)
+        // Clavier de l'iPad : ⌘↩ envoie.
+        .keyboardShortcut(.return, modifiers: .command)
         .accessibilityLabel(Text(nature == .question ? "Envoyer la question" : "Transmettre la demande"))
         .accessibilityIdentifier("envoyer-conversation")
     }

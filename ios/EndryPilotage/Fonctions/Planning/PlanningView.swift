@@ -44,6 +44,7 @@ struct PlanningView: View {
                     abonnement
                         .apparitionEnCascade(index: 4, visible: visible)
                 }
+                .largeurLisible(Adaptatif.ecran)
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, 120)
                 .animation(.endry, value: decalage)

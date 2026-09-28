@@ -64,6 +64,8 @@ struct EndryPilotageApp: App {
                     }
                 }
         }
+        // iPad avec clavier : ⌘1…⌘5 pour les espaces, ⌘K l'assistant vocal, ⌘N la conversation (maintenir ⌘ les affiche).
+        .commands { CommandesEndry(modele: modele) }
     }
 
     /// Captures forcées (`-clair` / `-sombre`), sinon le choix des Réglages (système par défaut).
@@ -219,5 +221,34 @@ struct LogoMarque: View {
             .scaledToFit()
             .frame(width: largeur)
             .accessibilityLabel(Text("Endry SA, sanitaire, chauffage, ventilation"))
+    }
+}
+
+/// Raccourcis clavier (iPad avec clavier, Mac) : listés quand on maintient la touche ⌘.
+struct CommandesEndry: Commands {
+    let modele: ModeleApp
+
+    private var actif: Bool {
+        modele.session.estConnecte && !modele.session.estOuvrier && !modele.verrou.doitAfficherEcran
+    }
+
+    var body: some Commands {
+        CommandMenu("Endry") {
+            ForEach(Array(Onglet.allCases.enumerated()), id: \.element) { index, onglet in
+                Button(onglet.titre) { modele.onglet = onglet }
+                    .keyboardShortcut(KeyEquivalent(Character(String(index + 1))), modifiers: .command)
+                    .disabled(!actif)
+            }
+            Divider()
+            Button("Parler à Endry") { modele.ouvrirAssistant() }
+                .keyboardShortcut("k", modifiers: .command)
+                .disabled(!actif)
+            Button("Écrire au bureau") { modele.ouvrirConversation() }
+                .keyboardShortcut("n", modifiers: .command)
+                .disabled(!actif || modele.conversation == nil)
+            Button("Actualiser") { Task { await modele.rafraichirTout() } }
+                .keyboardShortcut("r", modifiers: .command)
+                .disabled(!modele.session.estConnecte)
+        }
     }
 }

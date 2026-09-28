@@ -116,6 +116,7 @@ struct BarreOnglets: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .hoverEffect(.highlight)
         .accessibilityLabel(Text(onglet == .aujourdhui && badgeDecisions > 0 ? "\(onglet.titre), \(badgeDecisions) décisions en attente" : onglet.titre))
         .accessibilityAddTraits(actif ? .isSelected : [])
         .accessibilityIdentifier("onglet-\(onglet.rawValue)")

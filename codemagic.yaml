@@ -111,7 +111,7 @@ workflows:
       - *projet
       - *tests_kit
       - *tests_app
-      - name: Captures iPhone SE (XXL) et Pro Max
+      - name: Captures iPhone SE (XXL), Pro Max et iPad
         working_directory: ios
         script: |
           # Relance le seul test de captures, sans recompiler, sur les formats extrêmes.
@@ -144,6 +144,7 @@ workflows:
           }
           capturer "iPhone SE" se-xxl UICTContentSizeCategoryXXL
           capturer "Pro Max" promax ""
+          capturer "iPad Pro 13" ipad ""
       - name: Extraire les captures d'écran
         working_directory: ios
         script: |

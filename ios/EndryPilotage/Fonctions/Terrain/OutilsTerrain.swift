@@ -27,6 +27,10 @@ enum OutilTerrain: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// Outils ouverts à un ouvrier (lien d'équipe) : relevé et bon de livraison. La régie, qui engage une facture,
+    /// reste au patron.
+    static let pourOuvrier: [OutilTerrain] = [.releve, .bonLivraison]
+
     var icone: String {
         switch self {
         case .regie: "signature"
@@ -43,13 +47,29 @@ struct DemandeOutil: Identifiable, Equatable {
     var chantierId: String?
 }
 
+/// Chantier proposé dans les écrans de terrain : un dossier du patron, ou un chantier du jour d'un ouvrier.
+/// L'ouvrier ne voit que ses chantiers du jour (`GET /equipe/jour`), jamais la liste du bureau.
+struct ChantierPropose: Identifiable, Hashable {
+    var id: String
+    var titre: String
+    var client: String?
+    var lieu: String?
+
+    var detail: String { [client, lieu].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ") }
+}
+
 extension ModeleApp {
     func ouvrirOutil(_ outil: OutilTerrain, chantier: String? = nil) {
+        if session.estOuvrier, !OutilTerrain.pourOuvrier.contains(outil) { return }
         outilTerrain = DemandeOutil(outil: outil, chantierId: chantier)
     }
 
     /// Chantiers proposés : ceux du jour d'abord, puis les chantiers en cours, puis les autres.
-    var chantiersProposes: [Dossier] {
+    /// Ouvrier : ses chantiers du jour seulement.
+    var chantiersProposes: [ChantierPropose] {
+        if session.estOuvrier {
+            return (equipe?.chantiers ?? []).map { ChantierPropose(id: $0.id, titre: $0.titre, client: $0.client, lieu: $0.lieu) }
+        }
         let tous = chantiers?.tous ?? []
         let semaine = Set((chantiers?.semaine ?? []).filter { s in
             guard let d = s.dateDebut else { return false }
@@ -59,6 +79,12 @@ extension ModeleApp {
         let actives: Set<String> = ["planifie", "en_cours", "commande", "realise"]
         func rang(_ d: Dossier) -> Int { semaine.contains(d.id) ? 0 : actives.contains(d.etape) ? 1 : 2 }
         return tous.sorted { (rang($0), $0.titre) < (rang($1), $1.titre) }
+            .map { ChantierPropose(id: $0.id, titre: $0.titre, client: $0.client, lieu: $0.lieu) }
+    }
+
+    func chantierPropose(_ id: String?) -> ChantierPropose? {
+        guard let id else { return nil }
+        return chantiersProposes.first { $0.id == id }
     }
 
     func dossier(_ id: String?) -> Dossier? {
@@ -75,14 +101,15 @@ extension ModeleApp {
 
 // MARK: - Rangée d'outils
 
-/// Trois grandes tuiles : régie, bon de livraison, relevé 3D.
+/// Grandes tuiles : régie, bon de livraison, relevé 3D (relevé et bon seulement pour un ouvrier).
 struct RangeeOutilsTerrain: View {
     @Environment(ModeleApp.self) private var app
     var chantierId: String?
+    var outils: [OutilTerrain] = OutilTerrain.allCases
 
     var body: some View {
         HStack(spacing: Espace.s) {
-            ForEach(OutilTerrain.allCases) { outil in
+            ForEach(outils) { outil in
                 Button {
                     app.ouvrirOutil(outil, chantier: chantierId)
                 } label: {
@@ -123,7 +150,7 @@ struct ChoixChantier: View {
     var suggestions: [String] = []
     @State private var presente = false
 
-    private var choisi: Dossier? { app.dossier(chantierId) }
+    private var choisi: ChantierPropose? { app.chantierPropose(chantierId) }
 
     var body: some View {
         Button { presente = true } label: {
@@ -137,11 +164,11 @@ struct ChoixChantier: View {
                         .foregroundStyle(Color.encre)
                         .lineLimit(2)
                     if let choisi {
-                        Text([choisi.client, choisi.lieu].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
+                        Text(choisi.detail)
                             .styleTexte(13, relativeTo: .footnote)
                             .foregroundStyle(Color.encreDouce)
                     } else if libre.isEmpty {
-                        Text("Chantier du jour, ou client de passage")
+                        Text(app.session.estOuvrier ? "Un de vos chantiers du jour" : "Chantier du jour, ou client de passage")
                             .styleTexte(13, relativeTo: .footnote)
                             .foregroundStyle(Color.encrePale)
                     }
@@ -176,10 +203,10 @@ private struct ListeChoixChantier: View {
                 let proposes = filtrer(app.chantiersProposes)
                 if !suggestions.isEmpty && recherche.isEmpty {
                     Section("Suggérés") {
-                        ForEach(suggestions.compactMap { app.dossier($0) }) { ligne($0) }
+                        ForEach(suggestions.compactMap { app.chantierPropose($0) }) { ligne($0) }
                     }
                 }
-                Section(recherche.isEmpty ? "Chantiers" : "Résultats") {
+                Section(recherche.isEmpty ? (app.session.estOuvrier ? "Mes chantiers du jour" : "Chantiers") : "Résultats") {
                     ForEach(proposes) { ligne($0) }
                     if proposes.isEmpty {
                         Text("Aucun chantier ne correspond.").foregroundStyle(Color.encrePale)
@@ -207,13 +234,13 @@ private struct ListeChoixChantier: View {
         }
     }
 
-    private func filtrer(_ liste: [Dossier]) -> [Dossier] {
+    private func filtrer(_ liste: [ChantierPropose]) -> [ChantierPropose] {
         let q = recherche.trimmingCharacters(in: .whitespaces).lowercased()
         guard !q.isEmpty else { return liste }
-        return liste.filter { d in [d.titre, d.client, d.lieu ?? ""].contains { $0.lowercased().contains(q) } }
+        return liste.filter { d in [d.titre, d.client ?? "", d.lieu ?? ""].contains { $0.lowercased().contains(q) } }
     }
 
-    private func ligne(_ d: Dossier) -> some View {
+    private func ligne(_ d: ChantierPropose) -> some View {
         Button {
             chantierId = d.id
             libre = ""
@@ -222,7 +249,7 @@ private struct ListeChoixChantier: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(d.titre).foregroundStyle(Color.encre)
-                    Text([d.client, d.lieu].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
+                    Text(d.detail)
                         .font(.footnote).foregroundStyle(Color.encreDouce)
                 }
                 Spacer()
@@ -337,7 +364,8 @@ struct ResultatEnvoiTerrain: View {
             }
             Text(titre).styleTitre(30, relativeTo: .largeTitle).foregroundStyle(Color.encre)
             Text(message).styleTexte(16).foregroundStyle(Color.encreDouce).multilineTextAlignment(.center)
-            if case .transmis(let r) = resultat, let reference = r.decisionReference {
+            // Un ouvrier ne voit pas les décisions : l'offre préparée attend le patron.
+            if case .transmis(let r) = resultat, let reference = r.decisionReference, !app.session.estOuvrier {
                 Button {
                     fermer()
                     app.ouvrir(reference: reference)

@@ -504,7 +504,7 @@ struct CarteContexte: View {
                         .background(.degradeOr, in: Circle())
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Ouvrir : \(outil.titre)").styleTexte(15, relativeTo: .subheadline, graisse: .semibold).foregroundStyle(Color.encre)
-                        Text(app.dossier(chantierId)?.titre ?? outil.sousTitre).styleTexte(13, relativeTo: .footnote).foregroundStyle(Color.encreDouce)
+                        Text(app.chantierPropose(chantierId)?.titre ?? outil.sousTitre).styleTexte(13, relativeTo: .footnote).foregroundStyle(Color.encreDouce)
                     }
                     Spacer(minLength: 0)
                     Image(systemName: "arrow.up.right").font(.system(size: 13, weight: .bold)).foregroundStyle(Color.bronze)

@@ -22,8 +22,8 @@ struct Releve3DView: View {
     @State private var envoi = false
     @State private var resultat: ModeleSaisie.ResultatTerrain?
 
-    init(chantier: Dossier?) {
-        _chantierId = State(initialValue: chantier?.id)
+    init(chantierId: String?) {
+        _chantierId = State(initialValue: chantierId)
     }
 
     private var lidar: Bool { RoomCaptureSession.isSupported }
@@ -197,8 +197,11 @@ struct Releve3DView: View {
     }
 
     private var nomChantier: String? {
-        app.dossier(chantierId)?.titre ?? (libre.isEmpty ? nil : libre)
+        app.chantierPropose(chantierId)?.titre ?? (libre.isEmpty ? nil : libre)
     }
+
+    /// Prénom de l'ouvrier connecté avec un lien d'équipe ; le bureau sait qui a mesuré.
+    private var auteur: String? { app.session.estOuvrier ? (app.session.nomOuvrier ?? "Équipe") : nil }
 
     private func terminer(_ salle: CapturedRoom) {
         let r = PlanPiece.releve(depuis: salle, piece: piece, chantierId: chantierId, chantier: nomChantier)
@@ -215,6 +218,7 @@ struct Releve3DView: View {
         guard var r = releve else { return }
         r.chantierId = chantierId
         r.chantier = nomChantier
+        r.relevePar = auteur
         envoi = true
         let resultatEnvoi = await app.transmettre(r.envoi(usdz: usdz, plan: plan, photos: photos))
         envoi = false

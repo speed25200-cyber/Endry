@@ -258,7 +258,9 @@ Réponse : `{ok, message, id, decision_reference?}`. Ce que le PC fait de chaque
 - **`releve`** — relevé 3D (RoomPlan, LiDAR). Le PC prépare une **offre** (brouillon + `Decision` si elle
   doit partir). `donnees = {piece, chantier_id?, chantier?, date, murs: [{largeur, hauteur}],
   ouvertures: [{type: porte|fenetre|ouverture, largeur, hauteur}], contour_sol: [{x, y}],
-  objets: [{categorie, largeur, profondeur, hauteur}], remarques}` (mètres). Pièces : plan PNG, `.usdz`.
+  objets: [{categorie, largeur, profondeur, hauteur}], remarques, releve_par?}` (mètres). Pièces : plan PNG, `.usdz`.
+  `releve_par` : prénom de l’ouvrier quand le relevé vient d’un lien d’équipe (absent pour le patron) ; l’offre
+  préparée reste une décision du patron, jamais montrée à l’ouvrier.
 - **`journee`** — heures d’un ouvrier (lien d’équipe). Le PC reporte les heures par chantier.
   `donnees = {date, ouvrier, lignes: [{chantier_id, chantier, heures}], pointages: [{chantier_id, chantier, debut, fin}],
   remarques}` (heures arrondies au quart d’heure).

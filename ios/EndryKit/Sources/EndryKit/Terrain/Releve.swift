@@ -55,9 +55,12 @@ public struct ReleveMesures: Codable, Sendable, Hashable {
     public var contourSol: [Point]
     public var objets: [Objet]
     public var remarques: String
+    /// Prénom de l'ouvrier qui a fait le relevé (lien d'équipe) ; absent quand c'est le patron.
+    public var relevePar: String?
 
     public init(piece: String, chantierId: String? = nil, chantier: String? = nil, date: String, murs: [Mur] = [],
-                ouvertures: [Ouverture] = [], contourSol: [Point] = [], objets: [Objet] = [], remarques: String = "") {
+                ouvertures: [Ouverture] = [], contourSol: [Point] = [], objets: [Objet] = [], remarques: String = "",
+                relevePar: String? = nil) {
         self.piece = piece
         self.chantierId = chantierId
         self.chantier = chantier
@@ -67,6 +70,7 @@ public struct ReleveMesures: Codable, Sendable, Hashable {
         self.contourSol = contourSol
         self.objets = objets
         self.remarques = remarques
+        self.relevePar = relevePar
     }
 
     public var perimetre: Double { murs.reduce(0) { $0 + $1.largeur } }
@@ -123,7 +127,11 @@ public struct ReleveMesures: Codable, Sendable, Hashable {
             p.append("Équipements : " + equipements.map { "\($0.nombre) \($0.nombre > 1 ? Self.pluriel($0.nom) : $0.nom)" }.joined(separator: ", ") + ".")
         }
         if !remarques.isEmpty { p.append("Remarques : \(remarques)") }
-        p.append("Plan et fichier 3D joints. Préparer l’offre à partir de ces mesures ; ne rien envoyer au client sans mon accord.")
+        if let relevePar {
+            p.append("Relevé par \(relevePar) (équipe). Plan et fichier 3D joints. Préparer l’offre à partir de ces mesures ; rien ne part au client sans l’accord du patron.")
+        } else {
+            p.append("Plan et fichier 3D joints. Préparer l’offre à partir de ces mesures ; ne rien envoyer au client sans mon accord.")
+        }
         return p.joined(separator: " ")
     }
 

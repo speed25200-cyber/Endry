@@ -3,7 +3,8 @@ import EndryKit
 import SwiftUI
 
 /// Mode équipe : ce que voit un ouvrier connecté avec son lien d'équipe. Ses chantiers du jour, un pointage en
-/// un geste, photos, bon de livraison, remarques dictées, et l'envoi de sa journée. Aucun montant, aucune décision.
+/// un geste, relevé 3D, photos, bon de livraison, remarques dictées, et l'envoi de sa journée.
+/// Même app que le patron, autre accès : aucun montant, aucune décision, aucun agent, aucune liste du bureau.
 struct EspaceOuvrier: View {
     @Environment(ModeleApp.self) private var app
     var modele: ModeleEquipe
@@ -60,10 +61,20 @@ struct EspaceOuvrier: View {
         .task { await modele.charger() }
         .sheet(isPresented: $journeePresentee) { JourneeOuvrierView(modele: modele) }
         .fullScreenCover(item: Binding(get: { app.outilTerrain }, set: { app.outilTerrain = $0 })) { demande in
-            BonLivraisonView(chantier: nil)
-                .environment(app)
-                .id(demande.id)
+            // Sans chantier précisé : celui où l'ouvrier pointe, sinon son seul chantier du jour.
+            let chantier = demande.chantierId ?? modele.enCours?.chantierId ?? (modele.chantiers.count == 1 ? modele.chantiers.first?.id : nil)
+            Group {
+                switch demande.outil {
+                case .releve: Releve3DView(chantierId: chantier)
+                case .bonLivraison, .regie: BonLivraisonView(chantierId: chantier)
+                }
+            }
+            .environment(app)
+            .id(demande.id)
         }
+        // Siri, bouton Action, Centre de contrôle : relevé et bon de livraison seulement.
+        .onChange(of: DemandesRaccourcis.partage.outil, initial: true) { ouvrirDemande() }
+        .onChange(of: app.verrou.doitAfficherEcran) { ouvrirDemande() }
         .confirmationDialog("Se déconnecter de cet iPhone ?", isPresented: $confirmationDeconnexion, titleVisibility: .visible) {
             Button("Se déconnecter", role: .destructive) { Task { await app.deconnecterCetAppareil() } }
         }
@@ -77,6 +88,16 @@ struct EspaceOuvrier: View {
             }
         }
         .toast(Binding(get: { app.toast }, set: { app.toast = $0 }))
+    }
+
+    private func ouvrirDemande() {
+        let demandes = DemandesRaccourcis.partage
+        guard let outil = demandes.outil, !app.verrou.doitAfficherEcran else { return }
+        demandes.outil = nil
+        demandes.assistantDemande = false
+        demandes.chantier = nil
+        demandes.briefingDemande = false
+        if OutilTerrain.pourOuvrier.contains(outil) { app.ouvrirOutil(outil) }
     }
 
     private var entete: some View {
@@ -135,14 +156,10 @@ struct EspaceOuvrier: View {
                     .background(Color.or.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             HStack(spacing: Espace.s) {
-                if let adresse = c.adresse ?? c.lieu,
-                   let url = URL(string: "maps://?daddr=\(adresse.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
-                    Link(destination: url) { Label("Itinéraire", systemImage: "car.fill") }
-                        .styleTexte(13, graisse: .semibold).foregroundStyle(Color.bronze)
-                }
-                if let tel = c.telephone, let url = URL(string: "tel:\(tel.filter { $0.isNumber || $0 == "+" })") {
-                    Link(destination: url) { Label(c.contact ?? "Appeler", systemImage: "phone.fill") }
-                        .styleTexte(13, graisse: .semibold).foregroundStyle(Color.bronze)
+                // Libellés complets s'ils tiennent, sinon icônes seules (petits iPhone, grandes tailles de texte).
+                ViewThatFits(in: .horizontal) {
+                    liens(c).labelStyle(.titleAndIcon)
+                    liens(c).labelStyle(.iconOnly)
                 }
                 Spacer()
                 let actif = modele.enCours?.chantierId == c.id
@@ -170,9 +187,31 @@ struct EspaceOuvrier: View {
         .sensoryFeedback(.selection, trigger: modele.enCours?.chantierId)
     }
 
+    @ViewBuilder
+    private func liens(_ c: ChantierEquipe) -> some View {
+        HStack(spacing: Espace.s) {
+            if let adresse = c.adresse ?? c.lieu,
+               let url = URL(string: "maps://?daddr=\(adresse.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
+                Link(destination: url) { Label("Itinéraire", systemImage: "car.fill") }
+            }
+            if let tel = c.telephone, let url = URL(string: "tel:\(tel.filter { $0.isNumber || $0 == "+" })") {
+                Link(destination: url) { Label(c.contact ?? "Appeler", systemImage: "phone.fill") }
+            }
+            Button {
+                app.ouvrirOutil(.releve, chantier: c.id)
+            } label: { Label("Relever", systemImage: "cube.transparent") }
+                .accessibilityLabel(Text("Relevé 3D de ce chantier"))
+                .accessibilityIdentifier("relever-\(c.id)")
+        }
+        .styleTexte(13, graisse: .semibold)
+        .foregroundStyle(Color.bronze)
+        .fixedSize()
+    }
+
     private var outils: some View {
         VStack(alignment: .leading, spacing: Espace.s) {
             EnTeteSection(titre: "Sur le chantier")
+            RangeeOutilsTerrain(chantierId: modele.enCours?.chantierId, outils: OutilTerrain.pourOuvrier)
             HStack(spacing: Espace.s) {
                 BoutonMicroCompact(ecoute: dictee.ecoute, niveau: dictee.niveau) { Task { await dictee.basculer() } }
                 VStack(alignment: .leading, spacing: 2) {
@@ -195,12 +234,6 @@ struct EspaceOuvrier: View {
                     .disabled(envoiPhotos)
                 }
             }
-            Button {
-                app.ouvrirOutil(.bonLivraison)
-            } label: {
-                Label("Scanner un bon de livraison", systemImage: "shippingbox.fill")
-            }
-            .buttonStyle(BoutonSecondaire())
         }
     }
 
@@ -302,7 +335,7 @@ struct CarteEquipe: View {
                     .background(Color.or.opacity(0.18), in: Circle())
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Inviter un ouvrier").styleTexte(16, graisse: .semibold).foregroundStyle(Color.encre)
-                    Text("Ses chantiers du jour, ses heures, ses photos. Jamais l’argent.")
+                    Text("Ses chantiers du jour, ses heures, ses photos, ses relevés 3D. Jamais l’argent.")
                         .styleTexte(13, relativeTo: .footnote).foregroundStyle(Color.encreDouce)
                 }
                 Spacer()
@@ -347,7 +380,7 @@ struct InvitationOuvrierView: View {
                         .buttonStyle(BoutonPrincipal())
                         if let m = invitation.message { Text(m).styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encrePale) }
                     } else {
-                        Text("Un lien à usage unique, propre à cet ouvrier. Il verra ses chantiers du jour et enverra ses heures et ses photos ; jamais l’argent, les décisions ni les agents. Révocable dans Appareils.")
+                        Text("Un lien à usage unique, propre à cet ouvrier. Il verra ses chantiers du jour et enverra ses heures, ses photos et ses relevés 3D ; jamais l’argent, les décisions ni les agents. Révocable dans Appareils.")
                             .styleTexte(14).foregroundStyle(Color.encreDouce)
                         TextField("Prénom de l’ouvrier", text: $nom)
                             .textContentType(.givenName)

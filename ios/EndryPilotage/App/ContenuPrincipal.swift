@@ -83,8 +83,8 @@ struct ContenuPrincipal: View {
             let chantier = app.dossier(demande.chantierId ?? ArriveeChantier.chantierRecent())
             switch demande.outil {
             case .regie: RegieView(chantier: chantier)
-            case .bonLivraison: BonLivraisonView(chantier: chantier)
-            case .releve: Releve3DView(chantier: chantier)
+            case .bonLivraison: BonLivraisonView(chantierId: chantier?.id)
+            case .releve: Releve3DView(chantierId: chantier?.id)
             }
         }
         // « Dis Siri, parler à Endry » : l'assistant s'ouvre une fois l'app déverrouillée.

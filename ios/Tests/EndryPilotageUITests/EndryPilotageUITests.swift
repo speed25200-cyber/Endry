@@ -424,6 +424,35 @@ final class EndryPilotageUITests: XCTestCase {
         capturer(app, "19-ouvrier-journee")
     }
 
+    /// Mode équipe : l'ouvrier relève une pièce de son chantier ; le relevé part au bureau, sans accès aux décisions.
+    @MainActor
+    func testReleveOuvrier() {
+        let app = lancer(["-demo", "-demo-ouvrier"])
+        let relever = app.buttons["relever-18"]
+        XCTAssertTrue(relever.waitForExistence(timeout: 8))
+        relever.tap()
+        let champs = app.textFields.matching(NSPredicate(format: "placeholderValue == %@", "0,00"))
+        XCTAssertTrue(champs.firstMatch.waitForExistence(timeout: 5))
+        if champs.count >= 2 {
+            champs.element(boundBy: 0).tap()
+            champs.element(boundBy: 0).typeText("3.2")
+            champs.element(boundBy: 1).tap()
+            champs.element(boundBy: 1).typeText("2.6")
+        }
+        fermerClavier(app)
+        let calculer = atteindre(app.buttons["calculer-releve"], dans: app)
+        XCTAssertTrue(calculer.isEnabled)
+        calculer.tap()
+        let transmettre = atteindre(app.buttons["transmettre-releve"], dans: app)
+        XCTAssertTrue(transmettre.waitForExistence(timeout: 5))
+        capturer(app, "20-ouvrier-releve")
+        transmettre.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["resultat-terrain"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["Voir la décision préparée"].exists)
+        XCTAssertFalse(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "CHF")).firstMatch.exists)
+        capturer(app, "21-ouvrier-releve-transmis")
+    }
+
     /// Clavier fermé (et aide « glisser pour écrire » d'iOS écartée) avant de toucher le bas de l'écran.
     @MainActor
     private func fermerClavier(_ app: XCUIApplication) {

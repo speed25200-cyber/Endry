@@ -21,8 +21,8 @@ struct BonLivraisonView: View {
     @State private var envoi = false
     @State private var resultat: ModeleSaisie.ResultatTerrain?
 
-    init(chantier: Dossier?) {
-        _chantierId = State(initialValue: chantier?.id)
+    init(chantierId: String?) {
+        _chantierId = State(initialValue: chantierId)
     }
 
     var body: some View {
@@ -218,7 +218,7 @@ struct BonLivraisonView: View {
     private var bonComplet: BonLivraison {
         var b = bon ?? BonLivraison()
         b.chantierId = chantierId
-        if let d = app.dossier(chantierId) { b.chantier = d.titre } else if !libre.isEmpty { b.chantier = libre }
+        if let d = app.chantierPropose(chantierId) { b.chantier = d.titre } else if !libre.isEmpty { b.chantier = libre }
         return b
     }
 

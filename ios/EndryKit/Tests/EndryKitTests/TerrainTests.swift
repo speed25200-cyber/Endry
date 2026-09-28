@@ -374,6 +374,24 @@ final class RappelsEtReleveTests: XCTestCase {
         let envoi = r.envoi(usdz: Data([1]), plan: Data([2]))
         XCTAssertEqual(envoi.fichiers.map(\.typeMIME), ["image/png", "model/vnd.usdz+zip"])
         XCTAssertTrue(envoi.texteSaisie.hasPrefix("[Pour l’agent Offres] Relevé 3D"))
+        XCTAssertFalse(String(decoding: envoi.donnees, as: UTF8.self).contains("releve_par"))
+    }
+
+    /// Relevé fait par un ouvrier (lien d'équipe) : le bureau sait qui a mesuré ; l'accord reste celui du patron.
+    func testReleveParOuvrier() throws {
+        var r = ReleveMesures(piece: "Cuisine", chantierId: "18", chantier: "Villa Morel", date: "2026-09-28",
+                              murs: [.init(largeur: 3, hauteur: 2.4), .init(largeur: 2, hauteur: 2.4),
+                                     .init(largeur: 3, hauteur: 2.4), .init(largeur: 2, hauteur: 2.4)])
+        r.relevePar = "Marco"
+        XCTAssertTrue(r.resume.contains("Relevé par Marco (équipe)."))
+        XCTAssertTrue(r.resume.contains("sans l’accord du patron"))
+        XCTAssertFalse(r.resume.contains("mon accord"))
+        let envoi = r.envoi(usdz: nil, plan: nil)
+        XCTAssertTrue(String(decoding: envoi.donnees, as: UTF8.self).contains(#""releve_par":"Marco""#))
+        let decodeur = JSONDecoder()
+        decodeur.keyDecodingStrategy = .convertFromSnakeCase
+        let relu = try decodeur.decode(ReleveMesures.self, from: envoi.donnees)
+        XCTAssertEqual(relu.relevePar, "Marco")
     }
 }
 

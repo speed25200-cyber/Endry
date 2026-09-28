@@ -37,6 +37,8 @@ enum VoixEndry {
 struct ReglageVoixEndry: View {
     @AppStorage(VoixEndry.cle) private var choisie = ""
     @AppStorage(ReglageVoix.cleEnvoiDirect) private var envoiDirect = true
+    @AppStorage(ReglageVoix.cleDebit) private var debit = 1.02
+    @AppStorage(ReglageVoix.cleLectureComplete) private var lectureComplete = false
     @State private var options: [VoixEndry.Option] = []
     @State private var synthese = AVSpeechSynthesizer()
 
@@ -52,11 +54,24 @@ struct ReglageVoixEndry: View {
             }
             .pickerStyle(.navigationLink)
             .accessibilityIdentifier("choix-voix")
+            Picker(selection: $debit) {
+                ForEach(ReglageVoix.debits, id: \.valeur) { d in
+                    Text(d.libelle).tag(d.valeur)
+                }
+            } label: {
+                Label("Débit", systemImage: "speedometer")
+            }
+            .onChange(of: debit) { essayer() }
+            .accessibilityIdentifier("debit-voix")
             Button {
                 essayer()
             } label: {
                 Label("Écouter", systemImage: "play.circle")
             }
+            Toggle(isOn: $lectureComplete) {
+                Label("Lire les longues réponses en entier", systemImage: "text.alignleft")
+            }
+            .accessibilityIdentifier("lecture-complete")
             Toggle(isOn: $envoiDirect) {
                 Label("Envoi direct au bureau", systemImage: "paperplane")
             }
@@ -68,6 +83,7 @@ struct ReglageVoixEndry: View {
                  ? "Seules des voix compactes (robotiques) sont installées. Pour une voix naturelle : Réglages › Accessibilité › Contenu énoncé › Voix › Français, puis téléchargez une voix « Premium » ou « Améliorée ». Elle apparaîtra ici."
                  : "Les voix « Premium » et « Améliorée » sont les plus naturelles. D’autres se téléchargent dans Réglages › Accessibilité › Contenu énoncé › Voix › Français.")
                 + Text("\n\nEnvoi direct : ce que vous dites part aussitôt au bureau, comme dans une conversation (un instant pour annuler). Les Oui et les envois aux clients gardent toujours leur geste à l’écran.")
+                + Text("\n\nLongues réponses : Endry en dit le début, le détail reste à l’écran et dans la conversation. Pendant la conversation, dites « répète », « plus lentement », « plus vite », « ouvre la conversation », « on change de sujet » ou « merci, c’est tout ».")
         }
         .onAppear { options = VoixEndry.options() }
     }
@@ -76,7 +92,7 @@ struct ReglageVoixEndry: View {
         if synthese.isSpeaking { synthese.stopSpeaking(at: .immediate) }
         let enonce = AVSpeechUtterance(string: "Bonjour, je suis Endry. Trois décisions vous attendent aujourd’hui.")
         enonce.voice = MoteurLocal.meilleureVoix()
-        enonce.rate = AVSpeechUtteranceDefaultSpeechRate * 1.02
+        enonce.rate = min(AVSpeechUtteranceDefaultSpeechRate * Float(debit), AVSpeechUtteranceMaximumSpeechRate)
         enonce.pitchMultiplier = 0.98
         synthese.speak(enonce)
     }

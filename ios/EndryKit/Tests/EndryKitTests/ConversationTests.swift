@@ -51,6 +51,7 @@ final class ConversationTests: XCTestCase {
         XCTAssertEqual(modele.reponse(a: id)?.etat, .recu)
         XCTAssertEqual(modele.reponse(a: id)?.texte, "Deux factures ouvertes.")
         XCTAssertEqual(modele.reponse(a: id)?.decisionReference, "D-12")
+        XCTAssertEqual(modele.derniereArrivee?.texte, "Deux factures ouvertes.")
         XCTAssertEqual(modele.messages.count, 2)
     }
 

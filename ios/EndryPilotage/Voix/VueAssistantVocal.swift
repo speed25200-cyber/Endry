@@ -60,6 +60,10 @@ struct VueAssistantVocal: View {
                     ReponseLisible(assistant: assistant)
                         .frame(maxHeight: .infinity)
                         .transition(.opacity)
+                        // Toucher la réponse pendant qu'Endry parle l'interrompt (comme la sphère).
+                        .onTapGesture {
+                            if assistant?.phase == .parole { assistant?.interrompre() } else { clavier = false }
+                        }
                 } else {
                     TranscriptionAssistant(assistant: assistant)
                         .padding(.top, Espace.l)
@@ -92,6 +96,16 @@ struct VueAssistantVocal: View {
             await nouvel.demarrer()
         }
         .onDisappear { assistant?.arreter() }
+        // Commandes dites : « merci, c'est tout » ferme, « ouvre la conversation » passe à l'écrit.
+        .onChange(of: assistant?.commande?.id) {
+            switch assistant?.commande?.action {
+            case .fermer?: fermer()
+            case .ouvrirConversation?:
+                assistant?.arreter()
+                app.ouvrirConversation()
+            default: break
+            }
+        }
         .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.5), trigger: assistant?.phase)
         .toast(Binding(get: { app.decisions?.toast }, set: { nouveau in if let modele = app.decisions { modele.toast = nouveau } }), decalageBas: Espace.l)
     }

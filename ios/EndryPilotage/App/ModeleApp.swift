@@ -59,6 +59,8 @@ final class ModeleApp {
     private(set) var conversation: ModeleConversation?
     /// Écran « Conversation » ouvert.
     var conversationPresentee = false
+    /// Recherche globale ouverte (loupe d'Aujourd'hui, ⌘F).
+    var recherchePresentee = false
 
     @ObservationIgnored private var jetonAPNsEnAttente: String?
     /// File persistante des saisies faites sans réseau.
@@ -131,6 +133,8 @@ final class ModeleApp {
         // Retour du réseau : les saisies gardées sur l'iPhone partent seules.
         reseau.surRetour = { [weak self] in
             Task { await self?.saisie?.viderFile() }
+            // Questions de la conversation gardées faute de réseau : elles partent aussi.
+            Task { await self?.conversation?.renvoyerEnAttente() }
         }
         flux.surSujets = { [weak self] sujets in
             await self?.recharger(sujets)
@@ -344,6 +348,7 @@ final class ModeleApp {
         }
         await suiviActions?.rafraichir(saisies: s?.historique ?? [])
         await offresSignees?.charger(chantiers: c?.tous ?? [])
+        await conversation?.renvoyerEnAttente()
         await conversation?.verifierEnAttente()
         await apresChargement()
     }

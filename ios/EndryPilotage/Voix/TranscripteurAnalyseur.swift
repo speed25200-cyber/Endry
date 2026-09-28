@@ -64,10 +64,14 @@ nonisolated final class TranscripteurAnalyseur: Transcripteur, Oreille, @uncheck
         return await SpeechTranscriber.supportedLocale(equivalentTo: Locale(identifier: "fr-CH")) != nil
     }
 
-    /// Français de Suisse, sinon de France (même reconnaissance).
+    /// Français de Suisse, sinon de France (même reconnaissance). Cherché une fois : chaque tour de parole
+    /// rouvre le micro sans refaire la recherche.
     private static func localeDictee() async -> Locale? {
-        if let locale = await DictationTranscriber.supportedLocale(equivalentTo: Locale(identifier: "fr-CH")) { return locale }
-        return await DictationTranscriber.supportedLocale(equivalentTo: Locale(identifier: "fr-FR"))
+        if let connue = MemoireAnalyse.partage.locale { return connue }
+        var locale = await DictationTranscriber.supportedLocale(equivalentTo: Locale(identifier: "fr-CH"))
+        if locale == nil { locale = await DictationTranscriber.supportedLocale(equivalentTo: Locale(identifier: "fr-FR")) }
+        MemoireAnalyse.partage.locale = .some(locale)
+        return locale
     }
 
     /// Module de transcription et lecture de ses résultats (`texte`, `definitif`).
@@ -115,8 +119,12 @@ nonisolated final class TranscripteurAnalyseur: Transcripteur, Oreille, @uncheck
         }
         self.lecture = lecture
         do {
-            if let installation = try await AssetInventory.assetInstallationRequest(supporting: [module]) {
-                try await installation.downloadAndInstall()
+            // Modèle vérifié une fois par lancement : les tours suivants démarrent tout de suite.
+            if !MemoireAnalyse.partage.installe {
+                if let installation = try await AssetInventory.assetInstallationRequest(supporting: [module]) {
+                    try await installation.downloadAndInstall()
+                }
+                MemoireAnalyse.partage.installe = true
             }
         } catch {
             lecture.cancel()
@@ -131,6 +139,8 @@ nonisolated final class TranscripteurAnalyseur: Transcripteur, Oreille, @uncheck
             lecture.cancel()
             throw ErreurVoix.indisponible
         }
+        // Modèle chargé en mémoire avant le premier mot : les premiers résultats arrivent plus vite.
+        try? await analyseur.prepareToAnalyze(in: format)
         let (flux, continuation) = AsyncStream<AnalyzerInput>.makeStream()
         return (analyseur, format, flux, continuation)
     }
@@ -167,7 +177,10 @@ nonisolated final class TranscripteurAnalyseur: Transcripteur, Oreille, @uncheck
         let session = AVAudioSession.sharedInstance()
         // Mode par défaut, pas « appel » : le traitement téléphonique (filtre, compression) dégrade la reconnaissance.
         // Endry ne parle pas pendant qu'il écoute : pas besoin d'annulation d'écho ici.
-        try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothHFP, .allowBluetoothA2DP])
+        // Déjà configurée au tour précédent : on ne la reconfigure pas (chaque changement coûte du temps).
+        if session.category != .playAndRecord || session.mode != .default {
+            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetoothHFP, .allowBluetoothA2DP])
+        }
         try session.setActive(true, options: .notifyOthersOnDeactivation)
 
         let entree = moteurAudio.inputNode
@@ -232,5 +245,24 @@ nonisolated final class TranscripteurAnalyseur: Transcripteur, Oreille, @uncheck
             return source
         }
         return erreur == nil && sortie.frameLength > 0 ? sortie : nil
+    }
+}
+
+/// Ce que la reconnaissance a déjà vérifié pendant ce lancement (langue, modèle installé).
+nonisolated final class MemoireAnalyse: @unchecked Sendable {
+    static let partage = MemoireAnalyse()
+    private let verrou = NSLock()
+    private var localeConnue: Locale??
+    private var modeleInstalle = false
+
+    /// `nil` : pas encore cherché ; `.some(nil)` : pas de dictée française sur cet iPhone.
+    var locale: Locale?? {
+        get { verrou.withLock { localeConnue } }
+        set { verrou.withLock { localeConnue = newValue } }
+    }
+
+    var installe: Bool {
+        get { verrou.withLock { modeleInstalle } }
+        set { verrou.withLock { modeleInstalle = newValue } }
     }
 }

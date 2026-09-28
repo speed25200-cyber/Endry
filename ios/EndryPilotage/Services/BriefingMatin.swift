@@ -145,7 +145,7 @@ final class LecteurVocal {
         try? AVAudioSession.sharedInstance().setActive(true)
         let phrase = AVSpeechUtterance(string: texte)
         phrase.voice = MoteurLocal.meilleureVoix()
-        phrase.rate = AVSpeechUtteranceDefaultSpeechRate * 1.02
+        phrase.rate = min(AVSpeechUtteranceDefaultSpeechRate * Float(ReglageVoix.debit), AVSpeechUtteranceMaximumSpeechRate)
         phrase.prefersAssistiveTechnologySettings = false
         synthese.stopSpeaking(at: .immediate)
         synthese.speak(phrase)

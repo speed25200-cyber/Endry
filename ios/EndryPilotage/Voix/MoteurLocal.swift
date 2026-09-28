@@ -17,7 +17,7 @@ final class MoteurLocal: MoteurVoix {
     /// Outils (Claude sur le PC, données) ; `nil` tant que l'app n'est pas connectée.
     private let executeur: ExecuteurOutils?
     /// Réponses du PC ou informations arrivées pendant un tour : dites juste après.
-    private var annoncesEnAttente: [(question: String?, texte: String)] = []
+    private var annoncesEnAttente: [(question: String?, texte: String, affiche: String?, borne: Int?)] = []
     private let synthese = AVSpeechSynthesizer()
     private let delegue = DelegueSynthese()
     private var transcripteur: (any Transcripteur)?
@@ -32,10 +32,10 @@ final class MoteurLocal: MoteurVoix {
     private var questionEnAttente: String?
     /// Endry est en train de parler (suivi local : on n'interroge pas la synthèse, qui peut se bloquer).
     private var enParole = false
-
-    /// Fin de phrase : silence après la dernière parole reconnue.
-    /// 1 s : assez pour une respiration, assez court pour que la réponse parte aussitôt la phrase finie.
-    private static let delaiSilence: Duration = .milliseconds(1_000)
+    /// Dernière réponse dite (« répète »).
+    private var derniereReponse: String?
+    /// Réponse dite en résumé : les mots allumés s'arrêtent à la fin du résumé.
+    private var bornePhrase: Int?
 
     init(donnees: @escaping @MainActor () -> RepondeurLocal.Donnees,
          cerveau: (any CerveauVocal)? = nil,
@@ -51,7 +51,7 @@ final class MoteurLocal: MoteurVoix {
         actif = true
         delegue.surMot = { [weak self] fin in
             guard let self, self.actif else { return }
-            self.surEvenement?(.progressionParole(fin))
+            self.surEvenement?(.progressionParole(min(fin, self.bornePhrase ?? fin)))
         }
         // Sans micro (refusé, ou tests d'interface), la conversation continue au clavier.
         guard !Configuration.testsUI else {
@@ -106,8 +106,10 @@ final class MoteurLocal: MoteurVoix {
         dernierProvisoire = provisoire
         surEvenement?(.patron(definitif: definitif, provisoire: provisoire))
         silence?.cancel()
+        // Fin de phrase adaptative : réponse plus rapide quand la phrase est finie, plus de patience sur « euh… ».
+        let delai = FinDePhrase.delai(definitif: definitif, provisoire: provisoire)
         silence = Task { [weak self] in
-            try? await Task.sleep(for: Self.delaiSilence)
+            try? await Task.sleep(for: delai)
             guard !Task.isCancelled else { return }
             await self?.conclure()
         }
@@ -133,16 +135,23 @@ final class MoteurLocal: MoteurVoix {
     /// Réponse de Claude arrivée du PC : dite tout de suite si Endry est libre, sinon juste après le tour en cours.
     func annoncer(question: String, reponse: String, agent: String?) async {
         let qui = agent.map { "L’assistant, côté \($0), répond : " } ?? "L’assistant répond : "
-        await annoncer(question: question, texte: qui + reponse)
+        // Longue réponse : le début est dit, tout est affiché (et gardé dans la conversation).
+        let resume = ResumeOral.pourLaVoix(reponse)
+        if ReglageVoix.lectureComplete || resume.complet {
+            await annoncer(question: question, texte: qui + ResumeOral.lisible(reponse))
+        } else {
+            await annoncer(question: question, texte: qui + resume.dit + ResumeOral.renvoi,
+                           affiche: qui + ResumeOral.lisible(reponse), borne: (qui + resume.dit).utf16.count)
+        }
     }
 
     func signaler(_ texte: String) async {
         await annoncer(question: nil, texte: texte)
     }
 
-    private func annoncer(question: String?, texte: String) async {
+    private func annoncer(question: String?, texte: String, affiche: String? = nil, borne: Int? = nil) async {
         guard actif else { return }
-        annoncesEnAttente.append((question, texte))
+        annoncesEnAttente.append((question, texte, affiche, borne))
         guard !enReflexion else { return }
         enReflexion = true
         silence?.cancel()
@@ -170,6 +179,12 @@ final class MoteurLocal: MoteurVoix {
         }
         surEvenement?(.patron(definitif: question, provisoire: ""))
         surEvenement?(.phase(.reflexion))
+
+        // « Répète », « merci, c'est tout », « plus lentement »… : tout de suite, sans modèle ni bureau.
+        if let commande = CommandeVocale.detecter(question) {
+            await executer(commande)
+            return
+        }
 
         // Envoi direct (réglage par défaut) : ce que l'iPhone sait déjà, il le dit tout de suite ; tout le reste part
         // aussitôt au bureau, sans passer par le modèle de l'iPhone (plus rapide, et c'est Claude qui a les dossiers).
@@ -222,6 +237,36 @@ final class MoteurLocal: MoteurVoix {
         await terminerTour()
     }
 
+    private func executer(_ commande: CommandeVocale) async {
+        switch commande {
+        case .repeter:
+            if let derniere = derniereReponse {
+                await dire(derniere)
+            } else {
+                await dire("Je n’ai encore rien dit. Posez-moi une question.", memoriser: false)
+            }
+        case .terminer:
+            await dire("Avec plaisir.", memoriser: false)
+            // Pas de nouveau tour : l'écran se ferme.
+            surEvenement?(.commande(.fermer))
+            return
+        case .ouvrirConversation:
+            await dire("J’ouvre la conversation.", memoriser: false)
+            surEvenement?(.commande(.ouvrirConversation))
+            return
+        case .nouvelleConversation:
+            surEvenement?(.commande(.nouvelleConversation))
+            await dire("C’est noté, on change de sujet.", memoriser: false)
+        case .plusLentement:
+            ReglageVoix.changerDebit(de: -1)
+            await dire("D’accord, je parle plus lentement.", memoriser: false)
+        case .plusVite:
+            ReglageVoix.changerDebit(de: 1)
+            await dire("D’accord, je parle plus vite.", memoriser: false)
+        }
+        await terminerTour()
+    }
+
     /// Question pour l'assistant du PC : elle s'affiche, le patron la relit et touche « Envoyer ».
     private func demanderClaude(_ question: String) async {
         guard let executeur else {
@@ -254,7 +299,7 @@ final class MoteurLocal: MoteurVoix {
             enReflexion = true
             surEvenement?(.nouveauTour)
             if let question = annonce.question { surEvenement?(.patron(definitif: question, provisoire: "")) }
-            await dire(annonce.texte)
+            await dire(annonce.texte, affiche: annonce.affiche, borne: annonce.borne)
             await terminerTour()
             return
         }
@@ -272,9 +317,13 @@ final class MoteurLocal: MoteurVoix {
 
     // MARK: - Parole
 
-    private func dire(_ texte: String) async {
+    /// `affiche` : texte montré (plus long que le texte dit quand la réponse est dite en résumé) ;
+    /// `borne` : fin du texte dit dans le texte montré.
+    private func dire(_ texte: String, affiche: String? = nil, borne: Int? = nil, memoriser: Bool = true) async {
         guard actif else { return }
-        surEvenement?(.assistant(texte))
+        if memoriser { derniereReponse = texte }
+        bornePhrase = borne
+        surEvenement?(.assistant(affiche ?? texte))
         surEvenement?(.progressionParole(0))
         surEvenement?(.phase(.parole))
         // Durée maximale : si la synthèse vocale se bloque (service audio indisponible), Endry passe à la suite
@@ -283,12 +332,13 @@ final class MoteurLocal: MoteurVoix {
         guard !Configuration.testsUI else {
             // Tests d'interface : pas de synthèse (le simulateur de la CI n'a pas de sortie audio fiable).
             try? await Task.sleep(for: .milliseconds(300))
-            surEvenement?(.progressionParole(texte.utf16.count))
+            bornePhrase = nil
+            surEvenement?(.progressionParole((affiche ?? texte).utf16.count))
             return
         }
         let enonce = AVSpeechUtterance(string: texte)
         enonce.voice = Self.meilleureVoix()
-        enonce.rate = AVSpeechUtteranceDefaultSpeechRate * 1.02
+        enonce.rate = min(AVSpeechUtteranceDefaultSpeechRate * Float(ReglageVoix.debit), AVSpeechUtteranceMaximumSpeechRate)
         enonce.pitchMultiplier = 0.98
         enonce.postUtteranceDelay = 0.1
         delegue.termine = false
@@ -304,8 +354,9 @@ final class MoteurLocal: MoteurVoix {
         }
         if !delegue.termine { synthese.stopSpeaking(at: .immediate) }
         enParole = false
+        bornePhrase = nil
         surEvenement?(.niveauVoix(0))
-        surEvenement?(.progressionParole(texte.utf16.count))
+        surEvenement?(.progressionParole((affiche ?? texte).utf16.count))
     }
 
 

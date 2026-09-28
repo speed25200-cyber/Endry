@@ -84,6 +84,18 @@ struct DecisionsView: View {
             LogoMarque(largeur: 150)
             Spacer()
             Button {
+                app.recherchePresentee = true
+            } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Color.or)
+                    .frame(width: 44, height: 44)
+                    .background(Color.espresso.opacity(0.45), in: Circle())
+                    .overlay(Circle().stroke(Color.or.opacity(0.4), lineWidth: Espace.filet))
+            }
+            .accessibilityLabel(Text("Rechercher"))
+            .accessibilityIdentifier("bouton-recherche")
+            Button {
                 app.reglagesPresentes = true
             } label: {
                 Image(systemName: "slider.horizontal.3")

@@ -51,6 +51,8 @@ public struct MessageConversation: Codable, Identifiable, Equatable, Sendable {
     public var decisionReference: String?
     /// Message du PC pendant l'attente (hors horaires…).
     public var message: String?
+    /// Question partie sans réseau : renvoyée d'elle-même au retour du réseau.
+    public var aRenvoyer: Bool?
 
     public init(id: String = UUID().uuidString, role: Role, texte: String, le: Date = Date(), conversation: String,
                 nature: Nature = .question, source: Source = .ecrit, etat: Etat = .recu, agent: String? = nil) {
@@ -85,6 +87,8 @@ public struct MessageConversation: Codable, Identifiable, Equatable, Sendable {
 public final class ModeleConversation {
     public private(set) var messages: [MessageConversation] = []
     public private(set) var identifiant: String
+    /// Dernière réponse arrivée du bureau (l'app le signale si la conversation n'est pas ouverte).
+    public private(set) var derniereArrivee: MessageConversation?
     /// Domaine choisi pour les questions écrites (`nil` : l'assistant choisit).
     public var agentId: String?
     public var agentNom: String?
@@ -197,10 +201,28 @@ public final class ModeleConversation {
                 attendre(id, suivi: suivi, message: message)
                 if message == nil { suivre(id) } else { differer(id, message: message) }
             }
+        } catch where error.estProblemeReseau {
+            // Rien n'est perdu : la question repart toute seule dès que le réseau revient.
+            if let i = messages.firstIndex(where: { $0.id == id }) { messages[i].aRenvoyer = true }
+            attendre(id, suivi: nil, message: nil)
+            differer(id, message: "Pas de réseau : la question partira dès le retour du réseau.")
         } catch {
             repondre(id, texte: "La question n’est pas partie. \(error.message)", etat: .erreur)
         }
     }
+
+    /// Questions gardées faute de réseau : elles partent maintenant (retour du réseau, retour au premier plan).
+    public func renvoyerEnAttente() async {
+        let ids = messages.filter { $0.role == .patron && $0.aRenvoyer == true }.map(\.id)
+        for id in ids {
+            guard let i = messages.firstIndex(where: { $0.id == id }) else { continue }
+            messages[i].aRenvoyer = nil
+            await poser(id, question: messages[i].texte)
+        }
+    }
+
+    /// Questions encore gardées faute de réseau.
+    public var enAttenteReseau: Int { messages.filter { $0.aRenvoyer == true }.count }
 
     private func demander(_ texte: String, source: MessageConversation.Source) async {
         let envoi = agentNom.map { "[Pour l’agent \($0)] " + texte } ?? texte
@@ -275,6 +297,7 @@ public final class ModeleConversation {
         if let agent { r.agent = agent }
         if let decision { r.decisionReference = decision }
         remplacer(r)
+        if etat == .recu, r.role == .assistant { derniereArrivee = r }
         suivis[id]?.cancel()
         suivis[id] = nil
     }

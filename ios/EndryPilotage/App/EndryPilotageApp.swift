@@ -246,6 +246,9 @@ struct CommandesEndry: Commands {
             Button("Écrire au bureau") { modele.ouvrirConversation() }
                 .keyboardShortcut("n", modifiers: .command)
                 .disabled(!actif || modele.conversation == nil)
+            Button("Rechercher") { modele.recherchePresentee = true }
+                .keyboardShortcut("f", modifiers: .command)
+                .disabled(!actif)
             Button("Actualiser") { Task { await modele.rafraichirTout() } }
                 .keyboardShortcut("r", modifiers: .command)
                 .disabled(!modele.session.estConnecte)

@@ -89,6 +89,9 @@ struct ContenuPrincipal: View {
             // iPad : une grande feuille (format page), pas un petit formulaire.
             if let modele = app.conversation { ConversationView(modele: modele).presentationSizing(.page) }
         }
+        .sheet(isPresented: $app.recherchePresentee) {
+            RechercheView()
+        }
         .sheet(isPresented: $app.briefingPresente) {
             BriefingView()
         }
@@ -97,6 +100,13 @@ struct ContenuPrincipal: View {
         }
         .sheet(item: Binding(get: { app.suiviOuvert.map(IdentifiantSuivi.init) }, set: { app.suiviOuvert = $0?.id })) { cible in
             if let modele = app.suiviActions { FicheSuiviView(modele: modele, id: cible.id) }
+        }
+        // Le bureau a répondu pendant que la conversation était fermée : on le signale.
+        .onChange(of: app.conversation?.derniereArrivee?.id) { _, id in
+            guard id != nil, !app.conversationPresentee, !app.assistantPresente,
+                  let arrivee = app.conversation?.derniereArrivee else { return }
+            let debut = ResumeOral.lisible(arrivee.texte).replacingOccurrences(of: "\n", with: " ")
+            app.toast = Toast("Le bureau a répondu : \(debut.count > 70 ? String(debut.prefix(68)) + "…" : debut)", style: .info)
         }
         // Une décision aboutit (fait ou erreur) : le patron le voit, même s'il a quitté l'écran.
         .onChange(of: app.suiviActions?.derniereIssue?.id) { _, id in

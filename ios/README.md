@@ -139,6 +139,13 @@ Toucher court du micro central : dictée d'une saisie terrain. **Toucher long** 
 - **Réponses longues** : dès qu'une réponse dépasse quelques lignes (ou qu'une carte s'affiche), la sphère se range
   en haut à gauche et la réponse se lit en texte courant, aligné à gauche, qui défile (fondu en haut et en bas).
   La réponse du bureau n'est plus répétée dans une carte : un lien discret « Continuer dans la conversation ».
+- **Fluidité** (`EndryKit/Voix/FluiditeVoix.swift`) : fin de phrase adaptative (0,55 s quand la phrase est finie,
+  plus de patience après « euh », « et », « pour ») ; micro rouvert plus vite entre deux tours (langue et modèle de
+  dictée vérifiés une fois, modèle préchargé, session audio gardée) ; longues réponses du bureau **dites en résumé**
+  (le début, puis « la suite est à l'écran »), réglage « Lire les longues réponses en entier » ; **débit** de la voix
+  (posé, normal, rapide, très rapide) ; toucher la réponse interrompt Endry. **Commandes dites**, traitées sur
+  l'iPhone sans attendre : « répète », « plus lentement », « plus vite », « ouvre la conversation », « on change de
+  sujet », « merci, c'est tout » (ferme l'assistant).
 - **Conversation** (`Fonctions/Conversation/`, `EndryKit/Voix/ConversationBureau.swift`) : l'endroit réservé pour
   parler au bureau **par écrit ou en dictée**, comme une session Claude ouverte (Aujourd'hui › « Écrire »,
   Entreprise › Le bureau, bouton en haut de l'assistant vocal, raccourci « Écrire au bureau »). Fil partagé avec
@@ -147,6 +154,12 @@ Toucher court du micro central : dictée d'une saisie terrain. **Toucher long** 
   à copier. **Demande** (« prépare… », deviné d'après la tournure, modifiable d'un toucher) : part en saisie et
   son avancement (Suivi) s'affiche dessous jusqu'au résultat. Choix du domaine (Secrétariat, Offres…) en haut.
   Rien ne part chez un tiers depuis la conversation.
+  Sous chaque réponse : écouter, copier, partager ; sous la dernière, relances d'un toucher (« Plus de détails »,
+  « Résume en une phrase », « Et ensuite ? »). Sans réseau, la question est gardée et part seule au retour du
+  réseau. Réponse arrivée conversation fermée : un bandeau le signale.
+- **Recherche globale** (loupe d'Aujourd'hui, ⌘F ; `EndryKit/Stores/RechercheGlobale.swift`) : décisions,
+  chantiers, factures, offres, fournisseurs (sans montant d'achat, masqués devant le client) et conversation,
+  instantanément, sur l'iPhone ; toucher un résultat ouvre la décision, le chantier, le PDF ou la conversation.
 - **Entrées** : bouton « Parler à Endry » sur Aujourd'hui, toucher long du micro central, et Siri
   (« Parler à Endry », raccourci App Intents ; l'assistant ne s'ouvre qu'après Face ID).
 - **La voix ne valide jamais un envoi** : `proposer_decision` affiche la carte, le patron fait le geste

@@ -28,6 +28,15 @@ enum EvenementVoix: Sendable {
     case nouveauTour
     /// La synthèse vocale a dit la réponse jusqu'à ce décalage (UTF-16) : les mots s'allument au fil de la voix.
     case progressionParole(Int)
+    /// Commande dite (« merci, c'est tout », « ouvre la conversation »…) que l'écran exécute.
+    case commande(CommandeEcran)
+}
+
+/// Ce que l'écran de l'assistant fait sur commande vocale.
+enum CommandeEcran: Equatable, Sendable {
+    case fermer
+    case ouvrirConversation
+    case nouvelleConversation
 }
 
 /// Protocole commun aux deux moteurs : temps réel (parole-à-parole) et local (repli gratuit).
@@ -65,6 +74,23 @@ enum ReglageVoix {
     static var envoiDirect: Bool { UserDefaults.standard.object(forKey: cleEnvoiDirect) as? Bool ?? true }
     /// Délai laissé pour annuler un envoi direct.
     static let delaiAnnulation: Duration = .milliseconds(1_400)
+
+    static let cleDebit = "voix.debit"
+    /// Débit de la voix d'Endry (multiplie le débit normal) : posé, normal, rapide, très rapide.
+    static let debits: [(libelle: String, valeur: Double)] = [("Posé", 0.92), ("Normal", 1.02), ("Rapide", 1.12), ("Très rapide", 1.24)]
+    static var debit: Double { UserDefaults.standard.object(forKey: cleDebit) as? Double ?? 1.02 }
+
+    /// « Plus vite » / « plus lentement » : un cran de débit, sans sortir des quatre réglages.
+    static func changerDebit(de pas: Int) {
+        let valeurs = debits.map(\.valeur)
+        let actuel = valeurs.indices.min { abs(valeurs[$0] - debit) < abs(valeurs[$1] - debit) } ?? 1
+        let suivant = min(max(actuel + pas, 0), valeurs.count - 1)
+        UserDefaults.standard.set(valeurs[suivant], forKey: cleDebit)
+    }
+
+    static let cleLectureComplete = "voix.lectureComplete"
+    /// Faux (par défaut) : une longue réponse du bureau est dite en résumé, le détail reste à l'écran.
+    static var lectureComplete: Bool { UserDefaults.standard.bool(forKey: cleLectureComplete) }
 }
 
 @MainActor
@@ -86,6 +112,9 @@ final class AssistantVocal {
 
     /// Activité de Claude sur le PC (pastille en haut de l'écran), rafraîchie toutes les 10 s.
     private(set) var etatBureau: EtatBureau?
+    /// Dernière commande dite que l'écran doit exécuter (fermer, ouvrir la conversation), avec un identifiant
+    /// pour que la même commande dite deux fois soit vue deux fois.
+    private(set) var commande: (id: UUID, action: CommandeEcran)?
     /// Cartes qui partent d'elles-mêmes dans un instant (envoi direct), sauf « Annuler » ou modification.
     private(set) var envoisAuto: [ExecuteurOutils.Effet] = []
     /// Fil de la conversation avec le bureau (questions et réponses), le plus récent en dernier.
@@ -251,6 +280,13 @@ final class AssistantVocal {
             provisoire = ""
             reponse = ""
             reponseLue = nil
+        case .commande(let action):
+            if action == .nouvelleConversation {
+                partagee?.nouvelleConversation()
+                conversation = UUID().uuidString
+                fil.removeAll()
+            }
+            commande = (UUID(), action)
         }
     }
 

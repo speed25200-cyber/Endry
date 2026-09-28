@@ -321,6 +321,25 @@ final class EndryPilotageUITests: XCTestCase {
         XCTAssertTrue(bouton.waitForExistence(timeout: 5))
     }
 
+    /// Recherche globale : un nom de client trouve le chantier, qui s'ouvre d'un toucher.
+    @MainActor
+    func testRechercheGlobale() {
+        let app = lancer()
+        let loupe = app.buttons["bouton-recherche"]
+        XCTAssertTrue(loupe.waitForExistence(timeout: 8), "La loupe est absente.")
+        toucher(loupe)
+        let champ = app.searchFields.firstMatch
+        XCTAssertTrue(champ.waitForExistence(timeout: 5), "La recherche ne s’est pas ouverte.")
+        champ.tap()
+        champ.typeText("Morel")
+        let resultat = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "resultat-C:")).firstMatch
+        XCTAssertTrue(resultat.waitForExistence(timeout: 5), "Aucun chantier trouvé.")
+        capturer(app, "26-recherche")
+        resultat.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["dicter-chantier"].firstMatch.waitForExistence(timeout: 8),
+                      "Le chantier trouvé ne s’est pas ouvert.")
+    }
+
     /// Le bureau : l'agent Secrétariat répond à une question posée depuis sa fiche.
     @MainActor
     func testBureauAgentRepond() {

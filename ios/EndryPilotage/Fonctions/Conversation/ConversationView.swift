@@ -43,7 +43,10 @@ struct ConversationView: View {
                                 }
                                 MessageView(message: message, question: question(de: message), relancer: {
                                     Task { await modele.relancer(String(message.id.dropFirst(2))) }
-                                })
+                                }, suite: message.id == derniereReponse ? { suite in
+                                    // Envoyée telle quelle, sans toucher au brouillon du champ.
+                                    Task { await modele.envoyer(suite, nature: .question) }
+                                } : nil)
                                 .id(message.id)
                             }
                         }
@@ -82,6 +85,8 @@ struct ConversationView: View {
             }
         }
         .task { await modele.verifierEnAttente() }
+        // Petit signe au toucher quand la réponse du bureau arrive.
+        .sensoryFeedback(.impact(weight: .light), trigger: modele.derniereArrivee?.id)
         .onDisappear { dictee.arreter() }
         .onChange(of: dictee.transcription) { _, dit in
             guard dictee.ecoute, !dit.isEmpty else { return }
@@ -92,6 +97,13 @@ struct ConversationView: View {
             guard !natureChoisie else { return }
             nature = ModeleConversation.natureProbable(nouveau)
         }
+    }
+
+    /// Dernière réponse reçue du fil en cours : elle porte les relances rapides.
+    private var derniereReponse: String? {
+        guard let derniere = modele.messages.last, derniere.role == .assistant, derniere.etat == .recu,
+              derniere.conversation == modele.identifiant else { return nil }
+        return derniere.id
     }
 
     /// Messages qui ouvrent un nouveau fil (séparateur au-dessus).
@@ -352,6 +364,10 @@ private struct MessageView: View {
     /// Pour une réponse ou une note : le message du patron auquel elle répond.
     var question: MessageConversation?
     var relancer: () -> Void
+    /// Relances rapides (dernière réponse seulement).
+    var suite: ((String) -> Void)? = nil
+
+    private static let relances = ["Plus de détails", "Résume en une phrase", "Et ensuite ?"]
 
     var body: some View {
         switch message.role {
@@ -425,6 +441,7 @@ private struct MessageView: View {
             case .recu, .envoye:
                 TexteRiche(texte: message.texte)
                     .accessibilityIdentifier("reponse-conversation")
+                actions
                 if let reference = message.decisionReference {
                     Button {
                         fermer()
@@ -447,6 +464,58 @@ private struct MessageView: View {
                     Label("Copier", systemImage: "doc.on.doc")
                 }
             }
+        }
+    }
+
+    /// Écouter, copier, partager ; relances rapides sous la dernière réponse.
+    @ViewBuilder
+    private var actions: some View {
+        let lisible = ResumeOral.lisible(message.texte)
+        HStack(spacing: Espace.m) {
+            Button {
+                app.lecteur.basculer(lisible)
+            } label: {
+                Image(systemName: app.lecteur.enLecture ? "stop.circle" : "speaker.wave.2")
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .accessibilityLabel(Text(app.lecteur.enLecture ? "Arrêter la lecture" : "Écouter la réponse"))
+            Button {
+                UIPasteboard.general.string = lisible
+            } label: {
+                Image(systemName: "doc.on.doc")
+            }
+            .accessibilityLabel(Text("Copier la réponse"))
+            ShareLink(item: lisible) {
+                Image(systemName: "square.and.arrow.up")
+            }
+            .accessibilityLabel(Text("Partager la réponse"))
+            Spacer(minLength: 0)
+        }
+        .font(.system(size: 14, weight: .medium))
+        .foregroundStyle(Color.encrePale)
+        .buttonStyle(.plain)
+        .padding(.top, 2)
+        if let suite {
+            ScrollView(.horizontal) {
+                HStack(spacing: Espace.xs) {
+                    ForEach(Self.relances, id: \.self) { relance in
+                        Button { suite(relance) } label: {
+                            Text(relance)
+                                .styleTexte(13, relativeTo: .footnote, graisse: .medium)
+                                .foregroundStyle(Color.bronze)
+                                .padding(.horizontal, 12)
+                                .frame(height: 32)
+                                .background(Color.or.opacity(0.14), in: Capsule())
+                                .overlay(Capsule().stroke(Color.bronze.opacity(0.25), lineWidth: Espace.filet))
+                        }
+                        .buttonStyle(.plain)
+                        .hoverEffect(.highlight)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+            .padding(.top, Espace.xxs)
+            .accessibilityIdentifier("relances-conversation")
         }
     }
 

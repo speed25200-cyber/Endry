@@ -91,9 +91,9 @@ struct Releve3DView: View {
 
     private var formulaireManuel: some View {
         SectionTerrain(titre: "Dimensions (m)", icone: "ruler") {
-            ligneMesure("Longueur", valeur: $manuel.longueur)
-            ligneMesure("Largeur", valeur: $manuel.largeur)
-            ligneMesure("Hauteur", valeur: $manuel.hauteur)
+            ligneMesure("Longueur", valeur: $manuel.longueurTexte)
+            ligneMesure("Largeur", valeur: $manuel.largeurTexte)
+            ligneMesure("Hauteur", valeur: $manuel.hauteurTexte)
             Stepper("Portes : \(manuel.portes)", value: $manuel.portes, in: 0...6).styleTexte(15)
             Stepper("Fenêtres : \(manuel.fenetres)", value: $manuel.fenetres, in: 0...8).styleTexte(15)
             ForEach(ManuelReleve.equipementsProposes, id: \.self) { cat in
@@ -111,11 +111,12 @@ struct Releve3DView: View {
         }
     }
 
-    private func ligneMesure(_ titre: String, valeur: Binding<Double>) -> some View {
+    /// Mesure en mètres : « 2,40 » comme « 2.40 ».
+    private func ligneMesure(_ titre: String, valeur: Binding<String>) -> some View {
         HStack {
             Text(titre).styleTexte(15)
             Spacer()
-            TextField("0,00", value: valeur, format: .number.precision(.fractionLength(2)))
+            TextField("0,00", text: valeur)
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .frame(width: 90)
@@ -219,9 +220,12 @@ struct Releve3DView: View {
 
 struct ManuelReleve: Equatable {
     static let equipementsProposes = ["toilet", "sink", "bathtub", "washerDryer"]
-    var longueur = 0.0
-    var largeur = 0.0
-    var hauteur = 2.5
+    var longueurTexte = ""
+    var largeurTexte = ""
+    var hauteurTexte = "2,50"
+    var longueur: Double { Double.depuisTexteSuisse(longueurTexte) ?? 0 }
+    var largeur: Double { Double.depuisTexteSuisse(largeurTexte) ?? 0 }
+    var hauteur: Double { Double.depuisTexteSuisse(hauteurTexte) ?? 2.5 }
     var portes = 1
     var fenetres = 0
     var equipements: [String: Int] = [:]

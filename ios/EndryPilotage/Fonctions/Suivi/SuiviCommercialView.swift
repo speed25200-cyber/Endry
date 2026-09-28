@@ -221,11 +221,7 @@ struct EntretiensView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(e.client).styleTexte(15, graisse: .semibold).foregroundStyle(Color.encre)
                 Text(e.appareil).styleTexte(13, relativeTo: .footnote).foregroundStyle(Color.encreDouce).lineLimit(2)
-                HStack(spacing: 6) {
-                    if let lieu = e.lieu { Text(lieu) }
-                    if let echeance = e.echeance { Text("· échéance \(DateEndry.courte(echeance))") }
-                    if let p = e.periodicite { Text("· \(p)") }
-                }
+                Text([e.lieu, e.echeance.map { "échéance \(DateEndry.courte($0))" }, e.periodicite].compactMap { $0 }.joined(separator: " · "))
                 .styleTexte(11, relativeTo: .caption2)
                 .foregroundStyle(Color.encrePale)
             }

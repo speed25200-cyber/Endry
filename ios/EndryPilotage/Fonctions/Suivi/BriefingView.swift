@@ -84,7 +84,7 @@ struct BriefingView: View {
                                     .background(Color.or.opacity(0.16), in: Circle())
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(point.titre).styleTexte(15, graisse: .semibold).foregroundStyle(Color.encre)
-                                    Text(point.phrase).styleTexte(14).foregroundStyle(Color.encreDouce)
+                                    Text(Self.sansTitre(point)).styleTexte(14).foregroundStyle(Color.encreDouce)
                                 }
                                 Spacer(minLength: 0)
                             }
@@ -127,6 +127,13 @@ struct BriefingView: View {
         .onChange(of: actif) { _, _ in reprogrammer() }
         .onChange(of: minutes) { _, _ in reprogrammer() }
         .onDisappear { app.lecteur.arreter() }
+    }
+
+    /// La phrase dite reprend parfois le titre (« À encaisser : … ») : à l'écran, on ne le répète pas.
+    static func sansTitre(_ point: PointBriefing) -> String {
+        guard point.phrase.hasPrefix(point.titre + " :") else { return point.phrase }
+        let reste = point.phrase.dropFirst(point.titre.count + 2).trimmingCharacters(in: .whitespaces)
+        return reste.prefix(1).uppercased() + reste.dropFirst()
     }
 
     private func reprogrammer() {

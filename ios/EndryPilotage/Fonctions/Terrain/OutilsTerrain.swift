@@ -229,6 +229,7 @@ private struct ListeChoixChantier: View {
                 if d.id == chantierId { Image(systemName: "checkmark").foregroundStyle(Color.bronze) }
             }
         }
+        .accessibilityIdentifier("choix-chantier-\(d.id)")
     }
 }
 

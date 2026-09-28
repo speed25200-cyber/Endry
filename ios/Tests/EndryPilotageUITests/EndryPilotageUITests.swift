@@ -285,7 +285,7 @@ final class EndryPilotageUITests: XCTestCase {
         let choix = app.buttons["choix-chantier"]
         XCTAssertTrue(choix.waitForExistence(timeout: 5))
         choix.tap()
-        let morel = app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "Villa Morel")).firstMatch
+        let morel = app.buttons["choix-chantier-18"]
         XCTAssertTrue(morel.waitForExistence(timeout: 5))
         morel.tap()
         let travaux = app.textFields["regie-travaux"].exists ? app.textFields["regie-travaux"] : app.textViews["regie-travaux"]

@@ -13,7 +13,7 @@ struct DossierView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Espace.l) {
                 ZStack(alignment: .bottomLeading) {
-                    PhotoVivante(nom: PhotosMarque.pour(id: dossier.id))
+                    PhotoVivante(nom: PhotosMarque.pour(id: dossier.id), mention: false)
                         .frame(height: 300)
                         .overlay(VoilePhoto(haut: 0.55, bas: 1))
                     VStack(alignment: .leading, spacing: Espace.xs) {
@@ -24,6 +24,10 @@ struct DossierView: View {
                                 .foregroundStyle(Color.or)
                             if dossier.decisionEnAttente {
                                 Pastille(texte: "Décision en attente", couleur: .or, icone: "circle.fill")
+                            }
+                            if PhotosMarque.estIllustrative(PhotosMarque.pour(id: dossier.id)) {
+                                Spacer(minLength: Espace.xs)
+                                MentionIllustrative()
                             }
                         }
                         Text(dossier.client.isEmpty ? dossier.titre : dossier.client)

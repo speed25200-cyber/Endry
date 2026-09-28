@@ -51,7 +51,8 @@ struct PhotoVivante: View {
                 .frame(width: geo.size.width, height: geo.size.height)
                 .scaleEffect(zoom ? 1.16 : 1.05, anchor: ancre)
                 .clipped()
-                .overlay(alignment: .topTrailing) {
+                .overlay(alignment: .bottomTrailing) {
+                    // En bas à droite : le haut porte souvent un bouton (fermer, retour).
                     if mention && PhotosMarque.estIllustrative(nom) {
                         MentionIllustrative().padding(Espace.s)
                     }

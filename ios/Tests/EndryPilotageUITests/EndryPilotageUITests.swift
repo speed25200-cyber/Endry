@@ -75,14 +75,23 @@ final class EndryPilotageUITests: XCTestCase {
         let carrousel = app.scrollViews["carrousel-decisions"].firstMatch
         if !carrousel.waitForExistence(timeout: 3) { return atteindre(element, dans: app) }
         atteindre(carrousel, dans: app)
-        if element.exists, element.isHittable { return element }
+        if entierementVisible(element, dans: app) { return element }
         for _ in 0..<essais { carrousel.swipeRight() }
         for _ in 0..<essais {
-            if element.exists, element.isHittable { return element }
+            if entierementVisible(element, dans: app) { return element }
             carrousel.swipeLeft()
             usleep(300_000)
         }
         return element
+    }
+
+    /// Touchable ET entièrement à l'écran : une carte à moitié visible au bord du carrousel ne compte pas
+    /// (un glissement y partirait hors de l'écran et ferait défiler le carrousel).
+    @MainActor
+    private func entierementVisible(_ element: XCUIElement, dans app: XCUIApplication) -> Bool {
+        guard element.exists, element.isHittable else { return false }
+        let ecran = app.windows.firstMatch.frame
+        return ecran.insetBy(dx: -1, dy: -1).contains(element.frame)
     }
 
     /// Ouvre la fiche complète d'une décision (toucher la carte du carrousel).

@@ -7,11 +7,33 @@ final class EndryPilotageUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    /// Premier lancement sur un simulateur fraîchement démarré : il arrive que l'app ne reçoive pas de processus
+    /// (« does not have a process ID »). Ce n'est pas l'app qui échoue : on relance une fois, puis on laisse échouer.
+    private var lancementRate = false
+    private var relanceFaite = false
+
+    override func record(_ issue: XCTIssue) {
+        let texte = issue.compactDescription
+        if !relanceFaite, texte.contains("does not have a process ID") || texte.contains("Failed to launch") {
+            lancementRate = true
+            return
+        }
+        super.record(issue)
+    }
+
     @MainActor
     private func lancer(_ arguments: [String] = ["-demo"]) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["-uitests", "-AppleLanguages", "(fr)", "-AppleLocale", "fr_CH"] + arguments
         app.launch()
+        if lancementRate || !app.wait(for: .runningForeground, timeout: 20) {
+            lancementRate = false
+            relanceFaite = true
+            app.terminate()
+            sleep(3)
+            app.launch()
+        }
+        relanceFaite = true
         return app
     }
 

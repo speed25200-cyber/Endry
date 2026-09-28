@@ -98,6 +98,11 @@ enum ReglageVoix {
     /// Vrai : Endry ne répond que quand le patron touche la sphère (on peut marquer des pauses sans être coupé).
     static var reponseAuToucher: Bool { UserDefaults.standard.bool(forKey: cleReponseAuToucher) }
 
+    static let cleConversationContinue = "voix.conversationContinue"
+    /// Vrai (par défaut) : le micro reste ouvert pendant qu'Endry parle (annulation d'écho) ; on le coupe en parlant,
+    /// comme une vraie conversation. Repli automatique sur le tour à tour si l'iPhone ne le permet pas.
+    static var conversationContinue: Bool { UserDefaults.standard.object(forKey: cleConversationContinue) as? Bool ?? true }
+
     static let cleLectureComplete = "voix.lectureComplete"
     /// Faux (par défaut) : une longue réponse du bureau est dite en résumé, le détail reste à l'écran.
     static var lectureComplete: Bool { UserDefaults.standard.bool(forKey: cleLectureComplete) }

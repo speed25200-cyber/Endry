@@ -105,3 +105,54 @@ public enum CommandeVocale: Equatable, Sendable {
         return nil
     }
 }
+
+/// Conversation continue : le patron coupe Endry en parlant, comme avec un interlocuteur.
+///
+/// Le micro reste ouvert pendant qu'Endry parle (annulation d'écho du système). Ce qui reste d'écho de sa propre
+/// voix est écarté : seuls comptent les mots qu'Endry n'est pas en train de dire.
+public enum Interruption {
+    /// Un seul mot suffit pour ceux-là.
+    static let motsDArret: Set<String> = ["stop", "attends", "attend", "arrete", "non", "pardon", "tais toi", "chut", "merci"]
+    /// Hésitations : ne coupent pas.
+    static let hesitations: Set<String> = ["euh", "heu", "hum", "hm", "ah", "oh", "bon"]
+
+    private static func mots(_ texte: String) -> [String] {
+        RepondeurLocal.normaliser(texte).split(separator: " ").map(String.init)
+    }
+
+    /// Mots entendus qui ne viennent pas de la voix d'Endry (ni hésitations).
+    public static func motsDuPatron(_ entendu: String, pendant dit: String) -> [String] {
+        let echo = Set(mots(dit))
+        return mots(entendu).filter { !echo.contains($0) && !hesitations.contains($0) }
+    }
+
+    /// Couper Endry : deux vrais mots du patron, ou un mot d'arrêt (« stop », « attends », « non »…).
+    public static func couper(_ entendu: String, pendant dit: String) -> Bool {
+        let patron = motsDuPatron(entendu, pendant: dit)
+        if patron.count >= 2 { return true }
+        let tout = RepondeurLocal.normaliser(entendu)
+        return patron.count == 1 && (motsDArret.contains(patron[0]) || motsDArret.contains(tout))
+    }
+
+    /// Ce que le patron a dit, sans les premiers mots d'écho.
+    public static func sansEcho(_ entendu: String, pendant dit: String) -> String {
+        let echo = Set(mots(dit))
+        var morceaux = entendu.split(separator: " ").map(String.init)
+        while let premier = morceaux.first, let n = mots(premier).first, echo.contains(n) || hesitations.contains(n) {
+            morceaux.removeFirst()
+        }
+        return morceaux.joined(separator: " ")
+    }
+
+    /// Le patron reprend la parole juste après qu'Endry a commencé (moins de 4 s) : c'est la suite de sa phrase,
+    /// pas une nouvelle question. Une commande (« stop », « répète ») reste une commande.
+    public static func suite(de precedente: String, nouvelle: String, apres secondes: TimeInterval) -> String {
+        let n = nouvelle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard secondes < 4, !precedente.isEmpty, CommandeVocale.detecter(n) == nil,
+              !motsDArret.contains(RepondeurLocal.normaliser(n)) else { return n }
+        var p = precedente.trimmingCharacters(in: .whitespacesAndNewlines)
+        while let d = p.last, ".?!".contains(d) { p.removeLast() }
+        let debut = n.first.map { String($0).lowercased() + n.dropFirst() } ?? n
+        return p + " " + debut
+    }
+}

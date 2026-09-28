@@ -51,6 +51,13 @@ struct VueAssistantVocal: View {
                                 .accessibilityLabel(Text("Moteur vocal : \(nom)"))
                                 .transition(.opacity)
                         }
+                        if assistant?.phase == .parole, assistant?.nomMoteur.contains("continue") == true {
+                            Text("Parlez pour l’interrompre")
+                                .font(PoliceAssistant.texte(12, .medium, relativeTo: .caption))
+                                .foregroundStyle(Color.orClair.opacity(0.6))
+                                .padding(.top, 6)
+                                .transition(.opacity)
+                        }
                         if assistant?.phase == .ecoute, ReglageVoix.reponseAuToucher {
                             Text("Touchez la sphère quand vous avez fini")
                                 .font(PoliceAssistant.texte(12, .medium, relativeTo: .caption))

@@ -125,3 +125,35 @@ final class RechercheTests: XCTestCase {
         XCTAssertTrue(RechercheGlobale.chercher("   ", argent: argent).isEmpty)
     }
 }
+
+final class InterruptionTests: XCTestCase {
+    private let dit = "L’assistant répond : trois factures attendent un paiement, pour un total de douze mille francs."
+
+    func testEchoDeSaVoixNeCoupePas() {
+        XCTAssertFalse(Interruption.couper("trois factures attendent", pendant: dit))
+        XCTAssertFalse(Interruption.couper("euh", pendant: dit))
+        XCTAssertFalse(Interruption.couper("un paiement euh", pendant: dit))
+    }
+
+    func testLePatronCoupeEnParlant() {
+        XCTAssertTrue(Interruption.couper("Et pour la Villa Morel ?", pendant: dit))
+        XCTAssertTrue(Interruption.couper("Stop", pendant: dit))
+        XCTAssertTrue(Interruption.couper("Attends", pendant: dit))
+        XCTAssertTrue(Interruption.couper("factures non", pendant: dit))
+        XCTAssertEqual(Interruption.motsDuPatron("trois factures pour Morel", pendant: dit), ["morel"])
+    }
+
+    func testTexteSansEcho() {
+        XCTAssertEqual(Interruption.sansEcho("total de euh et pour la Villa Morel", pendant: dit), "et pour la Villa Morel")
+        XCTAssertEqual(Interruption.sansEcho("Et Morel", pendant: dit), "Et Morel")
+    }
+
+    func testSuiteDeLaPhrase() {
+        XCTAssertEqual(Interruption.suite(de: "Prépare l’offre.", nouvelle: "Pour la Villa Morel", apres: 1.5),
+                       "Prépare l’offre pour la Villa Morel")
+        XCTAssertEqual(Interruption.suite(de: "Prépare l’offre.", nouvelle: "Qui me doit de l’argent ?", apres: 8),
+                       "Qui me doit de l’argent ?")
+        XCTAssertEqual(Interruption.suite(de: "Prépare l’offre.", nouvelle: "Stop", apres: 1), "Stop")
+        XCTAssertEqual(Interruption.suite(de: "Prépare l’offre.", nouvelle: "Répète", apres: 1), "Répète")
+    }
+}

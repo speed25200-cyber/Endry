@@ -271,6 +271,8 @@ nonisolated final class CanalAudioTempsReel: @unchecked Sendable {
     private let lecteur = AVAudioPlayerNode()
     private let verrou = NSLock()
     private var convertisseur: AVAudioConverter?
+    /// Synthèse vocale de l'iPhone → format de lecture (conversation continue du moteur local).
+    private var convertisseurLecture: AVAudioConverter?
     private var enAttente = 0
     private var framesJouees: AVAudioFramePosition = 0
     private var generation = 0
@@ -353,6 +355,53 @@ nonisolated final class CanalAudioTempsReel: @unchecked Sendable {
         if !lecteur.isPlaying { lecteur.play() }
         let rms = sqrt(somme / Float(n))
         return min(max((20 * log10(max(rms, 0.000_01)) + 45) / 40, 0), 1)
+    }
+
+    /// Joue un tampon de la synthèse vocale de l'iPhone (moteur local en conversation continue) :
+    /// il passe par le même moteur audio que le micro, donc l'annulation d'écho l'efface de ce que le micro entend.
+    /// Renvoie le nombre d'images mises en lecture (24 kHz).
+    func jouerTampon(_ tampon: AVAudioPCMBuffer) -> Int {
+        guard let formatLecture, tampon.frameLength > 0 else { return 0 }
+        verrou.lock()
+        if convertisseurLecture == nil || convertisseurLecture?.inputFormat != tampon.format {
+            convertisseurLecture = AVAudioConverter(from: tampon.format, to: formatLecture)
+        }
+        let conversion = convertisseurLecture
+        verrou.unlock()
+        guard let conversion else { return 0 }
+        let ratio = formatLecture.sampleRate / tampon.format.sampleRate
+        let capacite = AVAudioFrameCount(Double(tampon.frameLength) * ratio) + 64
+        guard let sortie = AVAudioPCMBuffer(pcmFormat: formatLecture, frameCapacity: capacite) else { return 0 }
+        let fourni = Drapeau()
+        nonisolated(unsafe) let source = tampon
+        var erreur: NSError?
+        _ = conversion.convert(to: sortie, error: &erreur) { _, statut in
+            if fourni.leve {
+                statut.pointee = .noDataNow
+                return nil
+            }
+            fourni.leve = true
+            statut.pointee = .haveData
+            return source
+        }
+        guard erreur == nil, sortie.frameLength > 0 else { return 0 }
+        let n = Int(sortie.frameLength)
+        verrou.lock()
+        enAttente += 1
+        let gen = generation
+        verrou.unlock()
+        lecteur.scheduleBuffer(sortie) { [weak self] in
+            self?.termine(frames: n, generation: gen)
+        }
+        if !lecteur.isPlaying { lecteur.play() }
+        return n
+    }
+
+    /// Images déjà jouées de la réponse en cours (24 kHz).
+    var framesLues: Int {
+        verrou.lock()
+        defer { verrou.unlock() }
+        return Int(framesJouees)
     }
 
     /// Nouvelle réponse : le compteur de lecture (pour la troncature) repart de zéro.

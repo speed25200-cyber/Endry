@@ -139,6 +139,11 @@ Toucher court du micro central : dictée d'une saisie terrain. **Toucher long** 
 - **Réponses longues** : dès qu'une réponse dépasse quelques lignes (ou qu'une carte s'affiche), la sphère se range
   en haut à gauche et la réponse se lit en texte courant, aligné à gauche, qui défile (fondu en haut et en bas).
   La réponse du bureau n'est plus répétée dans une carte : un lien discret « Continuer dans la conversation ».
+- **Conversation continue** (gratuite, sur l'iPhone, iOS 26 et suivants ; réglage actif par défaut) : le micro reste
+  ouvert pendant qu'Endry parle ; sa voix passe par le même moteur audio que le micro (annulation d'écho du système,
+  `CanalAudioTempsReel`), et ce qui reste d'écho est écarté (`Interruption`). Le patron **coupe Endry en parlant**
+  (deux vrais mots, ou « stop », « attends », « non ») ; s'il reprend la parole moins de 4 s après le début de la
+  réponse, c'est la suite de sa phrase et les deux morceaux partent ensemble. Repli automatique sur le tour à tour.
 - **Fluidité** (`EndryKit/Voix/FluiditeVoix.swift`) : fin de phrase adaptative qui ne coupe pas la parole (1,2 à
   2,4 s de silence selon la phrase, plus après « euh », « et », « pour ») ; réglages « Temps avant la réponse »
   (court, normal, long) et « Répondre seulement quand je touche la sphère » ; toucher la sphère pendant qu'on

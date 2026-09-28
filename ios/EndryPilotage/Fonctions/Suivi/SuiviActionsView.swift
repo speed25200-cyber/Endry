@@ -84,7 +84,7 @@ struct LigneSuivi: View {
                 HStack(spacing: 6) {
                     Text(action.etat.libelle.uppercased())
                         .tracking(1.2)
-                        .styleTexte(10, relativeTo: .caption2, graisse: .bold)
+                        .styleTexte(10, relativeTo: .caption2, graisse: .semibold)
                         .foregroundStyle(action.etat.couleur)
                     Text(action.libelleGeste).styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encrePale)
                     if let agent = action.agent, let a = AgentBureau(rawValue: agent) {

@@ -59,6 +59,8 @@ enum LibelleSuivi {
 struct PastilleEtatSuivi: View {
     var etat: EtatSuivi
     var taille: CGFloat = 36
+    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
+    private var animer: Bool { !reduireAnimations && !Configuration.testsUI }
 
     var body: some View {
         ZStack {
@@ -66,8 +68,10 @@ struct PastilleEtatSuivi: View {
             Image(systemName: etat.icone)
                 .font(.system(size: taille * 0.42, weight: .bold))
                 .foregroundStyle(etat.couleur)
-                .symbolEffect(.rotate, options: .repeat(.continuous), isActive: etat == .enCours)
-                .symbolEffect(.pulse, options: .repeat(.continuous), isActive: etat == .transmis)
+                // Animation brève et bornée : jamais de boucle infinie (batterie, et les tests d'interface attendent
+                // que l'écran soit immobile).
+                .symbolEffect(.rotate, options: .repeat(.periodic(3, delay: 0.4)), isActive: animer && etat == .enCours)
+                .symbolEffect(.pulse, options: .repeat(.periodic(3, delay: 0.4)), isActive: animer && etat == .transmis)
         }
         .frame(width: taille, height: taille)
         .accessibilityHidden(true)
@@ -220,7 +224,11 @@ struct FicheSuiviContenu: View {
                 }
                 if !a.etat.termine {
                     HStack(spacing: Espace.s) {
-                        ProgressView().controlSize(.small)
+                        if Configuration.testsUI {
+                            Image(systemName: "hourglass").foregroundStyle(Color.encrePale)
+                        } else {
+                            ProgressView().controlSize(.small)
+                        }
                         Text(attente(a)).styleTexte(13, relativeTo: .footnote).foregroundStyle(Color.encrePale)
                     }
                 }

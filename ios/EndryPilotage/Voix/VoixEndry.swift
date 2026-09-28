@@ -1,4 +1,5 @@
 import AVFoundation
+import EndryKit
 import SwiftUI
 
 /// Voix d'Endry : choisie parmi les voix françaises installées sur l'iPhone.
@@ -39,6 +40,8 @@ struct ReglageVoixEndry: View {
     @AppStorage(ReglageVoix.cleEnvoiDirect) private var envoiDirect = true
     @AppStorage(ReglageVoix.cleDebit) private var debit = 1.02
     @AppStorage(ReglageVoix.cleLectureComplete) private var lectureComplete = false
+    @AppStorage(ReglageVoix.clePatience) private var patience = 1.0
+    @AppStorage(ReglageVoix.cleReponseAuToucher) private var reponseAuToucher = false
     @State private var options: [VoixEndry.Option] = []
     @State private var synthese = AVSpeechSynthesizer()
 
@@ -68,6 +71,19 @@ struct ReglageVoixEndry: View {
             } label: {
                 Label("Écouter", systemImage: "play.circle")
             }
+            Picker(selection: $patience) {
+                ForEach(FinDePhrase.patiences, id: \.valeur) { p in
+                    Text(p.libelle).tag(p.valeur)
+                }
+            } label: {
+                Label("Temps avant la réponse", systemImage: "hourglass")
+            }
+            .disabled(reponseAuToucher)
+            .accessibilityIdentifier("patience-voix")
+            Toggle(isOn: $reponseAuToucher) {
+                Label("Répondre seulement quand je touche la sphère", systemImage: "hand.tap")
+            }
+            .accessibilityIdentifier("reponse-au-toucher")
             Toggle(isOn: $lectureComplete) {
                 Label("Lire les longues réponses en entier", systemImage: "text.alignleft")
             }
@@ -83,6 +99,7 @@ struct ReglageVoixEndry: View {
                  ? "Seules des voix compactes (robotiques) sont installées. Pour une voix naturelle : Réglages › Accessibilité › Contenu énoncé › Voix › Français, puis téléchargez une voix « Premium » ou « Améliorée ». Elle apparaîtra ici."
                  : "Les voix « Premium » et « Améliorée » sont les plus naturelles. D’autres se téléchargent dans Réglages › Accessibilité › Contenu énoncé › Voix › Français.")
                 + Text("\n\nEnvoi direct : ce que vous dites part aussitôt au bureau, comme dans une conversation (un instant pour annuler). Les Oui et les envois aux clients gardent toujours leur geste à l’écran.")
+                + Text("\n\nEndry vous coupe la parole ? Choisissez « Long », ou « Répondre seulement quand je touche la sphère » : vous parlez avec toutes les pauses que vous voulez, puis vous touchez la sphère. Dans tous les cas, toucher la sphère pendant que vous parlez fait répondre Endry tout de suite.")
                 + Text("\n\nLongues réponses : Endry en dit le début, le détail reste à l’écran et dans la conversation. Pendant la conversation, dites « répète », « plus lentement », « plus vite », « ouvre la conversation », « on change de sujet » ou « merci, c’est tout ».")
         }
         .onAppear { options = VoixEndry.options() }

@@ -106,13 +106,22 @@ final class MoteurLocal: MoteurVoix {
         dernierProvisoire = provisoire
         surEvenement?(.patron(definitif: definitif, provisoire: provisoire))
         silence?.cancel()
-        // Fin de phrase adaptative : réponse plus rapide quand la phrase est finie, plus de patience sur « euh… ».
-        let delai = FinDePhrase.delai(definitif: definitif, provisoire: provisoire)
+        // Réponse au toucher : on attend que le patron touche la sphère, quelles que soient ses pauses.
+        guard !ReglageVoix.reponseAuToucher else { return }
+        // Fin de phrase adaptative, jamais pressée : plus de patience sur « euh… », réglable (Réglages › Voix).
+        let delai = FinDePhrase.delai(definitif: definitif, provisoire: provisoire, patience: ReglageVoix.patience)
         silence = Task { [weak self] in
             try? await Task.sleep(for: delai)
             guard !Task.isCancelled else { return }
             await self?.conclure()
         }
+    }
+
+    /// Toucher de la sphère pendant l'écoute : la phrase est finie, réponse tout de suite.
+    func terminerPhrase() {
+        guard actif, !enReflexion, tourCommence else { return }
+        silence?.cancel()
+        Task { await conclure() }
     }
 
     /// Question tapée au clavier : même chemin que la voix.

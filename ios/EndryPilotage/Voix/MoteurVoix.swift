@@ -50,6 +50,8 @@ protocol MoteurVoix: AnyObject {
     func poser(_ question: String) async
     /// L'assistant se tait et rend la parole au patron.
     func interrompre()
+    /// Le patron a fini sa phrase (toucher de la sphère) : réponse tout de suite, sans attendre le silence.
+    func terminerPhrase()
     /// Réponse arrivée plus tard (Claude, sur le PC) : dite dès que la conversation le permet.
     func annoncer(question: String, reponse: String, agent: String?) async
     /// Courte information à dire (demande transmise, assistant hors horaires…).
@@ -87,6 +89,14 @@ enum ReglageVoix {
         let suivant = min(max(actuel + pas, 0), valeurs.count - 1)
         UserDefaults.standard.set(valeurs[suivant], forKey: cleDebit)
     }
+
+    static let clePatience = "voix.patience"
+    /// Temps de silence avant qu'Endry réponde (multiplie les délais de fin de phrase) : court, normal, long.
+    static var patience: Double { UserDefaults.standard.object(forKey: clePatience) as? Double ?? 1.0 }
+
+    static let cleReponseAuToucher = "voix.reponseAuToucher"
+    /// Vrai : Endry ne répond que quand le patron touche la sphère (on peut marquer des pauses sans être coupé).
+    static var reponseAuToucher: Bool { UserDefaults.standard.bool(forKey: cleReponseAuToucher) }
 
     static let cleLectureComplete = "voix.lectureComplete"
     /// Faux (par défaut) : une longue réponse du bureau est dite en résumé, le détail reste à l'écran.
@@ -195,6 +205,11 @@ final class AssistantVocal {
 
     func interrompre() {
         moteur?.interrompre()
+    }
+
+    /// Toucher de la sphère pendant l'écoute : « j'ai fini », Endry répond sans attendre.
+    func terminerPhrase() {
+        moteur?.terminerPhrase()
     }
 
 

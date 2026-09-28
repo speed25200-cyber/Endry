@@ -139,8 +139,10 @@ Toucher court du micro central : dictée d'une saisie terrain. **Toucher long** 
 - **Réponses longues** : dès qu'une réponse dépasse quelques lignes (ou qu'une carte s'affiche), la sphère se range
   en haut à gauche et la réponse se lit en texte courant, aligné à gauche, qui défile (fondu en haut et en bas).
   La réponse du bureau n'est plus répétée dans une carte : un lien discret « Continuer dans la conversation ».
-- **Fluidité** (`EndryKit/Voix/FluiditeVoix.swift`) : fin de phrase adaptative (0,55 s quand la phrase est finie,
-  plus de patience après « euh », « et », « pour ») ; micro rouvert plus vite entre deux tours (langue et modèle de
+- **Fluidité** (`EndryKit/Voix/FluiditeVoix.swift`) : fin de phrase adaptative qui ne coupe pas la parole (1,2 à
+  2,4 s de silence selon la phrase, plus après « euh », « et », « pour ») ; réglages « Temps avant la réponse »
+  (court, normal, long) et « Répondre seulement quand je touche la sphère » ; toucher la sphère pendant qu'on
+  parle fait répondre tout de suite ; micro rouvert plus vite entre deux tours (langue et modèle de
   dictée vérifiés une fois, modèle préchargé, session audio gardée) ; longues réponses du bureau **dites en résumé**
   (le début, puis « la suite est à l'écran »), réglage « Lire les longues réponses en entier » ; **débit** de la voix
   (posé, normal, rapide, très rapide) ; toucher la réponse interrompt Endry. **Commandes dites**, traitées sur

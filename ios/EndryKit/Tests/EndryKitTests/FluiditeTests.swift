@@ -3,12 +3,16 @@ import XCTest
 @testable import EndryKit
 
 final class FluiditeTests: XCTestCase {
-    func testFinDePhraseAdaptative() {
-        XCTAssertEqual(FinDePhrase.delai(definitif: "Qui me doit de l’argent ?", provisoire: ""), .milliseconds(550))
-        XCTAssertEqual(FinDePhrase.delai(definitif: "Quels chantiers cette semaine", provisoire: ""), .milliseconds(750))
-        XCTAssertEqual(FinDePhrase.delai(definitif: "Quels chantiers", provisoire: "cette sem"), .milliseconds(1_000))
-        XCTAssertEqual(FinDePhrase.delai(definitif: "Prépare l’offre pour", provisoire: ""), .milliseconds(1_300))
-        XCTAssertEqual(FinDePhrase.delai(definitif: "Dis-moi", provisoire: "euh"), .milliseconds(1_300))
+    func testFinDePhraseNeCoupePasLaParole() {
+        XCTAssertEqual(FinDePhrase.delai(definitif: "Qui me doit de l’argent ?", provisoire: ""), .milliseconds(1_200))
+        // Un point posé par la dictée à chaque pause ne veut pas dire que la phrase est finie.
+        XCTAssertEqual(FinDePhrase.delai(definitif: "Prépare l’offre de la Villa Morel.", provisoire: ""), .milliseconds(1_500))
+        XCTAssertEqual(FinDePhrase.delai(definitif: "Quels chantiers", provisoire: "cette sem"), .milliseconds(1_800))
+        XCTAssertEqual(FinDePhrase.delai(definitif: "Prépare l’offre pour", provisoire: ""), .milliseconds(2_400))
+        XCTAssertEqual(FinDePhrase.delai(definitif: "Dis-moi", provisoire: "euh"), .milliseconds(2_400))
+        // Réglage « Long » : une fois et demie plus de patience.
+        XCTAssertEqual(FinDePhrase.delai(definitif: "Quels chantiers cette semaine", provisoire: "", patience: 1.5), .milliseconds(2_250))
+        XCTAssertEqual(FinDePhrase.delai(definitif: "Qui me doit de l’argent ?", provisoire: "", patience: 0.7), .milliseconds(840))
     }
 
     func testReponseCourteDiteEnEntier() {

@@ -2,9 +2,10 @@ import Foundation
 
 /// Fin de phrase : combien de silence attendre avant de répondre.
 ///
-/// La reconnaissance a confirmé la phrase et elle se termine par un point ou un point d'interrogation :
-/// on répond vite. Des mots encore incertains, ou une phrase qui s'arrête sur « euh », « et », « pour » :
-/// on laisse le temps de finir.
+/// On ne coupe jamais la parole : la dictée d'Apple met un point à chaque pause, donc un point ne suffit pas
+/// à dire que la phrase est finie. Une question (« ? ») confirmée : réponse un peu plus tôt. Des mots encore
+/// incertains, ou une phrase qui s'arrête sur « euh », « et », « pour » : on attend nettement plus.
+/// `patience` multiplie tous les délais (réglage « Temps avant la réponse »).
 public enum FinDePhrase {
     /// Mots après lesquels une phrase n'est manifestement pas finie.
     static let motsSuspendus: Set<String> = [
@@ -12,14 +13,22 @@ public enum FinDePhrase {
         "un", "une", "a", "au", "aux", "avec", "chez", "sur", "dans", "que", "qui", "si", "puis", "ensuite",
     ]
 
-    public static func delai(definitif: String, provisoire: String) -> Duration {
+    /// Réglages proposés : « Court », « Normal » (par défaut), « Long ».
+    public static let patiences: [(libelle: String, valeur: Double)] = [("Court", 0.7), ("Normal", 1.0), ("Long", 1.5)]
+
+    public static func delai(definitif: String, provisoire: String, patience: Double = 1.0) -> Duration {
+        .milliseconds(Int((Double(base(definitif: definitif, provisoire: provisoire)) * max(patience, 0.5)).rounded()))
+    }
+
+    /// Délai de base, en millisecondes.
+    static func base(definitif: String, provisoire: String) -> Int {
         let phrase = [definitif, provisoire].map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
             .joined(separator: " ")
         let dernier = RepondeurLocal.normaliser(phrase).split(separator: " ").last.map(String.init) ?? ""
-        if motsSuspendus.contains(dernier) { return .milliseconds(1_300) }
-        guard provisoire.trimmingCharacters(in: .whitespaces).isEmpty else { return .milliseconds(1_000) }
-        if let fin = definitif.trimmingCharacters(in: .whitespaces).last, "?.!".contains(fin) { return .milliseconds(550) }
-        return .milliseconds(750)
+        if motsSuspendus.contains(dernier) { return 2_400 }
+        guard provisoire.trimmingCharacters(in: .whitespaces).isEmpty else { return 1_800 }
+        if definitif.trimmingCharacters(in: .whitespaces).last == "?" { return 1_200 }
+        return 1_500
     }
 }
 

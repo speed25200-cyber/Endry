@@ -218,6 +218,9 @@ final class MoteurTempsReel: MoteurVoix {
         envoyer(CommandeRealtime.creerReponse)
     }
 
+    /// Le serveur détecte lui-même la fin de phrase.
+    func terminerPhrase() {}
+
     func interrompre() {
         interrompreAssistant()
         changerPhase(.ecoute)

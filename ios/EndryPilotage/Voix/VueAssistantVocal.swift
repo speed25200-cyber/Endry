@@ -51,6 +51,14 @@ struct VueAssistantVocal: View {
                                 .accessibilityLabel(Text("Moteur vocal : \(nom)"))
                                 .transition(.opacity)
                         }
+                        if assistant?.phase == .ecoute, ReglageVoix.reponseAuToucher {
+                            Text("Touchez la sphère quand vous avez fini")
+                                .font(PoliceAssistant.texte(12, .medium, relativeTo: .caption))
+                                .foregroundStyle(Color.orClair.opacity(0.6))
+                                .padding(.top, 6)
+                                .transition(.opacity)
+                                .accessibilityIdentifier("aide-toucher-sphere")
+                        }
                     }
                     .opacity(apparu ? 1 : 0)
                     if compact { Spacer(minLength: 0) }
@@ -195,6 +203,10 @@ struct VueAssistantVocal: View {
                 case .parole:
                     // Endry se tait et rend la parole.
                     assistant?.interrompre()
+                case .ecoute:
+                    // « J'ai fini » : Endry répond sans attendre le silence.
+                    clavier = false
+                    assistant?.terminerPhrase()
                 default:
                     clavier = false
                 }
@@ -203,6 +215,7 @@ struct VueAssistantVocal: View {
             .accessibilityLabel(Text(EtatAssistant.libelle(assistant?.phase ?? .preparation)))
             .accessibilityAddTraits(.updatesFrequently)
             .accessibilityAction(named: Text("Interrompre")) { assistant?.interrompre() }
+            .accessibilityAction(named: Text("J’ai fini, réponds")) { assistant?.terminerPhrase() }
             .accessibilityIdentifier("sphere-assistant")
     }
 

@@ -3,7 +3,7 @@ import SwiftUI
 import UIKit
 
 /// « Conversation » : l'endroit réservé pour parler au bureau, par écrit ou en dictée, comme une session
-/// Claude ouverte sur le PC. Les questions partent tout de suite (lecture seule) ; les demandes partent en
+/// Claude ouverte sur le PC. Les questions partent tout de suite (le bureau s'en occupe) ; les demandes partent en
 /// saisie et se suivent ici jusqu'au résultat. Rien ne part chez un tiers sans le geste du patron à l'écran.
 struct ConversationView: View {
     @Environment(ModeleApp.self) private var app
@@ -191,7 +191,7 @@ struct ConversationView: View {
             Text("Écrivez ou dictez : l’assistant du PC répond ici, tout de suite, comme une session ouverte. Il garde le fil de la conversation.")
                 .styleTexte(15).foregroundStyle(Color.encreDouce)
                 .fixedSize(horizontal: false, vertical: true)
-            Label("Une question : il lit et répond. Une demande (« prépare… ») : il prépare, vous suivez le travail ici. Rien ne part chez un tiers sans votre Oui.",
+            Label("Le bureau s’en occupe tout de suite : il répond, prépare, corrige, traite les e-mails… Vous suivez le travail ici. Tout envoi reste une décision à glisser.",
                   systemImage: "lock.shield")
                 .styleTexte(13, relativeTo: .footnote).foregroundStyle(Color.encrePale)
                 .fixedSize(horizontal: false, vertical: true)
@@ -265,7 +265,7 @@ struct ConversationView: View {
         }
     }
 
-    /// Question (lecture seule) ou Demande (le bureau prépare) : deviné d'après la tournure, modifiable.
+    /// Question ou Demande (le bureau prépare) : deviné d'après la tournure, modifiable.
     private var choixNature: some View {
         Button {
             natureChoisie = true
@@ -285,7 +285,7 @@ struct ConversationView: View {
         }
         .buttonStyle(.plain)
         .animation(.endryVif, value: nature)
-        .accessibilityLabel(Text(nature == .question ? "Question : l’assistant lit et répond" : "Demande : l’assistant prépare"))
+        .accessibilityLabel(Text(nature == .question ? "Question : le bureau s’en occupe et répond" : "Demande : le bureau prépare"))
         .accessibilityHint(Text("Touchez pour changer"))
         .accessibilityIdentifier("mode-conversation")
     }
@@ -426,7 +426,7 @@ private struct MessageView: View {
             case .attente:
                 Reflexion(depuis: question?.le ?? message.le, message: message.message)
             case .differe:
-                Label(message.message ?? "L’assistant répondra à son prochain passage ; vous serez prévenu.", systemImage: "clock")
+                Label(message.message ?? BureauClaude.reponseAVenir, systemImage: "clock")
                     .styleTexte(14).foregroundStyle(Color.encreDouce)
                     .fixedSize(horizontal: false, vertical: true)
             case .erreur:

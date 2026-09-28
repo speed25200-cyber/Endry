@@ -102,7 +102,7 @@ public struct ExecuteurOutils: Sendable {
                 guard !question.isEmpty else { return (json(["ok": false, "message": "Question vide."]), .aucun) }
                 let (agentId, nomAgent) = await BureauClaude(api: api).resoudreAgent(question: question, demande: args["agent"] as? String)
                 return (json(["preparee": true, "envoyee": false, "domaine": nomAgent ?? "",
-                              "message": "Question affichée à l’écran. Le patron la relit et touche Envoyer ; l’assistant du PC répond à son prochain passage. N’invente pas la réponse."]),
+                              "message": "Question affichée à l’écran. Le patron la relit et touche Envoyer ; le bureau s’en occupe tout de suite. N’invente pas la réponse."]),
                         .questionAConfirmer(question: question, agent: nomAgent, agentId: agentId))
             case "ouvrir_outil":
                 // Ouvre l'écran ; le patron remplit, relit, fait signer et transmet lui-même.

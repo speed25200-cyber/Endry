@@ -97,7 +97,8 @@ final class CerveauTests: XCTestCase {
         XCTAssertTrue(t.contains("aucune relance sans sa demande"))
         XCTAssertTrue(t.contains("proposer_decision"))
         XCTAssertTrue(t.contains("touche Transmettre"))
-        XCTAssertTrue(t.contains("prochain passage"))
+        XCTAssertTrue(t.contains("s’en occupe tout de suite"))
+        XCTAssertFalse(t.contains("lecture seule"))
     }
 
     func testConsignesConversationDirecte() {

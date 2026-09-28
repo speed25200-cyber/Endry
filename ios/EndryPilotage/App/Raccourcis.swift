@@ -172,7 +172,7 @@ struct DemanderAEndry: AppIntent {
         case .transmettre:
             return .result(dialog: "C’est une demande de travail pour le bureau. Ouvrez Endry pour la relire et la transmettre.")
         case .demanderClaude:
-            return .result(dialog: "C’est une question pour l’assistant du bureau. Ouvrez Endry pour l’envoyer ; il répondra à son prochain passage.")
+            return .result(dialog: "C’est une question pour l’assistant du bureau. Ouvrez Endry pour l’envoyer ; le bureau s’en occupe tout de suite.")
         case .etatBureau:
             let pause = lot.accueil?.pause ?? false
             return .result(dialog: "\(pause ? "L’assistant du bureau est en pause : vos décisions s’exécutent, il ne prépare rien de nouveau." : "L’assistant du bureau travaille. Ouvrez Endry pour voir ce qu’il fait.")")

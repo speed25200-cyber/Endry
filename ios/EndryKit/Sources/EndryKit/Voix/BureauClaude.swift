@@ -177,8 +177,21 @@ public struct BureauClaude: Sendable {
         self.api = api
     }
 
-    /// Préfixe qui dit à Claude ce qu'on attend : une réponse, pas une action.
-    public static let prefixeQuestion = "Question du patron (depuis l’assistant vocal de l’iPhone). Réponds-lui dans le résumé, en deux ou trois phrases à dire à voix haute ; ne prépare et n’envoie rien : "
+    /// Préfixe d'une question déposée en saisie (repli v1.1). Mode direct (v4) : le bureau traite tout de suite
+    /// ce qui est demandé ; les envois restent des décisions à glisser dans l'app.
+    public static let prefixeQuestion = "Question du patron (depuis l’app). Traite-la tout de suite et réponds-lui dans le résumé, en deux ou trois phrases à dire à voix haute ; tout envoi à un tiers reste une décision à valider dans l’app : "
+    /// Ancien préfixe (lecture seule), encore présent dans l'historique des saisies.
+    static let anciensPrefixes = ["Question du patron (depuis l’assistant vocal de l’iPhone). Réponds-lui dans le résumé, en deux ou trois phrases à dire à voix haute ; ne prépare et n’envoie rien : "]
+
+    /// Texte affiché pendant que le bureau traite (mode direct : pas de « lecture seule », pas de « prochain passage »).
+    public static let enTraitement = "Le bureau s’en occupe…"
+    /// Réponse pas encore arrivée : elle viendra ici (événement du PC ou notification).
+    public static let reponseAVenir = "Le bureau s’en occupe ; la réponse s’affichera ici."
+
+    /// Préfixe de question trouvé en tête du texte (actuel ou ancien).
+    static func prefixe(de texte: String) -> String? {
+        ([prefixeQuestion] + anciensPrefixes).first { texte.hasPrefix($0) }
+    }
 
     public static func texteQuestion(_ question: String, agent: AgentBureau? = nil) -> String {
         texteQuestion(question, nomAgent: agent?.nom)
@@ -189,12 +202,12 @@ public struct BureauClaude: Sendable {
         return prefixeQuestion + pour + "« \(question.trimmingCharacters(in: .whitespacesAndNewlines)) »"
     }
 
-    public static func estQuestion(_ texte: String) -> Bool { texte.hasPrefix(prefixeQuestion) }
+    public static func estQuestion(_ texte: String) -> Bool { prefixe(de: texte) != nil }
 
     /// Nom de l'agent visé par une question déposée (lu dans son texte).
     public static func nomAgent(_ texte: String) -> String? {
-        guard estQuestion(texte) else { return nil }
-        let reste = texte.dropFirst(prefixeQuestion.count)
+        guard let prefixe = prefixe(de: texte) else { return nil }
+        let reste = texte.dropFirst(prefixe.count)
         let marque = "[Pour l’agent "
         guard reste.hasPrefix(marque), let fin = reste.firstIndex(of: "]") else { return nil }
         return String(reste[reste.index(reste.startIndex, offsetBy: marque.count)..<fin])
@@ -204,8 +217,8 @@ public struct BureauClaude: Sendable {
 
     /// La question telle que le patron l'a posée (sans le préfixe), pour l'historique.
     public static func questionSeule(_ texte: String) -> String {
-        guard estQuestion(texte) else { return texte }
-        var q = String(texte.dropFirst(prefixeQuestion.count))
+        guard let prefixe = prefixe(de: texte) else { return texte }
+        var q = String(texte.dropFirst(prefixe.count))
         if q.hasPrefix("[Pour l’agent "), let fin = q.firstIndex(of: "]") {
             q = String(q[q.index(after: fin)...]).trimmingCharacters(in: .whitespaces)
         }
@@ -252,7 +265,7 @@ public struct BureauClaude: Sendable {
     }
 
     /// Pose la question au domaine (`agentId`), sinon à l'assistant qui choisit, sinon (serveur v1.1) par la saisie.
-    /// Le PC l'exécute en lecture seule et répond à son prochain passage.
+    /// Mode direct (v4) : le PC la traite tout de suite ; les envois deviennent des décisions à glisser.
     /// `conversation` : même fil pour les questions qui se suivent (« et pour la Villa Morel ? »), comme un chat ;
     /// `contexte` : derniers échanges, pour un PC qui ne garde pas le fil lui-même.
     public func poser(_ question: String, agentId: String? = nil, nomAgent: String? = nil,

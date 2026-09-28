@@ -651,7 +651,7 @@ struct CarteContexte: View {
         case .questionAConfirmer(let question, let agent, _):
             CarteConfirmation(titre: agent.map { "Question pour l’assistant · \($0)" } ?? "Question pour l’assistant du bureau",
                               texte: question, bouton: "Envoyer",
-                              note: "Lecture seule : l’assistant répond, il ne fait rien d’autre.",
+                              note: "Le bureau s’en occupe tout de suite ; tout envoi reste une décision à glisser.",
                               envoiAuto: envoiAuto, confirmer: confirmer, annuler: retirer, garder: garder)
         case .saisieAConfirmer(let texte):
             CarteConfirmation(titre: "Demande pour le bureau", texte: texte, bouton: "Transmettre",
@@ -857,7 +857,7 @@ struct CarteClaude: View {
     var question: String
     var reponse: String?
     var agent: String?
-    /// Question partie, réponse au prochain passage de l'assistant (message du PC).
+    /// Question partie ; message du PC s'il y en a un (hors horaires).
     var attente: String? = nil
     var retirer: () -> Void
 
@@ -904,7 +904,7 @@ struct CarteClaude: View {
                 } else {
                     HStack(spacing: Espace.xs) {
                         ProgressView().controlSize(.small).tint(Color.or)
-                        Text("Question transmise ; l’assistant la traite en lecture seule…")
+                        Text(BureauClaude.enTraitement)
                             .font(PoliceAssistant.texte(13, relativeTo: .footnote))
                             .foregroundStyle(Color.orClair.opacity(0.55))
                     }

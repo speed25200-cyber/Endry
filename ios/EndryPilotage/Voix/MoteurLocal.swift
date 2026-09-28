@@ -468,7 +468,7 @@ final class MoteurLocal: MoteurVoix {
             if ReglageVoix.envoiDirect {
                 await dire("Je pose la question au bureau\(cote).")
             } else {
-                await dire("Voici la question pour l’assistant du bureau\(cote). Touchez Envoyer : il répondra à son prochain passage.")
+                await dire("Voici la question pour l’assistant du bureau\(cote). Touchez Envoyer : le bureau s’en occupe tout de suite.")
             }
         } else {
             await dire("Je n’ai pas pu préparer la question.")

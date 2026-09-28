@@ -296,7 +296,7 @@ struct FicheSuiviContenu: View {
                     .confirmationDialog("Demander au bureau où en est cette action ?", isPresented: $question, titleVisibility: .visible) {
                         Button("Envoyer la question") { Task { await demander(a) } }
                     } message: {
-                        Text("Une question en lecture seule : l’assistant répond, il ne fait rien de plus.")
+                        Text("Le bureau s’en occupe et répond ; tout envoi reste une décision à glisser.")
                     }
             }
         }
@@ -354,7 +354,7 @@ struct FicheSuiviContenu: View {
         }
         demandeEnvoyee = true
         modele.enregistrer(saisie: nil, texte: texte, nature: .question, chantierId: a.chantierId)
-        app.toast = Toast(r == .transmise ? "Question transmise : l’assistant répond à son prochain passage." : "Gardée : partira au retour du réseau.")
+        app.toast = Toast(r == .transmise ? "Question transmise : le bureau s’en occupe." : "Gardée : partira au retour du réseau.")
     }
 }
 

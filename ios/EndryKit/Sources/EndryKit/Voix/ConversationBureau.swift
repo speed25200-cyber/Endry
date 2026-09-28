@@ -21,7 +21,7 @@ public struct MessageConversation: Codable, Identifiable, Equatable, Sendable {
     }
 
     public enum Nature: String, Codable, Sendable {
-        /// Lecture seule : l'assistant répond, il ne fait rien d'autre.
+        /// Question : le bureau répond (et fait ce qui est demandé ; les envois restent à glisser).
         case question
         /// Travail à préparer (offre, courrier…) : rien ne part chez un tiers sans le geste du patron.
         case demande
@@ -269,7 +269,7 @@ public final class ModeleConversation {
     public func differer(_ id: String, message: String?) {
         guard var r = messages.first(where: { $0.id == MessageConversation.idReponse(id) }), r.etat != .recu else { return }
         r.etat = .differe
-        r.message = message ?? "L’assistant répondra à son prochain passage ; vous serez prévenu."
+        r.message = message ?? BureauClaude.reponseAVenir
         remplacer(r)
     }
 

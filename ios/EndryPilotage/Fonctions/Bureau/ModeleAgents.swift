@@ -135,7 +135,7 @@ final class ModeleAgents {
             e.reponse = resultat.message ?? "L’assistant n’a pas pu répondre."
         } else {
             e.etat = .enAttente
-            e.reponse = "L’assistant répondra à son prochain passage ; la réponse s’affichera ici."
+            e.reponse = BureauClaude.reponseAVenir
         }
     }
 

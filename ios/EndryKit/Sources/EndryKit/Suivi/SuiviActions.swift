@@ -196,7 +196,7 @@ public struct ActionSuivie: Codable, Sendable, Hashable, Identifiable {
             return etapes.last(where: \.estErreur).map { $0.detail ?? $0.titre } ?? resume ?? "Le bureau signale une erreur."
         case .fait, .enCours, .transmis:
             if let resume, !resume.isEmpty { return resume }
-            if let d = decisionPreparee { return "Prêt : la décision \(d) attend votre Oui." }
+            if let d = decisionPreparee { return "Prêt : la décision \(d) attend que vous la glissiez." }
             if let f = fichiers.first { return "Fichier : \(f.nom)" }
             if let e = etapes.last(where: { $0.qui != "vous" && $0.type != "reponse" }) { return e.titre }
             if etat == .transmis { return reponse ?? "En attente du compte rendu du bureau." }

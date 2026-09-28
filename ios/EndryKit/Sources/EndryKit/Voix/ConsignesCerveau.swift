@@ -53,7 +53,7 @@ public enum ConsignesCerveau {
           ou si le patron dit « demande à l’assistant » (ou « au secrétariat », « à la compta »…), appelle demander_assistant
           avec la question complète et le domaine. \(envoiDirect
             ? "La question part aussitôt au bureau : dis simplement « Je pose la question au bureau », sa réponse arrive dans quelques instants et sera dite."
-            : "La question s’affiche ; le patron touche Envoyer ; l’assistant répond à son prochain passage, pas tout de suite.") N’invente jamais sa réponse.
+            : "La question s’affiche ; le patron touche Envoyer ; le bureau s’en occupe tout de suite et sa réponse sera dite.") N’invente jamais sa réponse.
         \(recap.map { "\nConversation récente (pour garder le fil) :\n" + $0 } ?? "")
         """
     }

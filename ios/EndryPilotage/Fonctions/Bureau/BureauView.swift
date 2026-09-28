@@ -287,7 +287,7 @@ struct FicheAgentView: View {
 
     private func conversation(_ agent: AgentPC) -> some View {
         VStack(alignment: .leading, spacing: Espace.s) {
-            Text("Lui demander (lecture seule)").styleSurtitre()
+            Text("Lui demander").styleSurtitre()
             ForEach(modele.echanges[agent.id] ?? []) { echange in
                 VStack(alignment: .leading, spacing: 6) {
                     Text(echange.question)
@@ -297,10 +297,10 @@ struct FicheAgentView: View {
                     case .enCours:
                         HStack(spacing: 6) {
                             ProgressView().controlSize(.small)
-                            Text("Question transmise à l’assistant…").styleTexte(13, relativeTo: .footnote).foregroundStyle(Color.encrePale)
+                            Text(BureauClaude.enTraitement).styleTexte(13, relativeTo: .footnote).foregroundStyle(Color.encrePale)
                         }
                     case .enAttente:
-                        Label(echange.reponse ?? "L’assistant répondra à son prochain passage.", systemImage: "clock")
+                        Label(echange.reponse ?? BureauClaude.reponseAVenir, systemImage: "clock")
                             .styleTexte(13, relativeTo: .footnote)
                             .foregroundStyle(Color.encreDouce)
                             .fixedSize(horizontal: false, vertical: true)

@@ -124,11 +124,11 @@ public enum CommandeRealtime {
 /// Outils côté app pour dialoguer avec Claude, l'assistant du bureau sur le PC.
 public enum OutilsClaude {
     public static let descriptionBureau = "Ce que fait l’assistant du PC, par domaine (secrétariat, comptabilité…) : état, tâche en cours, horaires, journal, décisions à valider. Paramètre agent facultatif."
-    public static let descriptionDemander = "Prépare une question pour l’assistant du PC (dossiers, Bexio, e-mails). Elle s’affiche ; le patron la relit et touche Envoyer. L’assistant répond à son prochain passage, en lecture seule."
+    public static let descriptionDemander = "Prépare une question pour l’assistant du PC (dossiers, Bexio, e-mails). Elle s’affiche ; le patron la relit et touche Envoyer. Le bureau s’en occupe tout de suite et répond."
 
     public static var consigne: String { consigneBase + " " + AgentBureau.consigne }
 
-    static let consigneBase = "L’assistant du bureau tourne sur le PC ; il a les dossiers, Bexio et les e-mails, et travaille par domaines. Pour savoir ce qu’il fait, appelle bureau. Pour toute question dont tes outils n’ont pas la réponse, ou si le patron dit « demande à l’assistant », appelle demander_assistant : la question s’affiche, le patron la relit et touche Envoyer ; l’assistant répond à son prochain passage, pas tout de suite. Une demande de travail (saisie) s’affiche aussi et n’est transmise que quand le patron touche Transmettre. N’invente jamais une réponse du PC."
+    static let consigneBase = "L’assistant du bureau tourne sur le PC ; il a les dossiers, Bexio et les e-mails, et travaille par domaines. Pour savoir ce qu’il fait, appelle bureau. Pour toute question dont tes outils n’ont pas la réponse, ou si le patron dit « demande à l’assistant », appelle demander_assistant : la question s’affiche, le patron la relit et touche Envoyer ; le bureau s’en occupe tout de suite et répond. Une demande de travail (saisie) s’affiche aussi et n’est transmise que quand le patron touche Transmettre. N’invente jamais une réponse du PC."
 
     public static var definitions: [[String: Any]] {
         [

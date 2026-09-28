@@ -401,7 +401,7 @@ final class AssistantVocal {
                 let attente = ExecuteurOutils.Effet.questionClaude(suivi: suivi, question: question, agent: agent, message: nil)
                 if let index = self.cartes.firstIndex(of: attente) {
                     self.cartes[index] = .questionClaude(suivi: suivi, question: question, agent: agent,
-                                                         message: "L’assistant répondra à son prochain passage ; vous serez prévenu.")
+                                                         message: BureauClaude.reponseAVenir)
                 }
                 return
             }

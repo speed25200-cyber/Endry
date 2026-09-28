@@ -257,8 +257,8 @@ Codemagic n’a pas besoin de fastlane : sa CLI (`app-store-connect`, `xcode-pro
 
 ### À faire une seule fois (vous)
 
-> **Configuration actuelle** : le workflow `ios-testflight` utilise l’intégration App Store Connect de l’entreprise,
-> nommée exactement **« Endry ASC API »** (voir « Créer l’intégration « Endry ASC API » » ci-dessous), et la signature
+> **Configuration actuelle** : le workflow `ios-testflight` utilise l’intégration App Store Connect
+> **« PetMind ASC API »** (la clé d’équipe App Store Connect déjà configurée dans Codemagic) et la signature
 > automatique de Codemagic (`ios_signing`, bundle `com.endrysa.endry`). Il lance **tous** les tests
 > (EndryKit, app, UI) avant de construire l’IPA. Rien n’est stocké dans le dépôt.
 >
@@ -267,25 +267,6 @@ Codemagic n’a pas besoin de fastlane : sa CLI (`app-store-connect`, `xcode-pro
 > créé **avec ce certificat** (« Certificate : Uploaded »).
 >
 > Publication : `git tag ios-v2.0.0 && git push origin ios-v2.0.0`, ou *Start new build* › `iOS · TestFlight`.
-
-#### Créer l’intégration « Endry ASC API » (patron, une seule fois, ~5 min)
-
-Tant qu’elle n’existe pas, le workflow `ios-testflight` s’arrête au démarrage (« integration not found ») ;
-`ios-tests` n’en a pas besoin.
-1. [appstoreconnect.apple.com](https://appstoreconnect.apple.com), avec le compte **titulaire (Account Holder) ou
-   administrateur** d’Endry SA › **Utilisateurs et accès** › **Intégrations** › **API App Store Connect** ›
-   **Clés d’équipe** › « + ».
-2. Nom : `Endry ASC API` ; accès : **Gestionnaire d’app** (App Manager). Générez.
-3. Notez l’**ID de la clé** et l’**ID de l’émetteur** (au-dessus du tableau), puis **téléchargez** `AuthKey_XXXX.p8`
-   (une seule fois possible ; gardez-le hors du dépôt, par exemple dans le coffre de mots de passe de l’entreprise).
-4. [codemagic.io](https://codemagic.io) › **Teams** › équipe de l’app › **Integrations** › **Developer Portal** ›
-   **Connect** (ou « Manage keys » › *Add another key*) :
-   - **App Store Connect API key name** : `Endry ASC API` — exactement ce nom, c’est celui que lit `codemagic.yaml` ;
-   - **Issuer ID**, **Key ID**, et le fichier `.p8`. Enregistrez.
-5. Relancez **Start new build** › `iOS · TestFlight`. La clé reste chez Apple et dans Codemagic, jamais dans le dépôt.
-
-L’ancienne intégration d’un autre projet n’est plus utilisée par Endry Pilotage ; vous pouvez la retirer de
-Codemagic quand vous voulez.
 
 **1. Clé API App Store Connect** (`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8`)
 - [appstoreconnect.apple.com](https://appstoreconnect.apple.com) › **Utilisateurs et accès** › onglet **Intégrations** ›

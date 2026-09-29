@@ -216,7 +216,7 @@ final class EndryPilotageUITests: XCTestCase {
         capturer(app, "24-offre-preparee")
     }
 
-    /// Heures du secrétariat : détail jour par jour, relevé PDF et tableau Excel.
+    /// Heures du secrétariat : jours regroupés, documents du bureau, demande de relevé au Secrétariat.
     @MainActor
     func testHeuresSecretariat() {
         let app = lancer()
@@ -226,7 +226,11 @@ final class EndryPilotageUITests: XCTestCase {
         XCTAssertTrue(carte.waitForExistence(timeout: 8))
         carte.tap()
         XCTAssertTrue(app.staticTexts["total-heures-secretariat"].waitForExistence(timeout: 8))
-        XCTAssertTrue(app.descendants(matching: .any)["export-excel"].firstMatch.waitForExistence(timeout: 8))
+        // Relevés du bureau (Claude) : ouvrir, ou en demander un à jour ; plus d'export maison sur l'iPhone.
+        XCTAssertTrue(app.descendants(matching: .any)["documents-heures"].firstMatch.waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["demander-releve"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["export-excel"].firstMatch.exists)
+        XCTAssertTrue(app.descendants(matching: .any)["vue-heures"].firstMatch.exists)
         capturer(app, "25-heures-secretariat")
     }
 

@@ -605,20 +605,45 @@ public struct HeuresSecretariat: Decodable, Sendable, Hashable {
         return ordre.map { ($0, total[$0] ?? 0) }.sorted { $0.1 > $1.1 }
     }
 
-    /// Tableau pour Excel ou Numbers (séparateur « ; », virgule décimale, UTF-8 avec BOM).
-    public func csv() -> Data {
-        func champ(_ s: String) -> String {
-            s.contains(";") || s.contains("\"") || s.contains("\n") ? "\"" + s.replacingOccurrences(of: "\"", with: "\"\"") + "\"" : s
+    /// Un jour du relevé : ses lignes et son total.
+    public struct Jour: Sendable, Hashable, Identifiable {
+        public var date: String
+        public var heures: Double
+        public var lignes: [LigneHeuresSecretariat]
+        public var id: String { date }
+    }
+
+    /// Lignes regroupées par jour (le plus récent d'abord), filtrées par travail et par texte cherché
+    /// (tâche, client ou travail ; sans tenir compte des accents ni des majuscules).
+    public func parJour(categorie: String? = nil, recherche: String = "") -> [Jour] {
+        let cherche = recherche.trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "fr_CH"))
+        let retenues = lignes.filter { l in
+            if let categorie, (l.categorie ?? "Autres") != categorie { return false }
+            guard !cherche.isEmpty else { return true }
+            return [l.libelle, l.client ?? "", l.categorie ?? ""].joined(separator: " ")
+                .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "fr_CH"))
+                .contains(cherche)
         }
-        func nombre(_ v: Double) -> String { String(format: "%.2f", v).replacingOccurrences(of: ".", with: ",") }
-        var lignesCSV = ["Date;Tâche;Catégorie;Client;Heures"]
-        for l in lignes {
-            lignesCSV.append([DateEndry.courte(l.date), champ(l.libelle), champ(l.categorie ?? ""), champ(l.client ?? ""), nombre(l.heures)]
-                .joined(separator: ";"))
+        var ordre: [String] = []
+        var groupes: [String: [LigneHeuresSecretariat]] = [:]
+        for l in retenues {
+            if groupes[l.date] == nil { ordre.append(l.date) }
+            groupes[l.date, default: []].append(l)
         }
-        lignesCSV.append(";;;Total;\(nombre(heures))")
-        if let montant { lignesCSV.append(";;;Montant CHF;\(nombre(montant))") }
-        return Data([0xEF, 0xBB, 0xBF]) + Data(lignesCSV.joined(separator: "\r\n").utf8)
+        return ordre.sorted(by: >).map { d in
+            let ls = groupes[d] ?? []
+            return Jour(date: d, heures: ls.reduce(0) { $0 + $1.heures }, lignes: ls)
+        }
+    }
+
+    /// Demande au Secrétariat (Claude, sur le PC) le relevé soigné du mois : c'est le bureau qui le produit.
+    public var demandeReleve: String {
+        "[Pour l’agent Secrétariat] Prépare le relevé des heures de secrétariat de \(mois) pour Endry SA : "
+            + "1) un PDF mis en page (en-tête Endry SA, période, tableau jour par jour avec tâche, client, travail et durée, "
+            + "sous-totaux par travail, total des heures, tarif et montant HT) ; "
+            + "2) un tableau Excel (.xlsx) avec les mêmes colonnes, un onglet par travail et les totaux en formules. "
+            + "Range-les avec les documents des heures du mois pour qu’ils apparaissent dans l’app. Rien n’est envoyé à personne."
     }
 
     /// « 31 h 30 », « 31h30 », « 31:30 », « 31.5 », « 31,5 h » → 31.5

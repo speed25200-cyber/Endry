@@ -471,3 +471,12 @@ L’app a un écran « Conversation » (Aujourd’hui › Écrire, Entreprise �
 - Journal : une entrée `type: "reponse"` avec `saisie_id` marque l’action correspondante « Fait ».
 - Plus de sondage périodique de l’écran Bureau ni de la voix : les événements SSE (`/evenements`) suffisent ; l’app
   relit aussi au retour au premier plan.
+
+### Relevé des heures du secrétariat : produit par le bureau
+- L'iPhone ne génère plus de PDF ni de CSV : il ouvre les `documents` de `GET /heures-secretariat` (PDF et `.xlsx`
+  mis en page par le bureau) et peut en demander un à jour. La demande part en saisie, préfixée
+  `[Pour l’agent Secrétariat]` : PDF (en-tête Endry SA, jour par jour, sous-totaux par travail, total, tarif,
+  montant HT) et Excel (mêmes colonnes, un onglet par travail, totaux en formules). Le PC les range avec les
+  documents du mois ; le compte rendu arrive dans la conversation.
+- Les comptes rendus (`fait` / `erreur`) et les questions `Q-…` du bureau entrent aussi dans le fil
+  « Conversation », comme une session ouverte avec Claude.

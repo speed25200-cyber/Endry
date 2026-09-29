@@ -70,7 +70,7 @@ final class ModeleOffresSigneesTests: XCTestCase {
 }
 
 final class HeuresSecretariatTests: XCTestCase {
-    func testDetailEtExportExcel() async throws {
+    func testDetail() async throws {
         let h = try await APIDemo(latence: .zero).heuresSecretariat()
         XCTAssertEqual(h.heures, 31.5, accuracy: 0.001)
         XCTAssertEqual(h.lignes.count, 13)
@@ -78,12 +78,28 @@ final class HeuresSecretariatTests: XCTestCase {
         XCTAssertEqual(h.parCategorie.first?.categorie, "Comptabilité")
         XCTAssertEqual(h.documents.first?.format, "pdf")
         XCTAssertEqual(h.moisDisponibles.first, "2026-09")
-        let csv = String(decoding: h.csv().dropFirst(3), as: UTF8.self)
-        let lignes = csv.components(separatedBy: "\r\n")
-        XCTAssertEqual(lignes.first, "Date;Tâche;Catégorie;Client;Heures")
-        XCTAssertEqual(lignes[1], "02.09.2026;Tri des e-mails et réponses aux demandes de devis;Courrier et e-mails;;2,50")
-        XCTAssertTrue(lignes.contains(";;;Total;31,50"))
-        XCTAssertEqual(Array(h.csv().prefix(3)), [0xEF, 0xBB, 0xBF], "BOM : Excel lit les accents")
+    }
+
+    /// Navigation : jours du plus récent au plus ancien, filtre par travail, recherche sans accents.
+    func testParJourFiltreEtRecherche() async throws {
+        let h = try await APIDemo(latence: .zero).heuresSecretariat()
+        let jours = h.parJour()
+        XCTAssertEqual(jours.map(\.date), jours.map(\.date).sorted(by: >))
+        XCTAssertEqual(jours.reduce(0) { $0 + $1.heures }, h.heures, accuracy: 0.001)
+        let compta = h.parJour(categorie: "Comptabilité")
+        XCTAssertFalse(compta.isEmpty)
+        XCTAssertTrue(compta.flatMap(\.lignes).allSatisfy { $0.categorie == "Comptabilité" })
+        let tri = h.parJour(recherche: "  E-MAILS ")
+        XCTAssertTrue(tri.flatMap(\.lignes).contains { $0.libelle.contains("e-mails") })
+        XCTAssertTrue(h.parJour(recherche: "zzz introuvable").isEmpty)
+    }
+
+    /// Le relevé PDF / Excel est produit par le bureau : la demande part au Secrétariat.
+    func testDemandeReleveAuSecretariat() async throws {
+        let h = try await APIDemo(latence: .zero).heuresSecretariat()
+        XCTAssertTrue(h.demandeReleve.hasPrefix("[Pour l’agent Secrétariat]"))
+        XCTAssertTrue(h.demandeReleve.contains("septembre 2026"))
+        XCTAssertTrue(h.demandeReleve.contains(".xlsx"))
     }
 
     /// Ancien PC (v1.0 / v1.1) : pas de détail, rien ne casse.

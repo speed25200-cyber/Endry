@@ -74,6 +74,7 @@ body:has(#navigation.open) { overflow: hidden; }
 img { display: block; max-width: 100%; height: auto; }
 a { color: inherit; text-decoration: none; }
 p { margin: 0; }
+h1, h2, h3, .eyebrow, .section-lead, .figure-motto, .certificate-text, .complication-text, .step p { text-wrap: balance; }
 ::selection { background: var(--ink); color: var(--gold); }
 
 h1, h2, h3 {
@@ -295,13 +296,13 @@ h1 em, h2 em, h3 em,
   grid-row: 1;
   display: grid;
   grid-template-columns: 1fr var(--brand-w) 1fr;
-  column-gap: clamp(28px, 3vw, 56px);
+  column-gap: 32px;
   align-items: center;
 }
 .nav-side {
   display: flex;
   align-items: center;
-  gap: clamp(20px, 2.2vw, 40px);
+  gap: clamp(18px, 1.9vw, 32px);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -335,7 +336,7 @@ h1 em, h2 em, h3 em,
 .nav-num { display: none; }
 .nav-side .nav-cta {
   gap: 10px;
-  padding: 0 18px;
+  padding: 0 14px 0 calc(14px + .2em);
   border: 1px solid var(--ink);
   transition: background .8s var(--ease), color .8s var(--ease);
 }
@@ -1562,7 +1563,7 @@ dialog[open] { animation: dialog-in .9s var(--ease-slow); }
 /* --------------------------------------------------------------------------
    Responsive
    -------------------------------------------------------------------------- */
-@media (max-width: 1280px) {
+@media (max-width: 1420px) {
   :root { --header-h: 84px; }
   .menu-toggle { display: block; }
   #navigation {
@@ -1727,6 +1728,9 @@ dialog[open] { animation: dialog-in .9s var(--ease-slow); }
   .step--9 p { margin-inline: auto; }
   .step--3::before,
   .step--9::before { display: none; }
+  .step--9 { justify-self: stretch; }
+  .step--3 h3,
+  .step--9 h3 { padding-left: .22em; margin-right: 0; }
 
   .faq summary { grid-template-columns: 32px minmax(0, 1fr) 24px; gap: 12px; padding: 20px 0; }
   .faq details p { padding: 0 0 24px 44px; }
@@ -1746,6 +1750,8 @@ dialog[open] { animation: dialog-in .9s var(--ease-slow); }
   #project-form .button { width: 100%; }
 
   .footer-bottom { flex-direction: column; justify-content: center; gap: 0; }
+  .footer-phones { flex-direction: column; gap: 0; }
+  .footer-dot { display: none; }
 
   .mobile-contact {
     position: fixed;
@@ -1769,7 +1775,7 @@ dialog[open] { animation: dialog-in .9s var(--ease-slow); }
     padding: 0 10px;
     font-size: .62rem;
     font-weight: 600;
-    letter-spacing: .18em;
+    letter-spacing: .14em;
     text-transform: uppercase;
     text-align: center;
     color: var(--ink);
@@ -1805,3 +1811,6 @@ dialog[open] { animation: dialog-in .9s var(--ease-slow); }
 @media print {
   .header, .mobile-contact { display: none; }
 }
+
+/* Numéros de téléphone : chiffres alignés pour la lisibilité. */
+a[href^="tel:"] { font-variant-numeric: lining-nums tabular-nums; }

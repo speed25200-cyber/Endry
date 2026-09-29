@@ -88,7 +88,7 @@ h1 em { font-style: italic; color: var(--gold); }
 .variant-link:hover figure img { transform: scale(1.03); }
 
 .variant-text { position: relative; padding: 10px 12px 10px 0; }
-.variant-letter { display: block; font: italic 400 64px/1 var(--serif); color: var(--bronze); margin-bottom: 18px; }
+.variant-letter { display: block; font: italic 400 52px/1 var(--serif); letter-spacing: .02em; color: var(--bronze); margin-bottom: 18px; }
 .variant h2 { font: 400 clamp(38px, 3.6vw, 56px)/1.05 var(--serif); color: var(--ivory); letter-spacing: -.01em; }
 .variant-mood { font: italic 400 20px/1.4 var(--serif); color: var(--gold); margin: 12px 0 22px; }
 .variant-text > p:not(.variant-mood) { color: var(--muted); max-width: 420px; }

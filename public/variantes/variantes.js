@@ -7,7 +7,7 @@ if(reduce||!('IntersectionObserver' in window)){items.forEach(el=>el.classList.a
 else{const io=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('is-in');io.unobserve(e.target);}}),{rootMargin:'0px 0px -8% 0px',threshold:.12});items.forEach(el=>io.observe(el));}
 const onScroll=()=>document.body.classList.toggle('is-scrolled',scrollY>40);
 addEventListener('scroll',onScroll,{passive:true});onScroll();
-const variants=[['a-nocturne.html','A','Nocturne'],['b-atelier.html','B','Atelier'],['c-monolithe.html','C','Monolithe'],['d-lumiere.html','D','Lumière']];
+const variants=[['xiii-manufacture.html','XIII','Manufacture'],['xiv-palace.html','XIV','Palace'],['xv-matiere.html','XV','Matière'],['xvi-thermes.html','XVI','Thermes']];
 const file=location.pathname.split('/').pop();const i=variants.findIndex(v=>v[0]===file);
 if(i<0)return;
 const prev=variants[(i+variants.length-1)%variants.length],next=variants[(i+1)%variants.length];

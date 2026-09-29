@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="fr-CH">
 <head>
-  <script>document.documentElement.classList.add('js')</script>
+  <script>document.documentElement.classList.add('js');if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&!location.hash)document.documentElement.classList.add('intro')</script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Endry SA — Maquette XIV · Palace</title>
@@ -19,64 +19,93 @@
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"LocalBusiness","name":"Endry SA","description":"Conception, installation, rénovation, maintenance et dépannage en sanitaire, chauffage et ventilation.","telephone":["+41266633060","+41799623060"],"email":"info@endry.ch","address":{"@type":"PostalAddress","streetAddress":"Route des Marechets 143","postalCode":"1541","addressLocality":"Bussy FR","addressCountry":"CH"},"areaServed":["Fribourg","Vaud","Valais"]}</script>
   <script defer src="../site.js"></script>
   <script defer src="variantes.js"></script>
+  <script defer src="vendor/gsap.min.js"></script>
+  <script defer src="vendor/ScrollTrigger.min.js"></script>
+  <script defer src="vendor/SplitText.min.js"></script>
+  <script defer src="vendor/CustomEase.min.js"></script>
+  <script defer src="vendor/lenis.min.js"></script>
+  <script defer src="xiv-palace.js"></script>
 </head>
 <body>
   <!-- Ornements Art déco (dessinés pour cette maquette) -->
   <svg class="sprite" aria-hidden="true" focusable="false">
     <symbol id="orn-fan" viewBox="0 0 240 122">
       <g fill="none" stroke="currentColor" stroke-width="1">
-        <path d="M4 120A116 116 0 0 1 236 120M32 120A88 88 0 0 1 208 120M64 120A56 56 0 0 1 176 120M94 120A26 26 0 0 1 146 120"/>
-        <path d="M64 120L4 120M65.1 109.1L6.2 97.4M68.3 98.6L12.8 75.6M73.4 88.9L23.5 55.6M80.4 80.4L38 38M88.9 73.4L55.6 23.5M98.6 68.3L75.6 12.8M109.1 65.1L97.4 6.2M120 64L120 4M130.9 65.1L142.6 6.2M141.4 68.3L164.4 12.8M151.1 73.4L184.4 23.5M159.6 80.4L202 38M166.6 88.9L216.5 55.6M171.7 98.6L227.2 75.6M174.9 109.1L233.8 97.4M176 120L236 120M96 110.1L73.8 100.9M101.6 101.6L84.6 84.6M110.1 96L100.9 73.8M120 94L120 70M129.9 96L139.1 73.8M138.4 101.6L155.4 84.6M144 110.1L166.2 100.9"/>
-        <path d="M0 121.5H240"/>
+        <path pathLength="1" d="M4 120A116 116 0 0 1 236 120M32 120A88 88 0 0 1 208 120M64 120A56 56 0 0 1 176 120M94 120A26 26 0 0 1 146 120"/>
+        <path pathLength="1" d="M64 120L4 120M65.1 109.1L6.2 97.4M68.3 98.6L12.8 75.6M73.4 88.9L23.5 55.6M80.4 80.4L38 38M88.9 73.4L55.6 23.5M98.6 68.3L75.6 12.8M109.1 65.1L97.4 6.2M120 64L120 4M130.9 65.1L142.6 6.2M141.4 68.3L164.4 12.8M151.1 73.4L184.4 23.5M159.6 80.4L202 38M166.6 88.9L216.5 55.6M171.7 98.6L227.2 75.6M174.9 109.1L233.8 97.4M176 120L236 120M96 110.1L73.8 100.9M101.6 101.6L84.6 84.6M110.1 96L100.9 73.8M120 94L120 70M129.9 96L139.1 73.8M138.4 101.6L155.4 84.6M144 110.1L166.2 100.9"/>
+        <path pathLength="1" d="M0 121.5H240"/>
       </g>
-      <path d="M106 120a14 14 0 0 1 28 0z" fill="currentColor"/>
     </symbol>
     <symbol id="orn-water" viewBox="0 0 120 80">
-      <g fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
-        <path d="M60 64V14M60 24C44 24 33 38 30 62M60 24C76 24 87 38 90 62M60 34C50 35 44 46 42 62M60 34C70 35 76 46 78 62"/>
-        <path d="M60 4l4 6-4 6-4-6z"/>
-        <path d="M18 64H102M28 64V70H92V64M38 70V76H82V70"/>
+      <g fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round">
+        <path pathLength="1" d="M60 64V14M60 24C44 24 33 38 30 62M60 24C76 24 87 38 90 62M60 34C50 35 44 46 42 62M60 34C70 35 76 46 78 62"/>
+        <path pathLength="1" d="M60 4l4 6-4 6-4-6z"/>
+        <path pathLength="1" d="M18 64H102M28 64V70H92V64M38 70V76H82V70"/>
       </g>
     </symbol>
     <symbol id="orn-sun" viewBox="0 0 120 80">
-      <g fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
-        <path d="M38.7 64.3L15.6 58.1M40.9 59L28.8 52M44.4 54.4L27.5 37.5M49 50.9L42 38.8M54.3 48.7L48.1 25.6M60 48L60 34M65.7 48.7L71.9 25.6M71 50.9L78 38.8M75.6 54.4L92.5 37.5M79.1 59L91.2 52M81.3 64.3L104.4 58.1"/>
-        <path d="M44 70A16 16 0 0 1 76 70"/>
-        <path d="M8 70H112M22 76H98"/>
+      <g fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round">
+        <path pathLength="1" d="M38.7 64.3L15.6 58.1M40.9 59L28.8 52M44.4 54.4L27.5 37.5M49 50.9L42 38.8M54.3 48.7L48.1 25.6M60 48L60 34M65.7 48.7L71.9 25.6M71 50.9L78 38.8M75.6 54.4L92.5 37.5M79.1 59L91.2 52M81.3 64.3L104.4 58.1"/>
+        <path pathLength="1" d="M44 70A16 16 0 0 1 76 70"/>
+        <path pathLength="1" d="M8 70H112M22 76H98"/>
       </g>
     </symbol>
     <symbol id="orn-air" viewBox="0 0 120 80">
-      <g fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
-        <path d="M14 26H78a10 10 0 1 0-10-10"/>
-        <path d="M30 40H106"/>
-        <path d="M14 54H74a10 10 0 1 1-10 10"/>
-        <path d="M6 40H20M92 26H104M86 54H100"/>
+      <g fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round">
+        <path pathLength="1" d="M14 26H78a10 10 0 1 0-10-10"/>
+        <path pathLength="1" d="M30 40H106"/>
+        <path pathLength="1" d="M14 54H74a10 10 0 1 1-10 10"/>
+        <path pathLength="1" d="M6 40H20M92 26H104M86 54H100"/>
       </g>
     </symbol>
     <symbol id="orn-step" viewBox="0 0 160 20">
       <g fill="none" stroke="currentColor" stroke-width="1">
-        <path d="M0 19H52V14H62V9H72V4H88V9H98V14H108V19H160"/>
+        <path pathLength="1" d="M0 19H52V14H62V9H72V4H88V9H98V14H108V19H160"/>
+        <path pathLength="1" d="M80 0l3 3-3 3-3-3z"/>
       </g>
-      <path d="M80 0l3 3-3 3-3-3z" fill="currentColor"/>
     </symbol>
   </svg>
 
   <a class="skip" href="#principal">Aller au contenu</a>
 
-  <!-- En-tête : portique symétrique sur fond or -->
+  <!-- Intro : portes d’ascenseur en laiton (décor, injecté seulement avec JS + mouvement autorisé) -->
+  <div class="lift" aria-hidden="true">
+    <div class="lift-transom">
+      <div class="lift-dial" data-dial="big"></div>
+    </div>
+    <div class="lift-door lift-door-l"></div>
+    <div class="lift-door lift-door-r"></div>
+  </div>
+
+  <!-- Feuille d’or WebGL (décor) -->
+  <canvas class="leaf-gl" aria-hidden="true"></canvas>
+
+  <!-- Indicateur d’étage fixe (décor) -->
+  <div class="floor" aria-hidden="true">
+    <div class="floor-dial" data-dial="small"></div>
+    <p class="floor-label"><span class="floor-kicker">Étage</span><span class="floor-name">Entrée</span></p>
+  </div>
+
+  <!-- Curseur (décor, pointeur fin uniquement) -->
+  <div class="cursor" aria-hidden="true">
+    <span class="cursor-sun"><svg viewBox="-20 -20 40 40"><g stroke="currentColor" stroke-width="1" fill="none"><circle r="5.5"/><path d="M0-9.5V-16M0 9.5V16M-9.5 0H-16M9.5 0H16M6.7-6.7l4.6-4.6M-6.7 6.7l-4.6 4.6M6.7 6.7l4.6 4.6M-6.7-6.7l-4.6-4.6"/></g></svg></span>
+    <span class="cursor-dot"></span>
+  </div>
+
   <header class="lobby">
     <div class="lobby-inner">
       <a class="brand" href="#" aria-label="Endry SA, accueil">
-        <img src="logo-encre.png" alt="Endry SA — Sanitaire, chauffage, ventilation" width="945" height="240">
+        <img class="brand-ink" src="logo-encre.png" alt="Endry SA — Sanitaire, chauffage, ventilation" width="945" height="240">
+        <img class="brand-gold" src="logo-transparent.png" alt="" width="945" height="240" aria-hidden="true">
       </a>
-      <nav id="navigation" aria-label="Navigation principale">
-        <a href="#expertises">Expertises</a>
-        <a href="#depannage">Dépannage</a>
-        <a href="#approche">L’esprit</a>
-        <a href="#realisations">Réalisations</a>
+      <nav id="navigation" aria-label="Navigation principale" data-lenis-prevent>
+        <a href="#expertises"><span class="nav-floor" aria-hidden="true">1</span>Expertises</a>
+        <a href="#depannage"><span class="nav-floor" aria-hidden="true">2</span>Dépannage</a>
+        <a href="#approche"><span class="nav-floor" aria-hidden="true">3</span>L’esprit</a>
+        <a href="#realisations"><span class="nav-floor" aria-hidden="true">4</span>Réalisations</a>
         <span class="nav-gap" aria-hidden="true"></span>
-        <a href="/suivi">Suivi de chantier</a>
-        <a href="#contact" class="nav-cta">Parlons de votre projet</a>
+        <a href="/suivi"><span class="nav-floor" aria-hidden="true">◇</span>Suivi de chantier</a>
+        <a href="#contact" class="nav-cta"><span>Parlons de votre projet</span></a>
       </nav>
       <button class="menu-toggle" aria-expanded="false" aria-controls="navigation" aria-label="Ouvrir le menu">
         <span class="menu-lines" aria-hidden="true"><span></span><span></span><span></span></span>
@@ -86,52 +115,45 @@
 
   <main id="principal">
 
-    <!-- Héros : façade de palace -->
-    <section class="hero" aria-labelledby="hero-title">
+    <!-- E · Entrée : soleil rayonnant sur feuille d’or, fenêtre à gradins qui s’ouvre -->
+    <section class="hero leafy" data-floor="0" data-floor-name="Entrée" aria-labelledby="hero-title">
       <div class="hero-sun" aria-hidden="true"></div>
+      <span class="sun-anchor" aria-hidden="true"></span>
+      <svg class="sun-rings" viewBox="-300 -300 600 300" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="1">
+          <path pathLength="1" d="M-290 0A290 290 0 0 1 290 0"/>
+          <path pathLength="1" d="M-250 0A250 250 0 0 1 250 0"/>
+          <path pathLength="1" d="M-150 0A150 150 0 0 1 150 0"/>
+          <path pathLength="1" d="M-120 0A120 120 0 0 1 120 0"/>
+        </g>
+      </svg>
 
-      <p class="eyebrow hero-eyebrow" data-reveal><span class="lozenge" aria-hidden="true"></span>Endry SA · La technique du bâtiment<span class="lozenge" aria-hidden="true"></span></p>
-
-      <h1 id="hero-title" class="hero-title" data-reveal style="--d:100ms">
-        <span class="t1">Le confort.</span>
-        <span class="t2">Dans chaque détail.</span>
-      </h1>
-
-      <p class="hero-sub" data-reveal style="--d:200ms">Sanitaire. Chauffage. Ventilation.<br>Installation, entretien et <a class="hero-repair" href="#depannage">dépannage</a>.</p>
-
-      <div class="portal" data-reveal style="--d:260ms">
-        <div class="portal-side portal-left">
-          <a class="plaque" href="tel:+41266633060">
-            <small>Fixe</small>
-            <span>026 663 30 60</span>
-          </a>
-          <span class="pilaster" aria-hidden="true"></span>
-        </div>
-
-        <figure class="portal-arch">
-          <div class="step-frame">
-            <div class="step-frame-b">
-              <div class="step-frame-c">
-                <img src="../assets/ambiance-salle-de-bain.webp" width="1672" height="941" alt="Ambiance illustrative : salle de bain contemporaine en pierre claire avec robinetterie bronze" fetchpriority="high">
-              </div>
-            </div>
-          </div>
-          <figcaption><span>L’eau. La chaleur. L’air.</span><small>Ambiance illustrative</small></figcaption>
-        </figure>
-
-        <div class="portal-side portal-right">
-          <span class="pilaster" aria-hidden="true"></span>
-          <a class="plaque" href="tel:+41799623060">
-            <small>Mobile</small>
-            <span>079 962 30 60</span>
-          </a>
+      <div class="hero-stage">
+        <p class="eyebrow hero-eyebrow"><span class="lozenge" aria-hidden="true"></span>Endry SA · La technique du bâtiment<span class="lozenge" aria-hidden="true"></span></p>
+        <h1 id="hero-title" class="hero-title">
+          <span class="t1">Le confort.</span>
+          <span class="t2">Dans chaque détail.</span>
+        </h1>
+        <p class="hero-sub">Sanitaire. Chauffage. Ventilation.<br>Installation, entretien et <a class="hero-repair" href="#depannage">dépannage</a>.</p>
+        <div class="hero-actions">
+          <a class="brass magnetic" href="#contact"><span>Parlons de votre projet</span></a>
+          <a class="link" href="#expertises">Découvrir notre savoir-faire <span aria-hidden="true">↓</span></a>
         </div>
       </div>
 
-      <div class="hero-actions" data-reveal>
-        <a class="brass" href="#contact">Parlons de votre projet</a>
-        <a class="link" href="#expertises">Découvrir notre savoir-faire <span aria-hidden="true">↓</span></a>
-      </div>
+      <a class="plaque plaque-l magnetic" href="tel:+41266633060"><small>Fixe</small><span>026 663 30 60</span></a>
+      <a class="plaque plaque-r magnetic" href="tel:+41799623060"><small>Mobile</small><span>079 962 30 60</span></a>
+
+      <figure class="hero-window">
+        <span class="hw-trim" aria-hidden="true"></span>
+        <span class="hw-clip">
+          <img src="../assets/ambiance-salle-de-bain.webp" width="1672" height="941" alt="Ambiance illustrative : salle de bain contemporaine en pierre claire avec robinetterie bronze" fetchpriority="high">
+        </span>
+        <figcaption>
+          <span class="hw-motto" aria-hidden="true">L’eau. La chaleur. L’air.</span>
+          <small>Ambiance illustrative</small>
+        </figcaption>
+      </figure>
     </section>
 
     <!-- Frise territoire -->
@@ -145,149 +167,137 @@
       </div>
     </div>
 
-    <!-- Expertises : trois portes d’ascenseur -->
-    <section id="expertises" class="section expertises" aria-labelledby="expertises-title">
-      <header class="section-head">
-        <p class="eyebrow" data-reveal><span class="lozenge" aria-hidden="true"></span>Nos expertises<span class="lozenge" aria-hidden="true"></span></p>
-        <h2 id="expertises-title" data-reveal style="--d:80ms">Trois métiers.<span>Une vision d’ensemble.</span></h2>
-        <svg class="head-orn" aria-hidden="true" data-reveal style="--d:140ms"><use href="#orn-step"/></svg>
-        <p class="section-intro" data-reveal style="--d:180ms">Du premier plan au dernier réglage, nous réunissons les installations essentielles au confort de votre bâtiment.</p>
-      </header>
+    <!-- 1 · Expertises : trois portes d’ascenseur -->
+    <section id="expertises" class="hall dark" data-floor="1" data-floor-name="Expertises" aria-labelledby="expertises-title">
+      <div class="hall-inner">
+        <header class="hall-head">
+          <p class="eyebrow eyebrow-light"><span class="lozenge" aria-hidden="true"></span>Nos expertises<span class="lozenge" aria-hidden="true"></span></p>
+          <h2 id="expertises-title" class="display" data-split>Trois métiers. <span class="alt">Une vision d’ensemble.</span></h2>
+          <p class="hall-intro" data-rise>Du premier plan au dernier réglage, nous réunissons les installations essentielles au confort de votre bâtiment.</p>
+        </header>
 
-      <div class="doors">
-        <article class="door" data-reveal>
-          <svg class="dial" viewBox="0 0 120 62" aria-hidden="true">
-            <path d="M12 58A48 48 0 0 1 108 58M20 58A40 40 0 0 1 100 58" fill="none"/>
-            <path d="M18.4 34L25.4 38M60 10V18M101.6 34L94.6 38M36 16.4L38 19.9M84 16.4L82 19.9" fill="none"/>
-            <path d="M60 58L30.6 41" class="needle"/>
-            <circle cx="60" cy="58" r="4"/>
-            <path d="M6 61H114" fill="none"/>
-          </svg>
-          <div class="door-frame">
-            <div class="door-panel">
-              <span class="door-num" aria-hidden="true">01</span>
-              <svg class="door-orn" aria-hidden="true"><use href="#orn-water"/></svg>
-              <p class="rubric">L’eau</p>
-              <h3>Sanitaire</h3>
-              <p class="door-lead">L’eau, à la bonne place.</p>
-              <p class="door-text">Des réseaux aux équipements, des installations conçues autour de vos usages et de votre espace.</p>
-              <details>
-                <summary>Explorer les prestations <span class="plus" aria-hidden="true"></span></summary>
-                <ul>
+        <div class="doors">
+          <article class="door" aria-labelledby="door-1">
+            <div class="door-transom" aria-hidden="true">
+              <div class="door-dial" data-dial="door" data-target="1"></div>
+              <span class="door-num">01 · Sanitaire</span>
+            </div>
+            <div class="door-frame">
+              <div class="door-room">
+                <svg class="door-emblem draw" aria-hidden="true"><use href="#orn-water"/></svg>
+                <p class="rubric rubric-light">L’eau</p>
+                <h3 id="door-1">Sanitaire</h3>
+                <p class="door-lead">L’eau, à la bonne place.</p>
+                <p class="door-text">Des réseaux aux équipements, des installations conçues autour de vos usages et de votre espace.</p>
+                <ul class="door-list">
                   <li>Distribution d’eau et évacuations</li>
                   <li>Installation des équipements sanitaires</li>
                   <li>Rénovation des installations</li>
                   <li>Entretien, dépannage et suivi technique</li>
                 </ul>
                 <a class="link link-light" href="#contact" data-service="Sanitaire">Discuter de mon projet sanitaire <span aria-hidden="true">→</span></a>
-              </details>
-              <span class="kickplate" aria-hidden="true"></span>
+              </div>
             </div>
-          </div>
-        </article>
+          </article>
 
-        <article class="door" data-reveal style="--d:120ms">
-          <svg class="dial" viewBox="0 0 120 62" aria-hidden="true">
-            <path d="M12 58A48 48 0 0 1 108 58M20 58A40 40 0 0 1 100 58" fill="none"/>
-            <path d="M18.4 34L25.4 38M60 10V18M101.6 34L94.6 38M36 16.4L38 19.9M84 16.4L82 19.9" fill="none"/>
-            <path d="M60 58V24" class="needle"/>
-            <circle cx="60" cy="58" r="4"/>
-            <path d="M6 61H114" fill="none"/>
-          </svg>
-          <div class="door-frame">
-            <div class="door-panel">
-              <span class="door-num" aria-hidden="true">02</span>
-              <svg class="door-orn" aria-hidden="true"><use href="#orn-sun"/></svg>
-              <p class="rubric">La chaleur</p>
-              <h3>Chauffage</h3>
-              <p class="door-lead">Une chaleur bien pensée.</p>
-              <p class="door-text">Une production et une distribution de chaleur adaptées aux besoins réels de votre bâtiment.</p>
-              <details>
-                <summary>Explorer les prestations <span class="plus" aria-hidden="true"></span></summary>
-                <ul>
+          <article class="door" aria-labelledby="door-2">
+            <div class="door-transom" aria-hidden="true">
+              <div class="door-dial" data-dial="door" data-target="2"></div>
+              <span class="door-num">02 · Chauffage</span>
+            </div>
+            <div class="door-frame">
+              <div class="door-room">
+                <svg class="door-emblem draw" aria-hidden="true"><use href="#orn-sun"/></svg>
+                <p class="rubric rubric-light">La chaleur</p>
+                <h3 id="door-2">Chauffage</h3>
+                <p class="door-lead">Une chaleur bien pensée.</p>
+                <p class="door-text">Une production et une distribution de chaleur adaptées aux besoins réels de votre bâtiment.</p>
+                <ul class="door-list">
                   <li>Installation et remplacement de chauffage</li>
                   <li>Distribution de chaleur et chauffage au sol</li>
                   <li>Optimisation des installations existantes</li>
                   <li>Entretien, dépannage et accompagnement technique</li>
                 </ul>
                 <a class="link link-light" href="#contact" data-service="Chauffage">Discuter de mon chauffage <span aria-hidden="true">→</span></a>
-              </details>
-              <span class="kickplate" aria-hidden="true"></span>
+              </div>
             </div>
-          </div>
-        </article>
+          </article>
 
-        <article class="door" data-reveal style="--d:240ms">
-          <svg class="dial" viewBox="0 0 120 62" aria-hidden="true">
-            <path d="M12 58A48 48 0 0 1 108 58M20 58A40 40 0 0 1 100 58" fill="none"/>
-            <path d="M18.4 34L25.4 38M60 10V18M101.6 34L94.6 38M36 16.4L38 19.9M84 16.4L82 19.9" fill="none"/>
-            <path d="M60 58L89.4 41" class="needle"/>
-            <circle cx="60" cy="58" r="4"/>
-            <path d="M6 61H114" fill="none"/>
-          </svg>
-          <div class="door-frame">
-            <div class="door-panel">
-              <span class="door-num" aria-hidden="true">03</span>
-              <svg class="door-orn" aria-hidden="true"><use href="#orn-air"/></svg>
-              <p class="rubric">L’air</p>
-              <h3>Ventilation</h3>
-              <p class="door-lead">L’air, au cœur du confort.</p>
-              <p class="door-text">Des solutions intégrées au bâtiment pour organiser le renouvellement de l’air au quotidien.</p>
-              <details>
-                <summary>Explorer les prestations <span class="plus" aria-hidden="true"></span></summary>
-                <ul>
+          <article class="door" aria-labelledby="door-3">
+            <div class="door-transom" aria-hidden="true">
+              <div class="door-dial" data-dial="door" data-target="3"></div>
+              <span class="door-num">03 · Ventilation</span>
+            </div>
+            <div class="door-frame">
+              <div class="door-room">
+                <svg class="door-emblem draw" aria-hidden="true"><use href="#orn-air"/></svg>
+                <p class="rubric rubric-light">L’air</p>
+                <h3 id="door-3">Ventilation</h3>
+                <p class="door-lead">L’air, au cœur du confort.</p>
+                <p class="door-text">Des solutions intégrées au bâtiment pour organiser le renouvellement de l’air au quotidien.</p>
+                <ul class="door-list">
                   <li>Étude des besoins de renouvellement d’air</li>
                   <li>Intégration des équipements de ventilation</li>
                   <li>Installation des réseaux</li>
                   <li>Adaptation en construction et rénovation</li>
                 </ul>
                 <a class="link link-light" href="#contact" data-service="Ventilation">Discuter de ma ventilation <span aria-hidden="true">→</span></a>
-              </details>
-              <span class="kickplate" aria-hidden="true"></span>
-            </div>
-          </div>
-        </article>
-      </div>
-
-      <!-- Dépannage : marquise de palace -->
-      <aside id="depannage" class="marquee" aria-labelledby="repair-title" data-reveal>
-        <div class="marquee-b">
-          <div class="marquee-c">
-            <span class="bulbs bulbs-top" aria-hidden="true"></span>
-            <p class="eyebrow eyebrow-light"><span class="lozenge" aria-hidden="true"></span>Aussi à vos côtés en cas de panne<span class="lozenge" aria-hidden="true"></span></p>
-            <h3 id="repair-title">Besoin d’un dépannage&#8239;?</h3>
-            <div class="marquee-grid">
-              <p class="marquee-text">Endry SA intervient aussi pour le dépannage de vos installations. Décrivez-nous le problème et votre localisation pour convenir des modalités d’intervention.</p>
-              <a class="cartouche" href="tel:+41799623060"><small>Appeler le</small><span>079 962 30 60</span></a>
-              <div class="marquee-links">
-                <a class="link link-light" href="tel:+41266633060">Fixe&#8239;: 026 663 30 60 <span aria-hidden="true">→</span></a>
-                <a class="link link-light" href="#contact" data-service="Dépannage">Décrire mon besoin <span aria-hidden="true">↓</span></a>
-                <p>Pour connaître nos disponibilités, privilégiez un appel.</p>
               </div>
             </div>
-            <span class="bulbs bulbs-bottom" aria-hidden="true"></span>
-          </div>
+          </article>
         </div>
-      </aside>
+      </div>
     </section>
 
-    <!-- L’esprit Endry : salon brun -->
-    <section id="approche" class="salon" aria-labelledby="approach-title">
-      <div class="section salon-inner">
-        <svg class="salon-fan" aria-hidden="true" data-reveal><use href="#orn-fan"/></svg>
-        <p class="eyebrow eyebrow-light" data-reveal style="--d:80ms"><span class="lozenge" aria-hidden="true"></span>L’esprit Endry<span class="lozenge" aria-hidden="true"></span></p>
-        <h2 id="approach-title" class="salon-quote" data-reveal style="--d:140ms">
-          <span class="q1"><span class="q" aria-hidden="true">«&#8239;</span>Ce qui se voit.</span> <span class="q2">Et tout ce qui se ressent.<span class="q" aria-hidden="true">&#8239;»</span></span>
+    <!-- 2 · Dépannage : tableau d’appel de l’ascenseur -->
+    <section id="depannage" class="service leafy" data-floor="2" data-floor-name="Dépannage" aria-labelledby="repair-title">
+      <div class="service-inner">
+        <div class="service-copy">
+          <p class="eyebrow eyebrow-left"><span class="lozenge" aria-hidden="true"></span>Aussi à vos côtés en cas de panne</p>
+          <h2 id="repair-title" class="display service-title" data-split>Besoin d’un <span class="alt">dépannage&#8239;?</span></h2>
+          <p class="service-text" data-rise>Endry SA intervient aussi pour le dépannage de vos installations. Décrivez-nous le problème et votre localisation pour convenir des modalités d’intervention.</p>
+          <div class="service-links" data-rise>
+            <a class="link" href="#contact" data-service="Dépannage">Décrire mon besoin <span aria-hidden="true">↓</span></a>
+            <p>Pour connaître nos disponibilités, privilégiez un appel.</p>
+          </div>
+        </div>
+
+        <div class="callpanel" data-rise>
+          <div class="callpanel-plate">
+            <svg class="callpanel-orn draw" aria-hidden="true"><use href="#orn-fan"/></svg>
+            <p class="callpanel-head" aria-hidden="true">Appel</p>
+            <a class="callbtn callbtn-main magnetic" href="tel:+41799623060">
+              <span class="lamp" aria-hidden="true"></span>
+              <span class="callbtn-txt"><small>Appeler le</small><span>079 962 30 60</span></span>
+            </a>
+            <a class="callbtn magnetic" href="tel:+41266633060">
+              <span class="lamp" aria-hidden="true"></span>
+              <span class="callbtn-txt"><small>Fixe&#8239;:</small><span>026 663 30 60</span></span>
+            </a>
+            <span class="callpanel-screws" aria-hidden="true"></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 · L’esprit Endry : salon brun -->
+    <section id="approche" class="salon dark" data-floor="3" data-floor-name="L’esprit" aria-labelledby="approach-title">
+      <div class="salon-inner">
+        <svg class="salon-fan draw" aria-hidden="true"><use href="#orn-fan"/></svg>
+        <p class="eyebrow eyebrow-light"><span class="lozenge" aria-hidden="true"></span>L’esprit Endry<span class="lozenge" aria-hidden="true"></span></p>
+        <h2 id="approach-title" class="salon-quote" data-split>
+          <span class="q1">Ce qui se voit.</span>
+          <span class="q2">Et tout ce qui <em>se ressent.</em></span>
         </h2>
         <div class="salon-body">
-          <p class="salon-text salon-left" data-reveal>Un espace agréable commence par des installations bien pensées. L’eau qui trouve sa place. Une chaleur adaptée. L’air qui circule.</p>
-          <figure class="arch" data-reveal style="--d:120ms">
-            <div class="arch-frame">
+          <p class="salon-text salon-left" data-rise>Un espace agréable commence par des installations bien pensées. L’eau qui trouve sa place. Une chaleur adaptée. L’air qui circule.</p>
+          <figure class="arch">
+            <span class="arch-frame">
               <img src="../assets/detail-robinetterie.webp" width="1536" height="1024" alt="Ambiance illustrative : détail d’une robinetterie en bronze brossé" loading="lazy">
-            </div>
+            </span>
             <figcaption>Ambiance illustrative</figcaption>
           </figure>
-          <div class="salon-text salon-right" data-reveal style="--d:200ms">
+          <div class="salon-text salon-right" data-rise>
             <p>À Bussy, nous accompagnons les particuliers, les gérances et les professionnels du bâtiment, de la conception à l’entretien et au dépannage. Avec une même attention portée à l’ensemble et aux détails.</p>
             <a class="link link-light" href="../assets/Endry-SA-Plaquette.pdf" target="_blank" rel="noopener">Découvrir notre plaquette <span aria-hidden="true">↗</span> <small>PDF</small></a>
           </div>
@@ -295,201 +305,198 @@
       </div>
     </section>
 
-    <!-- Réalisations : galerie symétrique -->
-    <section id="realisations" class="section gallery" aria-labelledby="projects-title">
-      <header class="section-head">
-        <p class="eyebrow" data-reveal><span class="lozenge" aria-hidden="true"></span>Réalisations Endry SA<span class="lozenge" aria-hidden="true"></span></p>
-        <h2 id="projects-title" data-reveal style="--d:80ms">La précision.<span>Sur le terrain.</span></h2>
-        <svg class="head-orn" aria-hidden="true" data-reveal style="--d:140ms"><use href="#orn-step"/></svg>
-        <p class="section-intro" data-reveal style="--d:180ms">Un regard sur nos installations, à travers les photographies de chantier de notre plaquette.</p>
-      </header>
-
-      <div class="vitrine">
-        <figure class="vitrine-item" data-reveal>
-          <button class="project-image" data-image="../assets/reseaux-sanitaires.webp" data-caption="Réseaux sanitaires — Réalisation Endry SA" aria-label="Agrandir la réalisation de réseaux sanitaires">
-            <span class="chamfer"><span class="chamfer-b"><img src="../assets/reseaux-sanitaires.webp" alt="Réseaux sanitaires photographiés sur un chantier Endry SA" width="720" height="559" loading="lazy"></span></span>
-            <span class="zoom" aria-hidden="true">Agrandir</span>
-          </button>
-          <figcaption><span class="cap-num">I</span><span class="cap-title">Réseaux sanitaires</span><small>Installation</small></figcaption>
-        </figure>
-        <figure class="vitrine-item vitrine-tall" data-reveal style="--d:100ms">
-          <button class="project-image" data-image="../assets/hydraulique.webp" data-caption="Hydraulique — Réalisation Endry SA" aria-label="Agrandir la réalisation hydraulique">
-            <span class="chamfer"><span class="chamfer-b"><img src="../assets/hydraulique.webp" alt="Installation hydraulique issue de la plaquette Endry SA" width="369" height="494" loading="lazy"></span></span>
-            <span class="zoom" aria-hidden="true">Agrandir</span>
-          </button>
-          <figcaption><span class="cap-num">II</span><span class="cap-title">Hydraulique</span><small>Chauffage</small></figcaption>
-        </figure>
-        <figure class="vitrine-item vitrine-tall" data-reveal style="--d:200ms">
-          <button class="project-image" data-image="../assets/sanitaire.webp" data-caption="Sanitaire — Réalisation Endry SA" aria-label="Agrandir la réalisation sanitaire">
-            <span class="chamfer"><span class="chamfer-b"><img src="../assets/sanitaire.webp" alt="Installation sanitaire issue de la plaquette Endry SA" width="369" height="494" loading="lazy"></span></span>
-            <span class="zoom" aria-hidden="true">Agrandir</span>
-          </button>
-          <figcaption><span class="cap-num">III</span><span class="cap-title">Sanitaire</span><small>Équipement</small></figcaption>
-        </figure>
-        <figure class="vitrine-item" data-reveal style="--d:300ms">
-          <button class="project-image" data-image="../assets/chauffage-sol.webp" data-caption="Chauffage au sol — Réalisation Endry SA" aria-label="Agrandir la réalisation de chauffage au sol">
-            <span class="chamfer"><span class="chamfer-b"><img src="../assets/chauffage-sol.webp" alt="Réseau de chauffage au sol réalisé par Endry SA" width="418" height="800" loading="lazy"></span></span>
-            <span class="zoom" aria-hidden="true">Agrandir</span>
-          </button>
-          <figcaption><span class="cap-num">IV</span><span class="cap-title">Chauffage au sol</span><small>Distribution</small></figcaption>
-        </figure>
-      </div>
-    </section>
-
-    <!-- Méthode : escalier à gradins -->
-    <section class="stairs" aria-labelledby="method-title">
-      <div class="section stairs-inner">
-        <header class="section-head">
-          <p class="eyebrow eyebrow-light" data-reveal><span class="lozenge" aria-hidden="true"></span>À chaque étape<span class="lozenge" aria-hidden="true"></span></p>
-          <h2 id="method-title" data-reveal style="--d:80ms">Un projet accompagné.<span>Du début à la suite.</span></h2>
-          <svg class="head-orn" aria-hidden="true" data-reveal style="--d:140ms"><use href="#orn-step"/></svg>
+    <!-- 4 · Réalisations : façade à gradins -->
+    <section id="realisations" class="gallery leafy" data-floor="4" data-floor-name="Réalisations" aria-labelledby="projects-title">
+      <div class="gallery-inner">
+        <header class="gallery-head">
+          <p class="eyebrow eyebrow-left"><span class="lozenge" aria-hidden="true"></span>Réalisations Endry SA</p>
+          <h2 id="projects-title" class="display" data-split>La précision. <span class="alt">Sur le terrain.</span></h2>
+          <p class="gallery-intro" data-rise>Un regard sur nos installations, à travers les photographies de chantier de notre plaquette.</p>
         </header>
-        <ol class="steps">
-          <li data-reveal>
-            <span class="step-num" aria-hidden="true">1</span>
-            <h3>Comprendre.</h3>
-            <p>Échanger sur vos besoins, relever l’existant et identifier les contraintes du site.</p>
-          </li>
-          <li data-reveal style="--d:100ms">
-            <span class="step-num" aria-hidden="true">2</span>
-            <h3>Concevoir.</h3>
-            <p>Définir la solution technique et un périmètre d’intervention clair, avec vous.</p>
-          </li>
-          <li data-reveal style="--d:200ms">
-            <span class="step-num" aria-hidden="true">3</span>
-            <h3>Installer.</h3>
-            <p>Préparer le chantier, intégrer les équipements et contrôler leur fonctionnement.</p>
-          </li>
-          <li data-reveal style="--d:300ms">
-            <span class="step-num" aria-hidden="true">4</span>
-            <h3>Accompagner.</h3>
-            <p>Faciliter la prise en main et organiser l’entretien et le suivi des installations.</p>
-          </li>
-        </ol>
-      </div>
-    </section>
 
-    <!-- Questions -->
-    <section class="section faq" aria-labelledby="faq-title">
-      <header class="section-head">
-        <p class="eyebrow" data-reveal><span class="lozenge" aria-hidden="true"></span>Avant de commencer<span class="lozenge" aria-hidden="true"></span></p>
-        <h2 id="faq-title" data-reveal style="--d:80ms">Vos questions.<span>Nos réponses.</span></h2>
-      </header>
-      <div class="frame faq-frame" data-reveal>
-        <div class="frame-b">
-          <div class="frame-c">
-            <div class="frame-d">
-              <details>
-                <summary><span class="q-num" aria-hidden="true">I</span><span class="q-text">Proposez-vous des dépannages&#8239;?</span><span class="plus" aria-hidden="true"></span></summary>
-                <p>Oui, Endry SA assure également des dépannages. Appelez-nous au <a href="tel:+41266633060">026 663 30 60</a> ou au <a href="tel:+41799623060">079 962 30 60</a> en précisant le problème, l’installation concernée et votre commune. Nous faisons le point avec vous sur les modalités d’intervention et les disponibilités.</p>
-              </details>
-              <details>
-                <summary><span class="q-num" aria-hidden="true">II</span><span class="q-text">Dans quelles régions intervenez-vous&#8239;?</span><span class="plus" aria-hidden="true"></span></summary>
-                <p>Endry SA est implantée à Bussy FR et accompagne des projets dans les cantons de Fribourg, Vaud et Valais. Contactez-nous avec la commune de votre projet pour préciser les modalités d’intervention.</p>
-              </details>
-              <details>
-                <summary><span class="q-num" aria-hidden="true">III</span><span class="q-text">Travaillez-vous en rénovation&#8239;?</span><span class="plus" aria-hidden="true"></span></summary>
-                <p>Oui. Nous intervenons en construction neuve et en rénovation. L’existant, les accès et vos usages permettent de définir une solution adaptée.</p>
-              </details>
-              <details>
-                <summary><span class="q-num" aria-hidden="true">IV</span><span class="q-text">Comment obtenir une offre&#8239;?</span><span class="plus" aria-hidden="true"></span></summary>
-                <p>Décrivez votre besoin, la commune et l’échéance souhaitée. Un premier échange permet de préciser le périmètre et de déterminer si une visite est nécessaire avant le chiffrage.</p>
-              </details>
-              <details>
-                <summary><span class="q-num" aria-hidden="true">V</span><span class="q-text">Assurez-vous l’entretien après l’installation&#8239;?</span><span class="plus" aria-hidden="true"></span></summary>
-                <p>L’entretien et le suivi technique font partie de notre accompagnement en sanitaire et chauffage. Les prestations et leur fréquence se définissent selon les équipements concernés.</p>
-              </details>
-            </div>
-          </div>
+        <div class="facade">
+          <figure class="bay bay-1">
+            <button class="project-image" data-image="../assets/reseaux-sanitaires.webp" data-caption="Réseaux sanitaires — Réalisation Endry SA" aria-label="Agrandir la réalisation de réseaux sanitaires">
+              <span class="bay-frame"><img src="../assets/reseaux-sanitaires.webp" alt="Réseaux sanitaires photographiés sur un chantier Endry SA" width="720" height="559" loading="lazy"></span>
+              <span class="zoom" aria-hidden="true">Agrandir</span>
+            </button>
+            <figcaption><span class="cap-num" aria-hidden="true">I</span><span class="cap-title">Réseaux sanitaires</span><small>Installation</small></figcaption>
+          </figure>
+          <figure class="bay bay-2">
+            <button class="project-image" data-image="../assets/hydraulique.webp" data-caption="Hydraulique — Réalisation Endry SA" aria-label="Agrandir la réalisation hydraulique">
+              <span class="bay-frame"><img src="../assets/hydraulique.webp" alt="Installation hydraulique issue de la plaquette Endry SA" width="369" height="494" loading="lazy"></span>
+              <span class="zoom" aria-hidden="true">Agrandir</span>
+            </button>
+            <figcaption><span class="cap-num" aria-hidden="true">II</span><span class="cap-title">Hydraulique</span><small>Chauffage</small></figcaption>
+          </figure>
+          <figure class="bay bay-3">
+            <button class="project-image" data-image="../assets/chauffage-sol.webp" data-caption="Chauffage au sol — Réalisation Endry SA" aria-label="Agrandir la réalisation de chauffage au sol">
+              <span class="bay-frame"><img src="../assets/chauffage-sol.webp" alt="Réseau de chauffage au sol réalisé par Endry SA" width="418" height="800" loading="lazy"></span>
+              <span class="zoom" aria-hidden="true">Agrandir</span>
+            </button>
+            <figcaption><span class="cap-num" aria-hidden="true">III</span><span class="cap-title">Chauffage au sol</span><small>Distribution</small></figcaption>
+          </figure>
+          <figure class="bay bay-4">
+            <button class="project-image" data-image="../assets/sanitaire.webp" data-caption="Sanitaire — Réalisation Endry SA" aria-label="Agrandir la réalisation sanitaire">
+              <span class="bay-frame"><img src="../assets/sanitaire.webp" alt="Installation sanitaire issue de la plaquette Endry SA" width="369" height="494" loading="lazy"></span>
+              <span class="zoom" aria-hidden="true">Agrandir</span>
+            </button>
+            <figcaption><span class="cap-num" aria-hidden="true">IV</span><span class="cap-title">Sanitaire</span><small>Équipement</small></figcaption>
+          </figure>
         </div>
       </div>
     </section>
 
-    <!-- Contact -->
-    <section id="contact" class="section contact" aria-labelledby="contact-title">
-      <header class="section-head">
-        <p class="eyebrow" data-reveal><span class="lozenge" aria-hidden="true"></span>Votre prochain projet<span class="lozenge" aria-hidden="true"></span></p>
-        <h2 id="contact-title" data-reveal style="--d:80ms">Parlons de<span>votre bâtiment.</span></h2>
-        <svg class="head-orn" aria-hidden="true" data-reveal style="--d:140ms"><use href="#orn-step"/></svg>
-        <p class="section-intro" data-reveal style="--d:180ms">Une construction, une rénovation, un entretien ou un dépannage&#8239;? Commençons par un échange.</p>
-      </header>
+    <!-- 5 · Méthode : l’ascenseur qui monte de 1 à 4 -->
+    <section class="method dark" data-floor="5" data-floor-name="Méthode" aria-labelledby="method-title">
+      <div class="method-inner">
+        <header class="method-head">
+          <p class="eyebrow eyebrow-light eyebrow-left"><span class="lozenge" aria-hidden="true"></span>À chaque étape</p>
+          <h2 id="method-title" class="display" data-split>Un projet accompagné. <span class="alt">Du début à la suite.</span></h2>
+        </header>
 
-      <div class="contact-grid">
-        <div class="frame contact-card" data-reveal>
-          <div class="frame-b">
-            <div class="frame-c">
-              <div class="frame-d">
-                <p class="rubric">La réception</p>
-                <div class="contact-plaques">
-                  <a class="plaque plaque-wide" href="tel:+41266633060"><small>Fixe</small><span>026 663 30 60</span></a>
-                  <a class="plaque plaque-wide" href="tel:+41799623060"><small>Mobile</small><span>079 962 30 60</span></a>
-                </div>
-                <dl class="contact-list">
-                  <div>
-                    <dt>E-mail</dt>
-                    <dd><a class="email" href="mailto:info@endry.ch">info@endry.ch</a></dd>
-                  </div>
-                  <div>
-                    <dt>Adresse</dt>
-                    <dd><address>Route des Marechets 143<br>1541 Bussy FR</address></dd>
-                  </div>
-                  <div>
-                    <dt>Territoire</dt>
-                    <dd>Fribourg · Vaud · Valais</dd>
-                  </div>
-                </dl>
-                <svg class="card-fan" aria-hidden="true"><use href="#orn-fan"/></svg>
-              </div>
-            </div>
+        <div class="shaft-numeral" aria-hidden="true">
+          <div class="numeral-window">
+            <div class="numeral-reel"><span>1</span><span>2</span><span>3</span><span>4</span></div>
           </div>
+          <div class="numeral-dial" data-dial="method"></div>
         </div>
 
-        <div class="frame form-card" data-reveal style="--d:120ms">
-          <div class="frame-b">
-            <div class="frame-c">
-              <div class="frame-d">
-                <form id="project-form">
-                  <p class="rubric">Fiche de demande</p>
-                  <h3>Votre projet, en quelques mots.</h3>
-                  <p class="form-help">Préparez votre demande, puis envoyez-la depuis votre messagerie.</p>
-                  <div class="field-row">
-                    <label><span class="field-name">Nom et prénom <span aria-hidden="true">*</span></span><input name="nom" required autocomplete="name" maxlength="100" placeholder="Votre nom"></label>
-                    <label><span class="field-name">E-mail <span aria-hidden="true">*</span></span><input name="email" type="email" required autocomplete="email" maxlength="160" placeholder="vous@exemple.ch"></label>
-                  </div>
-                  <div class="field-row">
-                    <label><span class="field-name">Téléphone</span><input name="telephone" type="tel" autocomplete="tel" maxlength="40" placeholder="Votre numéro"></label>
-                    <label><span class="field-name">Commune du projet <span aria-hidden="true">*</span></span><input name="commune" required autocomplete="address-level2" maxlength="120" placeholder="Commune ou NPA"></label>
-                  </div>
-                  <div class="field-row">
-                    <label><span class="field-name">Domaine <span aria-hidden="true">*</span></span>
-                      <select name="domaine" id="domaine" required>
-                        <option value="">Sélectionner</option>
-                        <option>Sanitaire</option>
-                        <option>Chauffage</option>
-                        <option>Ventilation</option>
-                        <option>Projet global</option>
-                        <option>Entretien</option>
-                        <option>Dépannage</option>
-                      </select>
-                    </label>
-                    <label><span class="field-name">Échéance souhaitée</span><input name="echeance" maxlength="100" placeholder="Ex.&#8239;: printemps 2027"></label>
-                  </div>
-                  <label><span class="field-name">Votre besoin <span aria-hidden="true">*</span></span><textarea name="message" rows="5" required maxlength="2500" placeholder="Type de bâtiment, travaux envisagés ou problème rencontré…"></textarea></label>
-                  <p class="privacy-note">* Champs requis. Les informations servent à traiter votre demande. <a href="../confidentialite.html">Confidentialité</a></p>
-                  <button class="brass" type="submit">Préparer ma demande</button>
-                  <noscript><p class="privacy-note">Pour nous transmettre votre demande, écrivez à <a href="mailto:info@endry.ch">info@endry.ch</a> ou appelez le 026 663 30 60 ou le 079 962 30 60.</p></noscript>
-                </form>
-              </div>
+        <div class="shaft">
+          <span class="shaft-rail" aria-hidden="true"><span class="shaft-cabin"></span></span>
+          <ol class="steps">
+            <li class="step">
+              <span class="step-num" aria-hidden="true">1</span>
+              <h3>Comprendre.</h3>
+              <p>Échanger sur vos besoins, relever l’existant et identifier les contraintes du site.</p>
+            </li>
+            <li class="step">
+              <span class="step-num" aria-hidden="true">2</span>
+              <h3>Concevoir.</h3>
+              <p>Définir la solution technique et un périmètre d’intervention clair, avec vous.</p>
+            </li>
+            <li class="step">
+              <span class="step-num" aria-hidden="true">3</span>
+              <h3>Installer.</h3>
+              <p>Préparer le chantier, intégrer les équipements et contrôler leur fonctionnement.</p>
+            </li>
+            <li class="step">
+              <span class="step-num" aria-hidden="true">4</span>
+              <h3>Accompagner.</h3>
+              <p>Faciliter la prise en main et organiser l’entretien et le suivi des installations.</p>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 · Questions -->
+    <section class="faq leafy" data-floor="6" data-floor-name="Questions" aria-labelledby="faq-title">
+      <div class="faq-inner">
+        <header class="faq-head">
+          <p class="eyebrow eyebrow-left"><span class="lozenge" aria-hidden="true"></span>Avant de commencer</p>
+          <h2 id="faq-title" class="display" data-split>Vos questions. <span class="alt">Nos réponses.</span></h2>
+          <svg class="faq-orn draw" aria-hidden="true"><use href="#orn-step"/></svg>
+        </header>
+        <div class="faq-list">
+          <details data-rise>
+            <summary><span class="q-num" aria-hidden="true">I</span><span class="q-text">Proposez-vous des dépannages&#8239;?</span><span class="plus" aria-hidden="true"></span></summary>
+            <p>Oui, Endry SA assure également des dépannages. Appelez-nous au <a href="tel:+41266633060">026 663 30 60</a> ou au <a href="tel:+41799623060">079 962 30 60</a> en précisant le problème, l’installation concernée et votre commune. Nous faisons le point avec vous sur les modalités d’intervention et les disponibilités.</p>
+          </details>
+          <details data-rise>
+            <summary><span class="q-num" aria-hidden="true">II</span><span class="q-text">Dans quelles régions intervenez-vous&#8239;?</span><span class="plus" aria-hidden="true"></span></summary>
+            <p>Endry SA est implantée à Bussy FR et accompagne des projets dans les cantons de Fribourg, Vaud et Valais. Contactez-nous avec la commune de votre projet pour préciser les modalités d’intervention.</p>
+          </details>
+          <details data-rise>
+            <summary><span class="q-num" aria-hidden="true">III</span><span class="q-text">Travaillez-vous en rénovation&#8239;?</span><span class="plus" aria-hidden="true"></span></summary>
+            <p>Oui. Nous intervenons en construction neuve et en rénovation. L’existant, les accès et vos usages permettent de définir une solution adaptée.</p>
+          </details>
+          <details data-rise>
+            <summary><span class="q-num" aria-hidden="true">IV</span><span class="q-text">Comment obtenir une offre&#8239;?</span><span class="plus" aria-hidden="true"></span></summary>
+            <p>Décrivez votre besoin, la commune et l’échéance souhaitée. Un premier échange permet de préciser le périmètre et de déterminer si une visite est nécessaire avant le chiffrage.</p>
+          </details>
+          <details data-rise>
+            <summary><span class="q-num" aria-hidden="true">V</span><span class="q-text">Assurez-vous l’entretien après l’installation&#8239;?</span><span class="plus" aria-hidden="true"></span></summary>
+            <p>L’entretien et le suivi technique font partie de notre accompagnement en sanitaire et chauffage. Les prestations et leur fréquence se définissent selon les équipements concernés.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 · Réception : contact -->
+    <section id="contact" class="reception leafy" data-floor="7" data-floor-name="Réception" aria-labelledby="contact-title">
+      <div class="reception-inner">
+        <header class="reception-head">
+          <p class="eyebrow"><span class="lozenge" aria-hidden="true"></span>Votre prochain projet<span class="lozenge" aria-hidden="true"></span></p>
+          <h2 id="contact-title" class="display display-xl" data-split>Parlons de <span class="alt">votre bâtiment.</span></h2>
+          <p class="reception-intro" data-rise>Une construction, une rénovation, un entretien ou un dépannage&#8239;? Commençons par un échange.</p>
+        </header>
+
+        <div class="reception-grid">
+          <div class="desk" data-rise>
+            <p class="rubric rubric-light">La réception</p>
+            <div class="desk-plaques">
+              <a class="plaque plaque-wide magnetic" href="tel:+41266633060"><small>Fixe</small><span>026 663 30 60</span></a>
+              <a class="plaque plaque-wide magnetic" href="tel:+41799623060"><small>Mobile</small><span>079 962 30 60</span></a>
             </div>
+            <dl class="desk-list">
+              <div>
+                <dt>E-mail</dt>
+                <dd><a class="email" href="mailto:info@endry.ch">info@endry.ch</a></dd>
+              </div>
+              <div>
+                <dt>Adresse</dt>
+                <dd><address>Route des Marechets 143<br>1541 Bussy FR</address></dd>
+              </div>
+              <div>
+                <dt>Territoire</dt>
+                <dd>Fribourg · Vaud · Valais</dd>
+              </div>
+            </dl>
+            <svg class="desk-fan draw" aria-hidden="true"><use href="#orn-fan"/></svg>
+          </div>
+
+          <div class="register" data-rise>
+            <form id="project-form">
+              <p class="rubric">Fiche de demande</p>
+              <h3>Votre projet, en quelques mots.</h3>
+              <p class="form-help">Préparez votre demande, puis envoyez-la depuis votre messagerie.</p>
+              <div class="field-row">
+                <label><span class="field-name">Nom et prénom <span aria-hidden="true">*</span></span><input name="nom" required autocomplete="name" maxlength="100" placeholder="Votre nom"></label>
+                <label><span class="field-name">E-mail <span aria-hidden="true">*</span></span><input name="email" type="email" required autocomplete="email" maxlength="160" placeholder="vous@exemple.ch"></label>
+              </div>
+              <div class="field-row">
+                <label><span class="field-name">Téléphone</span><input name="telephone" type="tel" autocomplete="tel" maxlength="40" placeholder="Votre numéro"></label>
+                <label><span class="field-name">Commune du projet <span aria-hidden="true">*</span></span><input name="commune" required autocomplete="address-level2" maxlength="120" placeholder="Commune ou NPA"></label>
+              </div>
+              <div class="field-row">
+                <label><span class="field-name">Domaine <span aria-hidden="true">*</span></span>
+                  <select name="domaine" id="domaine" required>
+                    <option value="">Sélectionner</option>
+                    <option>Sanitaire</option>
+                    <option>Chauffage</option>
+                    <option>Ventilation</option>
+                    <option>Projet global</option>
+                    <option>Entretien</option>
+                    <option>Dépannage</option>
+                  </select>
+                </label>
+                <label><span class="field-name">Échéance souhaitée</span><input name="echeance" maxlength="100" placeholder="Ex.&#8239;: printemps 2027"></label>
+              </div>
+              <label><span class="field-name">Votre besoin <span aria-hidden="true">*</span></span><textarea name="message" rows="5" required maxlength="2500" placeholder="Type de bâtiment, travaux envisagés ou problème rencontré…"></textarea></label>
+              <p class="privacy-note">* Champs requis. Les informations servent à traiter votre demande. <a href="../confidentialite.html">Confidentialité</a></p>
+              <button class="brass magnetic" type="submit"><span>Préparer ma demande</span></button>
+              <noscript><p class="privacy-note">Pour nous transmettre votre demande, écrivez à <a href="mailto:info@endry.ch">info@endry.ch</a> ou appelez le 026 663 30 60 ou le 079 962 30 60.</p></noscript>
+            </form>
           </div>
         </div>
       </div>
     </section>
   </main>
 
-  <footer class="foyer">
+  <footer class="foyer dark">
     <div class="foyer-inner">
-      <svg class="foyer-fan" aria-hidden="true"><use href="#orn-fan"/></svg>
+      <svg class="foyer-fan draw" aria-hidden="true"><use href="#orn-fan"/></svg>
       <a class="foyer-logo" href="#" aria-label="Retour en haut">
         <img src="logo-transparent.png" width="945" height="240" alt="Endry SA">
       </a>
@@ -517,20 +524,20 @@
     <a href="#contact">Parlons de votre projet</a>
   </div>
 
-  <dialog id="image-dialog" aria-labelledby="image-caption">
+  <dialog id="image-dialog" aria-labelledby="image-caption" data-lenis-prevent>
     <button class="close-dialog" aria-label="Fermer la photo">×</button>
     <img id="large-image" alt="">
     <p id="image-caption"></p>
   </dialog>
 
-  <dialog id="request-dialog" aria-labelledby="request-title">
+  <dialog id="request-dialog" aria-labelledby="request-title" data-lenis-prevent>
     <button class="close-dialog" aria-label="Fermer la demande">×</button>
     <p class="eyebrow"><span class="lozenge" aria-hidden="true"></span>Votre demande<span class="lozenge" aria-hidden="true"></span></p>
     <h2 id="request-title">Prête à être envoyée.</h2>
     <p class="dialog-text">Vérifiez le texte ci-dessous. Ouvrez votre messagerie, ajoutez vos plans ou photos si utile, puis envoyez l’e-mail à info@endry.ch.</p>
     <textarea id="request-preview" rows="9" readonly aria-label="Texte de votre demande"></textarea>
     <div class="dialog-actions">
-      <a id="send-email" class="brass" href="mailto:info@endry.ch">Ouvrir ma messagerie</a>
+      <a id="send-email" class="brass" href="mailto:info@endry.ch"><span>Ouvrir ma messagerie</span></a>
       <button class="link" type="button" id="copy-request">Copier le texte</button>
     </div>
     <p id="copy-status" role="status"></p>

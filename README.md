@@ -49,3 +49,12 @@ Syntaxe JavaScript, présence des routes, ressources locales, ancres et alternat
 
 ## Correction demandée — fixe et dépannage visible
 Ajout du fixe 026 663 30 60 en complément du mobile 079 962 30 60 dans l’accueil, le contact, le dépannage, le pied de page et les pages informatives. Le dépannage est souligné dès l’accueil. Publication de cette correction sur le site existant demandée par l’utilisateur signalant l’absence des modifications en ligne.
+
+## Maquettes XIII à XVI (29.09.2026)
+Quatre nouvelles directions artistiques du site vitrine, dans `public/variantes/` et servies en privé sur `/variantes/` (page de comparaison). Elles prolongent la série de maquettes I à XII sans en reprendre les directions :
+- **XIII · Manufacture** — haute horlogerie suisse : ivoire nacré, composition centrée, cadran et guillochés en bronze.
+- **XIV · Palace** — Art déco de grand hôtel : aplats or clair, soleil rayonnant, gradins, capitales Italiana.
+- **XV · Matière** — nuancier de matériaux en grille de tuiles : bronze brossé, laiton, travertin, noyer, lin (CSS).
+- **XVI · Thermes** — bains alpins : arches, bassins elliptiques, lumière dorée.
+
+Même contenu, mêmes coordonnées et même formulaire que `index.html` (réutilisation de `site.js`). Logo d’origine uniquement : `logo-transparent.png` sur fonds sombres, `logo-encre.png` (lettrage brun et bronze) sur fonds clairs, tous deux détourés du logo sans redessin. Polices OFL auto-hébergées (`public/variantes/fonts/`), aucune ressource tierce. Pages en `noindex`. La barre « Maquette XIII · … » en bas à gauche (`review.css`, `variantes.js`) sert à la revue et se retire à la mise en production de la variante retenue.

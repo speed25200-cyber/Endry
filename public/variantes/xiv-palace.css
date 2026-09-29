@@ -1550,13 +1550,16 @@ dialog::backdrop { background: rgba(33, 26, 19, .84); }
 }
 
 /* Tablette (≈ 1024px) */
-@media (max-width: 1100px) {
+@media (max-width: 1240px) {
   .portal { grid-template-columns: 1fr 1fr; row-gap: 32px; }
   .portal-arch { grid-column: 1 / -1; grid-row: 1; justify-self: center; width: min(100%, 620px); }
   .portal-side { grid-row: 2; height: auto; }
   .portal-left { padding-right: 10px; }
   .portal-right { padding-left: 10px; }
   .pilaster { display: none; }
+}
+
+@media (max-width: 1100px) {
 
   .marquee-grid { grid-template-columns: 1fr 1fr; }
   .cartouche { grid-column: 1 / -1; grid-row: 1; justify-self: center; }

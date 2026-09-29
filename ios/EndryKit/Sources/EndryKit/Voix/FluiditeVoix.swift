@@ -187,3 +187,22 @@ public enum DecoupeurPhrases {
         return reste.isEmpty ? nil : (reste, utf.count)
     }
 }
+
+
+/// Relais au bureau : ce que le patron dit part **mot pour mot** au bureau (Claude sur le PC), sans que le modèle
+/// de l'iPhone l'interprète, cherche ou réponde à sa place. L'iPhone dit seulement qu'il transmet, puis lit la
+/// réponse du bureau quand elle arrive.
+public enum RelaisBureau {
+    /// Phrase dite pendant l'envoi.
+    public static let annonceEnvoi = "Je transmets au bureau."
+    /// Préfixe de la réponse lue.
+    public static func annonceReponse(agent: String?) -> String {
+        agent.map { "Le bureau, côté \($0), répond : " } ?? "Le bureau répond : "
+    }
+    /// Une phrase coupée partirait telle quelle au bureau : on attend au moins le réglage « Long » avant d'envoyer.
+    public static func patience(_ reglage: Double) -> Double { max(reglage, 1.5) }
+    /// Texte envoyé : exactement ce qui a été dit (espaces nettoyés), rien d'ajouté ni de reformulé.
+    public static func texte(_ dit: String) -> String {
+        dit.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+    }
+}

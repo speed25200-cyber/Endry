@@ -105,6 +105,11 @@ enum ReglageVoix {
     /// Nouvelle clé : l'ancien réglage (actif par défaut) ne s'applique plus.
     static let cleConversationContinueV2 = "voix.conversationContinue.v2"
 
+    static let cleRelaisBureau = "voix.relaisBureau"
+    /// Vrai (par défaut) : la voix est un simple relais. Ce que le patron dit part mot pour mot au bureau, qui
+    /// traite et répond ; l'iPhone ne cherche rien et ne répond rien lui-même (demande du patron, 29.09.2026).
+    static var relaisBureau: Bool { UserDefaults.standard.object(forKey: cleRelaisBureau) as? Bool ?? true }
+
     static let cleLectureComplete = "voix.lectureComplete"
     /// Faux (par défaut) : une longue réponse du bureau est dite en résumé, le détail reste à l'écran.
     static var lectureComplete: Bool { UserDefaults.standard.bool(forKey: cleLectureComplete) }

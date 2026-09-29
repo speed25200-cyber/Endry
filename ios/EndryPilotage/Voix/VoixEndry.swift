@@ -38,6 +38,7 @@ enum VoixEndry {
 struct ReglageVoixEndry: View {
     @AppStorage(VoixEndry.cle) private var choisie = ""
     @AppStorage(ReglageVoix.cleEnvoiDirect) private var envoiDirect = true
+    @AppStorage(ReglageVoix.cleRelaisBureau) private var relaisBureau = true
     @AppStorage(ReglageVoix.cleDebit) private var debit = 1.02
     @AppStorage(ReglageVoix.cleLectureComplete) private var lectureComplete = false
     @AppStorage(ReglageVoix.clePatience) private var patience = 1.0
@@ -93,6 +94,10 @@ struct ReglageVoixEndry: View {
                 Label("Lire les longues réponses en entier", systemImage: "text.alignleft")
             }
             .accessibilityIdentifier("lecture-complete")
+            Toggle(isOn: $relaisBureau) {
+                Label("Tout transmettre au bureau", systemImage: "arrow.up.forward.circle")
+            }
+            .accessibilityIdentifier("relais-bureau")
             Toggle(isOn: $envoiDirect) {
                 Label("Envoi direct au bureau", systemImage: "paperplane")
             }
@@ -103,6 +108,7 @@ struct ReglageVoixEndry: View {
             Text(VoixEndry.seulementCompactes
                  ? "Seules des voix compactes (robotiques) sont installées. Pour une voix naturelle : Réglages › Accessibilité › Contenu énoncé › Voix › Français, puis téléchargez une voix « Premium » ou « Améliorée ». Elle apparaîtra ici."
                  : "Les voix « Premium » et « Améliorée » sont les plus naturelles. D’autres se téléchargent dans Réglages › Accessibilité › Contenu énoncé › Voix › Français.")
+                + Text("\n\nTout transmettre au bureau (conseillé) : Endry ne cherche rien et ne répond rien lui-même. Ce que vous dites part mot pour mot au bureau, qui s’en occupe ; Endry vous lit sa réponse dès qu’elle arrive. Désactivé : l’iPhone répond d’abord lui-même avec Apple Intelligence.")
                 + Text("\n\nEnvoi direct : ce que vous dites part aussitôt au bureau, comme dans une conversation (un instant pour annuler). Les Oui et les envois aux clients gardent toujours leur geste à l’écran.")
                 + Text("\n\nConversation continue (expérimental) : le micro reste ouvert pendant qu’Endry parle ; parlez pour le couper, comme avec quelqu’un. Si la voix ne fonctionne plus, désactivez-la.")
                 + Text("\n\nEndry vous coupe la parole ? Choisissez « Long », ou « Répondre seulement quand je touche la sphère » : vous parlez avec toutes les pauses que vous voulez, puis vous touchez la sphère. Dans tous les cas, toucher la sphère pendant que vous parlez fait répondre Endry tout de suite.")

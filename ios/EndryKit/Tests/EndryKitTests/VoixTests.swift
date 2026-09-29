@@ -386,3 +386,22 @@ final class VocabulaireMetierTests: XCTestCase {
         XCTAssertTrue(vocabulaire.termes.contains(Fixtures.chantiers.chantiers[0].client))
     }
 }
+
+/// Relais au bureau (29.09.2026) : la voix transmet mot pour mot, sans interpréter.
+final class RelaisBureauTests: XCTestCase {
+    func testTexteEnvoyeMotPourMot() {
+        let dit = "  Sur le devis Lambert   remplace la ligne 3\npar un chauffe-eau 200 litres "
+        XCTAssertEqual(RelaisBureau.texte(dit), "Sur le devis Lambert remplace la ligne 3 par un chauffe-eau 200 litres")
+    }
+
+    func testAttendLaFinDeLaPhraseAvantDEnvoyer() {
+        XCTAssertEqual(RelaisBureau.patience(0.7), 1.5)
+        XCTAssertEqual(RelaisBureau.patience(1.0), 1.5)
+        XCTAssertEqual(RelaisBureau.patience(2.0), 2.0)
+    }
+
+    func testLaReponseVientDuBureau() {
+        XCTAssertEqual(RelaisBureau.annonceReponse(agent: nil), "Le bureau répond : ")
+        XCTAssertEqual(RelaisBureau.annonceReponse(agent: "Offres"), "Le bureau, côté Offres, répond : ")
+    }
+}

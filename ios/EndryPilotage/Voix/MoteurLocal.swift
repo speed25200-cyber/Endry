@@ -7,10 +7,12 @@ import Foundation
 /// Écoute sur l'iPhone (SpeechAnalyzer, ou SFSpeechRecognizer fr-CH), comprend et répond avec le modèle
 /// d'Apple Intelligence embarqué (qui lit les données par les outils), parle avec la meilleure voix française
 /// installée. Sans Apple Intelligence, il répond aux questions simples à partir des données en cache.
-/// Rien ne part au PC par la voix : une question ou une demande s'affiche, le patron la relit et la confirme.
+/// Par défaut (`ReglageVoix.relaisBureau`), il ne répond rien lui-même : ce qui est dit part mot pour mot au bureau
+/// et la réponse du bureau est lue quand elle arrive. Les « Oui » restent un glissement à l'écran.
 @MainActor
 final class MoteurLocal: MoteurVoix {
     var nom: String {
+        if ReglageVoix.relaisBureau { return "Relais direct au bureau" }
         if canal != nil { return "Conversation continue · sur l’iPhone" }
         return cerveau == nil ? "Sur l’iPhone" : "Apple Intelligence · sur l’iPhone"
     }
@@ -254,7 +256,8 @@ final class MoteurLocal: MoteurVoix {
         // Réponse au toucher : on attend que le patron touche la sphère, quelles que soient ses pauses.
         guard !ReglageVoix.reponseAuToucher else { return }
         // Fin de phrase adaptative, jamais pressée : plus de patience sur « euh… », réglable (Réglages › Voix).
-        let delai = FinDePhrase.delai(definitif: definitif, provisoire: provisoire, patience: ReglageVoix.patience)
+        let patience = ReglageVoix.relaisBureau ? RelaisBureau.patience(ReglageVoix.patience) : ReglageVoix.patience
+        let delai = FinDePhrase.delai(definitif: definitif, provisoire: provisoire, patience: patience)
         silence = Task { [weak self] in
             try? await Task.sleep(for: delai)
             guard !Task.isCancelled else { return }
@@ -293,7 +296,7 @@ final class MoteurLocal: MoteurVoix {
     /// Réponse de Claude arrivée du PC : dite tout de suite si Endry est libre, sinon juste après le tour en cours.
     func annoncer(question: String, reponse: String, agent: String?) async {
         cerveau?.retenir(question: question, reponse: reponse)
-        let qui = agent.map { "L’assistant, côté \($0), répond : " } ?? "L’assistant répond : "
+        let qui = RelaisBureau.annonceReponse(agent: agent)
         // Longue réponse : le début est dit, tout est affiché (et gardé dans la conversation).
         let resume = ResumeOral.pourLaVoix(reponse)
         if ReglageVoix.lectureComplete || resume.complet {
@@ -362,7 +365,15 @@ final class MoteurLocal: MoteurVoix {
             return
         }
 
-        // Envoi direct (réglage par défaut) : ce que l'iPhone sait déjà, il le dit tout de suite (et le modèle
+        // Relais (réglage par défaut) : tout part mot pour mot au bureau, qui traite et répond. L'iPhone ne
+        // cherche rien, ne reformule rien et ne répond pas à sa place.
+        if ReglageVoix.relaisBureau {
+            await demanderClaude(RelaisBureau.texte(question))
+            await terminerTour()
+            return
+        }
+
+        // Envoi direct : ce que l'iPhone sait déjà, il le dit tout de suite (et le modèle
         // d'Apple le saura au tour suivant) ; une demande de travail part aussitôt au bureau.
         if ReglageVoix.envoiDirect {
             switch RepondeurLocal.repondre(question, avec: donnees()) {
@@ -465,7 +476,9 @@ final class MoteurLocal: MoteurVoix {
         surEvenement?(.effet(r.effet))
         if case .questionAConfirmer(_, let agent, _) = r.effet {
             let cote = agent.map { ", côté \($0)" } ?? ""
-            if ReglageVoix.envoiDirect {
+            if ReglageVoix.relaisBureau, ReglageVoix.envoiDirect {
+                await dire(RelaisBureau.annonceEnvoi)
+            } else if ReglageVoix.envoiDirect {
                 await dire("Je pose la question au bureau\(cote).")
             } else {
                 await dire("Voici la question pour l’assistant du bureau\(cote). Touchez Envoyer : le bureau s’en occupe tout de suite.")

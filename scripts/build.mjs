@@ -1,6 +1,6 @@
 import {mkdir,readFile,writeFile,readdir,cp} from 'node:fs/promises';
 import {join,extname} from 'node:path';
-const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.txt':'text/plain; charset=utf-8','.png':'image/png','.webp':'image/webp','.pdf':'application/pdf'};
+const types={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.txt':'text/plain; charset=utf-8','.png':'image/png','.webp':'image/webp','.pdf':'application/pdf','.woff2':'font/woff2','.svg':'image/svg+xml'};
 const assets={};
 async function walk(dir,prefix=''){for(const entry of await readdir(dir,{withFileTypes:true})){const path=join(dir,entry.name),key=prefix+'/'+entry.name;if(entry.isDirectory())await walk(path,key);else assets[key]=[types[extname(path)]||'application/octet-stream',(await readFile(path)).toString('base64')];}}
 await walk('public');

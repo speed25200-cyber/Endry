@@ -1,0 +1,8 @@
+/* Barre de revue des maquettes — à retirer lors de la mise en production de la variante retenue. */
+.review-switch{position:fixed;left:18px;bottom:18px;z-index:80;display:flex;align-items:center;gap:2px;padding:4px;border-radius:40px;background:#1a140ee6;color:#f9dba3;font:500 11px/1 "Manrope",system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid #f9dba333;box-shadow:0 10px 40px #0004}
+.review-switch a{color:inherit;text-decoration:none;padding:9px 12px;border-radius:30px;transition:background .2s}
+.review-switch a:hover{background:#f9dba31f}
+.review-switch a:focus-visible{outline:2px solid #f9dba3;outline-offset:2px}
+.review-current{padding:9px 6px!important}
+@media(max-width:760px){.review-switch{display:none}}
+@media print{.review-switch{display:none}}

@@ -100,7 +100,8 @@ async function route(req,env,ctx){const url=new URL(req.url),path=url.pathname,m
  if(photoMatch&&method==='GET'){const viewer=await admin(req,env)?null:await session(req,env);const photo=await sql(env,'SELECT * FROM photos WHERE id=?',photoMatch[1]).first();if(!photo||viewer&&viewer.id!==photo.project_id)error(404,'Photo introuvable.');const file=await env.BUCKET.get(photo.object_key);if(!file)error(404,'Photo indisponible.');return new Response(file.body,{headers:{'Content-Type':photo.mime,'Content-Disposition':'inline'}});}
  if(path.startsWith('/api/'))error(404,'Page introuvable.');
  if(!['GET','HEAD'].includes(method))error(405,'Méthode non autorisée.');
- const key=path==='/'?'/index.html':['/suivi','/suivi/','/admin','/admin/'].includes(path)?'/portail.html':path;
+ if(path==='/variantes')return new Response(null,{status:301,headers:{Location:'/variantes/'}});
+ const key=path==='/'?'/index.html':['/suivi','/suivi/','/admin','/admin/'].includes(path)?'/portail.html':path.endsWith('/')?path+'index.html':path;
  const asset=assets[key];if(!asset)error(404,'Page introuvable.');const binary=Uint8Array.from(atob(asset[1]),c=>c.charCodeAt(0));return new Response(method==='HEAD'?null:binary,{headers:{'Content-Type':asset[0]}});
 }
 export default {async fetch(req,env,ctx){let response;try{response=await route(req,env,ctx);}catch(e){if(!e.status)console.error('endry_request_failed',{path:new URL(req.url).pathname,message:e.message});response=json({error:e.status?e.message:'Le service est temporairement indisponible. Votre demande n’a pas pu être confirmée. Réessayez.'},e.status||503);}

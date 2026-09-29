@@ -1,1 +1,1 @@
-{"action": "attendre_et_captures", "workflow": "ios-tests", "branche": "claude/code-magic-push-eirhs1", "commit": "38c7b20", "n": 2, "essai": 79}
+{"action": "lancer", "workflow": "ios-testflight", "branche": "claude/code-magic-push-eirhs1", "annuler": ["6abaf530ca24ef8b0eef82ed"], "n": 3, "essai": 80}

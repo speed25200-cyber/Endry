@@ -30,6 +30,10 @@ app = next((a for a in apps if "endry" in json.dumps(a.get("repository", {})).lo
 if not app:
     sys.exit("Aucune application trouvée.")
 
+# Annule des builds en file (doublons qui bloquent la file) avant tout lancement.
+for a_annuler in demande.get("annuler", []):
+    print("== Annulation du build", a_annuler, ":", appel(f"/builds/{a_annuler}/cancel", "POST", {}))
+
 build_lance = None
 if demande.get("action") in ("lancer", "lancer_et_captures"):
     r = appel("/builds", "POST", {"appId": app["_id"], "workflowId": demande["workflow"], "branch": demande["branche"]})

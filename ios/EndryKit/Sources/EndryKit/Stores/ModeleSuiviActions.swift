@@ -13,6 +13,8 @@ public final class ModeleSuiviActions {
     public private(set) var comptesRendusPC = false
     /// Dernière action passée à « Fait » ou « Erreur » (toast, retour haptique).
     public private(set) var derniereIssue: ActionSuivie?
+    /// Chaque action qui aboutit (fait ou erreur), une fois : son compte rendu entre dans la conversation.
+    @ObservationIgnored public var surIssue: (@MainActor (ActionSuivie) -> Void)?
 
     @ObservationIgnored private let api: any EndryAPI
     @ObservationIgnored private let fichier: URL?
@@ -132,12 +134,12 @@ public final class ModeleSuiviActions {
         majLe = Date()
         elaguer()
         // Ce qui vient d'aboutir : un signe pour le patron.
-        if let issue = actions.first(where: { a in
+        let issues = actions.filter { a in
             guard let e = avant[a.id] else { return false }
             return !e.termine && (a.etat == .fait || a.etat == .erreur)
-        }) {
-            derniereIssue = issue
         }
+        if let issue = issues.first { derniereIssue = issue }
+        for issue in issues.reversed() { surIssue?(issue) }
         sauvegarder()
     }
 

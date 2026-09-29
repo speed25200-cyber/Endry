@@ -128,3 +128,48 @@ final class ConversationTests: XCTestCase {
         XCTAssertEqual(ModeleConversation.natureProbable(""), .question)
     }
 }
+
+/// Le bureau parle dans le fil comme Claude dans une session ouverte : comptes rendus et questions.
+@MainActor
+final class ConversationBureauParleTests: XCTestCase {
+    func testCompteRenduEntreUneSeuleFoisDansLeFil() async {
+        let fil = ModeleConversation(bureau: nil)
+        var a = ActionSuivie(id: "S:S-12", nature: .saisie, saisieId: "S-12", titre: "Offre Lambert corrigée",
+                             geste: "transmis", le: Date())
+        a.etat = .fait
+        a.resume = "Main-d’œuvre du groupe de sécurité retirée : 7,5 h au lieu de 8,5 h."
+        a.decisionPreparee = "V-SACK44"
+        fil.recevoir(issue: a)
+        fil.recevoir(issue: a)
+        let recus = fil.messages.filter { $0.role == .assistant }
+        XCTAssertEqual(recus.count, 1)
+        XCTAssertEqual(recus.first?.role, .assistant)
+        XCTAssertEqual(recus.first?.decisionReference, "V-SACK44")
+        XCTAssertTrue(recus.first?.texte.hasPrefix("**Fait** — Offre Lambert corrigée") ?? false)
+        XCTAssertTrue(recus.first?.texte.contains("7,5 h") ?? false)
+    }
+
+    func testQuestionDuBureauDansLeFil() async {
+        let fil = ModeleConversation(bureau: nil)
+        let q = Carte(type: .question, reference: "Q-QL8RDE", genre: "Question",
+                      titre: "Combien d’heures retirer pour le groupe de sécurité ?", motif: "")
+        fil.recevoir(questionDuBureau: q)
+        fil.recevoir(questionDuBureau: q)
+        XCTAssertEqual(fil.messages.count, 1)
+        XCTAssertEqual(fil.messages.first?.decisionReference, "Q-QL8RDE")
+        XCTAssertTrue(fil.messages.first?.texte.contains("Question du bureau") ?? false)
+        // Une carte qui n'est pas une question n'entre pas dans le fil.
+        fil.recevoir(questionDuBureau: Carte(type: .validation, reference: "V-1", genre: "E-mail", titre: "t", motif: ""))
+        XCTAssertEqual(fil.messages.count, 1)
+    }
+
+    func testErreurSignalee() async {
+        let fil = ModeleConversation(bureau: nil)
+        var a = ActionSuivie(id: "D:V-9", nature: .decision, reference: "V-9", titre: "Envoyer l’offre", geste: "oui", le: Date())
+        a.etat = .erreur
+        a.resume = "Bexio ne répond pas."
+        fil.recevoir(issue: a)
+        XCTAssertEqual(fil.messages.first?.etat, .erreur)
+        XCTAssertTrue(fil.messages.first?.texte.hasPrefix("**Pas abouti**") ?? false)
+    }
+}

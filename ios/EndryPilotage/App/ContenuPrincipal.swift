@@ -112,7 +112,8 @@ struct ContenuPrincipal: View {
         .onChange(of: app.suiviActions?.derniereIssue?.id) { _, id in
             guard id != nil, let issue = app.suiviActions?.derniereIssue else { return }
             app.suiviActions?.oublierIssue()
-            app.toast = Toast(issue.etat == .erreur ? "Erreur : \(issue.titre)" : "Fait : \(issue.titre)",
+            let titre = issue.titre.count > 70 ? String(issue.titre.prefix(68)) + "…" : issue.titre
+            app.toast = Toast(issue.etat == .erreur ? "Pas abouti : \(titre)" : "Fait : \(titre)",
                               style: issue.etat == .erreur ? .erreur : .succes)
         }
         .fullScreenCover(item: $app.outilTerrain) { demande in

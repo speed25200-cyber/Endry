@@ -178,7 +178,11 @@ final class ModeleApp {
         let cache = session.estDemo ? nil : session.cache
         let rapport: RapportErreur = { [weak self] erreur in self?.session.signaler(erreur) }
         let d = ModeleDecisions(api: api, cache: cache, rapport: rapport)
-        d.surAccueil = { [weak self] accueil in self?.publier(accueil) }
+        d.surAccueil = { [weak self] accueil in
+            self?.publier(accueil)
+            // Les questions du bureau entrent aussi dans la conversation, comme dans une session avec Claude.
+            for carte in accueil.decisions where carte.estQuestion { self?.conversation?.recevoir(questionDuBureau: carte) }
+        }
         decisions = d
         offresSignees = session.estOuvrier ? nil : ModeleOffresSignees(api: api)
         if session.estOuvrier {
@@ -187,6 +191,8 @@ final class ModeleApp {
             let dossierSuivi = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             let s = ModeleSuiviActions(api: api, fichier: session.estDemo ? nil : dossierSuivi?.appendingPathComponent("suivi-actions.json"))
             suiviActions = s
+            // Chaque compte rendu du bureau (fait, pas abouti) entre dans la conversation.
+            s.surIssue = { [weak self] issue in self?.conversation?.recevoir(issue: issue) }
             d.surGeste = { [weak self] geste, carte, reponse, consignes in
                 s.enregistrer(geste, carte: carte, reponse: reponse, consignes: consignes)
                 self?.suivreApresGeste()

@@ -335,6 +335,57 @@ public final class ModeleConversation {
                                       conversation: messages[i].conversation, nature: .demande, etat: etat))
     }
 
+    // MARK: Le bureau parle de lui-même
+
+    /// Compte rendu d'une demande ou d'un geste, question du bureau : dans le fil, comme un message de
+    /// l'assistant (une seule fois par `cle` ; mis à jour si le texte change). Comme une session ouverte avec Claude.
+    public func recevoirDuBureau(cle: String, texte: String, agent: String? = nil, decision: String? = nil,
+                                 erreur: Bool = false, le: Date = Date()) {
+        let propre = texte.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !propre.isEmpty else { return }
+        let id = "B:" + cle
+        if var existant = messages.first(where: { $0.id == id }) {
+            guard existant.texte != propre else { return }
+            existant.texte = propre
+            existant.etat = erreur ? .erreur : .recu
+            remplacer(existant)
+            return
+        }
+        var m = MessageConversation(id: id, role: .assistant, texte: propre, le: le,
+                                    conversation: conversationCourante(maintenant: le), etat: erreur ? .erreur : .recu,
+                                    agent: agent)
+        m.decisionReference = decision
+        ajouter(m)
+    }
+
+    /// Compte rendu d'une action suivie qui vient d'aboutir.
+    public func recevoir(issue a: ActionSuivie) {
+        recevoirDuBureau(cle: "S:" + a.id, texte: Self.compteRendu(a), agent: a.agent,
+                         decision: a.decisionPreparee, erreur: a.etat == .erreur)
+    }
+
+    /// Question que le bureau pose au patron (carte `Q-…`) : elle entre dans le fil ; on y répond ici ou sur la carte.
+    public func recevoir(questionDuBureau carte: Carte) {
+        guard carte.estQuestion else { return }
+        var texte = "**Question du bureau** (\(carte.reference))\n\n\(carte.titre)"
+        if let detail = carte.texte?.trimmingCharacters(in: .whitespacesAndNewlines), !detail.isEmpty, detail != carte.titre {
+            texte += "\n\n" + detail
+        } else if !carte.motif.isEmpty, carte.motif != carte.titre {
+            texte += "\n\n" + carte.motif
+        }
+        recevoirDuBureau(cle: "Q:" + carte.reference, texte: texte, decision: carte.reference)
+    }
+
+    nonisolated static func compteRendu(_ a: ActionSuivie) -> String {
+        let tete = a.etat == .erreur ? "**Pas abouti** — \(a.titre)" : "**Fait** — \(a.titre)"
+        var lignes = [tete]
+        let resultat = a.ligneResultat.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !resultat.isEmpty, resultat != a.titre { lignes.append(resultat) }
+        let fichiers = a.fichiers.map(\.nom)
+        if !fichiers.isEmpty { lignes.append("Documents : " + fichiers.joined(separator: ", ")) }
+        return lignes.joined(separator: "\n\n")
+    }
+
     // MARK: Réponses tardives
 
     /// Réponses arrivées depuis (événement `reponse` ou `maj saisies` du PC, retour au premier plan).

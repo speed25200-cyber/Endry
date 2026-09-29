@@ -434,9 +434,12 @@ private struct MessageView: View {
                     Label(message.texte, systemImage: "exclamationmark.triangle")
                         .styleTexte(14).foregroundStyle(Color.rouille)
                         .fixedSize(horizontal: false, vertical: true)
-                    Button("Réessayer", action: relancer)
-                        .styleTexte(14, graisse: .semibold)
-                        .tint(Color.bronze)
+                    // Un compte rendu du bureau (« pas abouti ») ne se renvoie pas d'ici.
+                    if !message.id.hasPrefix("B:") {
+                        Button("Réessayer", action: relancer)
+                            .styleTexte(14, graisse: .semibold)
+                            .tint(Color.bronze)
+                    }
                 }
             case .recu, .envoye:
                 TexteRiche(texte: message.texte)
@@ -447,7 +450,9 @@ private struct MessageView: View {
                         fermer()
                         app.ouvrir(reference: reference)
                     } label: {
-                        Label("Voir la décision \(reference) à valider", systemImage: "checkmark.seal")
+                        let question = reference.uppercased().hasPrefix("Q-")
+                        let libelle: String = question ? "Répondre à la question \(reference)" : "Voir la décision \(reference) à valider"
+                        Label(libelle, systemImage: question ? "text.bubble" : "checkmark.seal")
                             .styleTexte(14, graisse: .semibold)
                     }
                     .buttonStyle(BoutonSecondaire())

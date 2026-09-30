@@ -350,6 +350,7 @@ body.is-scrolled .header::before { opacity: 1; }
   background: var(--ivory);
 }
 .sp-window img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 45%; transform: scale(1.18); }
+.sp-scrim { position: absolute; inset: 0; background: linear-gradient(to top, rgba(33, 26, 19, .62), rgba(33, 26, 19, .18) 38%, transparent 60%); opacity: 0; pointer-events: none; }
 .sp-ring {
   position: absolute; left: 50%; top: 50%;
   width: calc(var(--win) * 1.2077); aspect-ratio: 1;
@@ -605,7 +606,6 @@ body.is-scrolled .header::before { opacity: 1; }
    Méthode : le mouvement
    -------------------------------------------------------------------------- */
 .movement { position: relative; background: var(--ink); color: var(--gold-soft); }
-.motion .movement { background: transparent; }
 .mv-stage {
   display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
   gap: clamp(40px, 6vw, 120px); align-items: center;
@@ -712,7 +712,7 @@ details[open] .faq-crown::before, details[open] .faq-crown::after { background: 
   margin-top: clamp(64px, 8vw, 120px);
   align-items: start;
 }
-.contact-info { border-top: 1px solid var(--line); }
+.contact-info { border-top: 1px solid var(--line); position: sticky; top: 18svh; }
 .contact-line {
   display: grid; grid-template-columns: 96px 1fr auto; align-items: center; gap: 10px;
   min-height: 88px; padding: 18px 0; border-bottom: 1px solid var(--line);
@@ -884,6 +884,7 @@ dialog[open] { animation: dlg-in .8s var(--ease-out); }
   .faq { grid-template-columns: 1fr; }
   .faq-head { position: relative; top: auto; }
   .contact-grid { grid-template-columns: 1fr; }
+  .contact-info { position: relative; top: auto; }
   .ap-grid { grid-template-columns: 1fr 1fr; }
   .ap-figure { grid-column: 1 / -1; grid-row: 1; width: min(420px, 70vw); justify-self: center; }
   .cert-frame { grid-template-columns: 1fr; }
@@ -920,7 +921,7 @@ dialog[open] { animation: dlg-in .8s var(--ease-out); }
 
   .sp-stage { min-height: 600px; }
   .sp-line--a { flex-direction: column; gap: 0; top: 88px; font-size: 2rem; }
-  .sp-line--b { bottom: 104px; font-size: 1.6rem; }
+  .sp-line--b { bottom: 164px; font-size: 1.6rem; }
   .sp-caption { bottom: 96px; }
   .sp-caption { right: 16px; }
 

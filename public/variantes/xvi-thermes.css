@@ -250,12 +250,22 @@ h2 em { color: var(--bronze-t); }
 .hero-arch { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; z-index: 3; pointer-events: none; }
 .hero-arch path { fill: none; stroke: var(--bronze); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .hero-arch .arch-out { stroke-opacity: .4; }
+.hero-deep {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; height: 42%;
+  background: linear-gradient(180deg, rgba(33, 26, 19, 0), #211a13 88%);
+  opacity: 0; pointer-events: none;
+}
 .hero-drop {
   position: absolute; z-index: 4; left: 50%; top: calc(var(--hz) + 9%);
-  width: 9px; height: 13px; margin: -13px 0 0 -4.5px;
+  width: 12px; height: 17px; margin: -17px 0 0 -6px; transform-origin: 50% 100%;
   border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
   background: radial-gradient(circle at 38% 34%, #fffaf0, var(--gold) 45%, var(--bronze));
   opacity: 0; pointer-events: none;
+  filter: drop-shadow(0 0 6px rgba(249, 219, 163, .9));
+}
+.hero-drop::before {
+  content: ""; position: absolute; left: 50%; bottom: 60%; width: 1px; height: 22vh; margin-left: -.5px;
+  background: linear-gradient(180deg, rgba(159, 114, 42, 0), rgba(159, 114, 42, .7));
 }
 
 .hero-meta { position: absolute; z-index: 4; }
@@ -291,7 +301,7 @@ h2 em { color: var(--bronze-t); }
 /* --------------------------------------------------------------------------
    Expertises — trois niches de lumière
    -------------------------------------------------------------------------- */
-.xp { position: relative; background: var(--ink); color: var(--on-dark); overflow: hidden; }
+.xp { position: relative; background: var(--ink); color: var(--on-dark); overflow: hidden; overflow: clip; }
 .xp .eyebrow { color: var(--gold-soft); }
 .xp h2 { color: #fbf1df; }
 .xp h2 em { color: var(--gold); }

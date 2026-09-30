@@ -79,7 +79,7 @@
     if (y < lastY - 2) hdr.classList.remove('is-hidden');
     lastY = y;
     let dark = darkZones.some(z => { const r = z.getBoundingClientRect(); return r.top <= 44 && r.bottom >= 44; });
-    if (plungeST && plungeST.isActive && plungeST.progress > 0.66) dark = true;
+    if (plungeST && plungeST.progress > 0.66 && plungeEl.getBoundingClientRect().bottom > 44) dark = true;
     hdr.classList.toggle('is-dark', dark);
     cursorTone(dark);
   };
@@ -471,23 +471,26 @@
     }
     lenis.stop();
     const tl = gsap.timeline({ defaults: { ease: 'rise' }, onComplete: () => lenis.start() });
-    gsap.set(fill, { clipPath: `inset(${hzPct * 100}% 0% 0% 0%)` });
+    const impact = `50% ${((hzPct + 0.09) * 100).toFixed(2)}%`;
+    gsap.set(fill, { clipPath: `ellipse(0% 0% at ${impact})` });
     gsap.set($$('path', archSvg), { strokeDashoffset: 1 });
     gsap.set(metaKids, { opacity: 0, y: 26 });
     gsap.set('.hero-cap', { opacity: 0 });
     gsap.set(hdr, { opacity: 0, y: -20 });
     gsap.set(titles, { filter: 'blur(14px)' });
     const dropY = heroStage.getBoundingClientRect().height * (hzPct + 0.09);
-    tl.fromTo(drop, { y: -dropY, opacity: 0, scaleY: 1.5 }, { y: 0, opacity: 1, scaleY: 1.9, duration: 0.55, ease: 'power2.in' }, 0.05)
-      .to(drop, { opacity: 0, scale: 0.2, duration: 0.12, ease: 'none' }, 0.6)
+    tl.fromTo(drop, { y: -dropY, opacity: 0, scaleY: 0.8 }, { y: 0, opacity: 1, scaleY: 1.25, duration: 0.55, ease: 'power2.in' }, 0.05)
+      .to(drop, { opacity: 0, scaleX: 2.4, scaleY: 0.1, duration: 0.14, ease: 'power2.out' }, 0.6)
       .call(() => {
         addRipple(0.5, hzPct + 0.09, 1.7);
         setTimeout(() => addRipple(0.5, hzPct + 0.09, 0.9), 260);
         setTimeout(() => addRipple(0.5, hzPct + 0.09, 0.5), 560);
       }, null, 0.6)
-      .fromTo(rings, { scale: 0.05, opacity: 0.95 }, { scale: 1.4, opacity: 0, duration: 1.8, stagger: 0.22, ease: 'power2.out' }, 0.6)
+      .fromTo(rings, { scale: 0.05, opacity: 0.95 }, { scale: 1.4, opacity: 0, duration: 1.8, stagger: 0.22, ease: 'power2.out', immediateRender: false }, 0.6)
       .to($$('path', archSvg), { strokeDashoffset: 0, duration: 1.2, ease: 'lux', stagger: 0.05 }, 0.62)
-      .to(fill, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1.25, ease: 'lux' }, 0.8)
+      // Le bassin s’étale depuis l’impact, puis l’image monte et remplit l’arche
+      .to(fill, { clipPath: `ellipse(26% 6% at ${impact})`, duration: 0.6, ease: 'power3.out' }, 0.6)
+      .to(fill, { clipPath: `ellipse(130% 150% at ${impact})`, duration: 1.2, ease: 'lux', clearProps: 'clipPath' }, 1.02)
       .fromTo(hero, { zoom: 1.24 }, { zoom: 1.14, duration: 1.9, ease: 'rise' }, 0.8)
       .to(titles, { filter: 'blur(0px)', duration: 1.2, ease: 'power2.out', clearProps: 'filter' }, 1.12)
       .to(hdr, { opacity: 1, y: 0, duration: 0.9, clearProps: 'opacity,transform' }, 1.45)
@@ -543,7 +546,8 @@
       .fromTo(pwLine, { opacity: 0, yPercent: 16 }, { opacity: 1, yPercent: 0, duration: 1.6, ease: 'power2.out' }, 3.6)
       .fromTo(hero, { sub: 0 }, { sub: 1, duration: 3.4, ease: 'power1.inOut', immediateRender: false }, 5.6)
       .to([pwKicker, pwLine], { opacity: 0, yPercent: -30, duration: 1.3, ease: 'power1.in', stagger: 0.1 }, 6.8)
-      .fromTo(hero, { caus: 1, glow: 1 }, { caus: 0, glow: 0, duration: 1, ease: 'power1.in', immediateRender: false }, 8.6)
+      .fromTo(hero, { caus: 1, glow: 1 }, { caus: 0.7, glow: 0, duration: 1, ease: 'power1.in', immediateRender: false }, 8.6)
+      .fromTo('.hero-deep', { opacity: 0 }, { opacity: 1, duration: 1.4, ease: 'power1.inOut' }, 8.2)
       .to({}, { duration: 0.6 });
     fontsReady.then(() => {
       pwSplit = SplitText.create(pwLine, { type: 'lines', mask: 'lines' });

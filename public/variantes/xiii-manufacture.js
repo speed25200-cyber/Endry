@@ -423,7 +423,7 @@ void main(){
     const sec = $('.sapphire');
     if (!sec) return;
     const win = $('.sp-window', sec), img = $('.sp-window img', sec), ring = $('.sp-ring', sec);
-    const words = $$('.sp-line--a span', sec), lineB = $('.sp-line--b', sec);
+    const words = $$('.sp-line--a span', sec), lineB = $('.sp-line--b', sec), lineEm = $('.sp-line--b em', sec), scrim = $('.sp-scrim', sec);
     const r0 = () => win.offsetHeight ? parseFloat(getComputedStyle(ring).width) * .828 / 2 : 200;
     const r1 = () => Math.hypot(win.offsetWidth, win.offsetHeight) / 2 + 4;
     gsap.set(words, {yPercent: 40, opacity: 0});
@@ -440,8 +440,13 @@ void main(){
       .to(words[0], {xPercent: -120, opacity: 0, ease: 'power2.in', duration: .7}, 0)
       .to(words[2], {xPercent: 120, opacity: 0, ease: 'power2.in', duration: .7}, 0)
       .to(words[1], {yPercent: -80, opacity: 0, ease: 'power2.in', duration: .7}, 0)
-      .to(lineB, {y: 60, opacity: 0, ease: 'power2.in', duration: .6}, 0)
-      .to({}, {duration: .25});
+      .to(lineB, {y: 60, opacity: 0, ease: 'power2.in', duration: .45}, 0)
+      // l’image est ouverte : la devise se pose sur l’ambiance, en or
+      .set(lineB, {color: '#FBF8F2', textShadow: '0 2px 30px rgba(33,26,19,.45)'}, .5)
+      .set(lineEm, {color: '#F9DBA3'}, .5)
+      .to(scrim, {opacity: 1, ease: 'none', duration: .4}, .7)
+      .to(lineB, {y: 0, opacity: 1, ease: 'expo.out', duration: .45}, .88)
+      .to({}, {duration: .3});
   }
 
   /* ------------------------------------------------------------------------
@@ -612,11 +617,14 @@ void main(){
       if (!vis && on) { on = false; gsap.ticker.remove(swing); }
     }).observe(mvSvg);
   }
-  function movementTone() {
+  // le fond brun s’ouvre comme un boîtier qu’on retourne
+  function movementReveal() {
     const sec = $('.movement');
     if (!sec) return;
-    const to = c => gsap.to(document.body, {backgroundColor: c, duration: 1, ease: 'power2.inOut', overwrite: 'auto'});
-    ScrollTrigger.create({trigger: sec, start: 'top 60%', end: 'bottom 40%', refreshPriority: -1, onToggle: self => to(self.isActive ? '#211A13' : '#F7F2E9')});
+    gsap.fromTo(sec, {clipPath: 'inset(0% 6% 0% 6% round 56px 56px 0px 0px)'}, {
+      clipPath: 'inset(0% 0% 0% 0% round 0px 0px 0px 0px)', ease: 'none',
+      scrollTrigger: {trigger: sec, start: 'top bottom', end: 'top 15%', scrub: .6, onLeave: () => gsap.set(sec, {clearProps: 'clipPath'})}
+    });
   }
   function movementPinned() {
     const sec = $('.movement'), stage = $('.mv-stage', sec), steps = $$('.step', sec);
@@ -727,7 +735,7 @@ void main(){
     territory();
     certificate();
     approach();
-    movementTone();
+    movementReveal();
     const mm = gsap.matchMedia();
     mm.add({desk: '(min-width: 1024px) and (min-height: 600px)', small: '(max-width: 1023px), (max-height: 599px)'}, ctx => {
       const {desk} = ctx.conditions;

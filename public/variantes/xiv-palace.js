@@ -86,6 +86,11 @@
   }
   const LUX = window.CustomEase ? 'lux' : 'expo.inOut';
   root.classList.add('anim');
+  // Gravure des portes de l’intro dès que possible (avant l’attente des polices)
+  if (root.classList.contains('intro')) {
+    const l = $('.lift-door-l'), r = $('.lift-door-r');
+    if (l && r) l.innerHTML = r.innerHTML = leafSVG(innerWidth / 2, innerHeight, true);
+  }
   ScrollTrigger.config({ ignoreMobileResize: true });
 
   let lenis = null;
@@ -169,7 +174,7 @@ void main(){
   float ray=alt*aa*live*fade;
   float side=f<.5?-1.:1.;
   vec2 n=tg*side*.09*live*fade;
-  vec2 g=fp/58.;
+  vec2 g=fp/72.;
   g.x+=mod(floor(g.y),2.)*.5;
   vec2 cell=floor(g);
   vec2 cf=fract(g);
@@ -191,7 +196,7 @@ void main(){
   vec3 base=vec3(.976,.859,.639);
   vec3 rayC=vec3(.95,.81,.575);
   vec3 col=mix(base,rayC,ray*.85);
-  col*=.985+.03*h3-.016*seam;
+  col*=.99+.022*h3-.012*seam;
   col*=mix(.955,1.015,diff);
   col+=vec3(1.,.94,.80)*spec*.26+vec3(1.,.9,.7)*sheen*.04;
   col-=(hash(fp)-.5)*.018;
@@ -317,6 +322,8 @@ void main(){
   engraveDoors();
   ScrollTrigger.addEventListener('refreshInit', engraveDoors);
 
+  /* Tout ce qui suit attend les polices (SplitText mesure les glyphes), 900 ms au plus. */
+  const boot = () => {
   /* ------------------------------------------------------------------------
      Découpage typographique
      ------------------------------------------------------------------------ */
@@ -348,6 +355,7 @@ void main(){
   gsap.set(heroParts.plaques, { autoAlpha: 0, y: 40 });
   gsap.set(heroParts.window, { yPercent: 34 });
   gsap.set(heroParts.rings, { strokeDasharray: 1, strokeDashoffset: 1 });
+  root.classList.add('booted');
 
   function heroIn(delay) {
     const tl = gsap.timeline({ delay });
@@ -370,12 +378,10 @@ void main(){
   if (root.classList.contains('intro') && lift) {
     stopScroll();
     const dL = $('.lift-door-l', lift), dR = $('.lift-door-r', lift);
-    dL.innerHTML = dR.innerHTML = leafSVG(innerWidth / 2, innerHeight, true);
     const dial = $('.lift-dial', lift), needle = $('.d-needle-g', dial), lamp = $('.d-lamp', dial);
     const n = { v: 7 };
-    const tl = gsap.timeline({
-      onComplete: () => { endIntro(); syncLock(); ScrollTrigger.refresh(); }
-    });
+    const tl = gsap.timeline();
+    tl.add(() => { endIntro(); syncLock(); ScrollTrigger.refresh(); }, 2.32);
     tl.to(n, {
       v: 0, duration: 1.05, ease: 'power2.inOut',
       onUpdate: () => { setNeedle(dial, rot(n.v, 8)); lightNum(dial, Math.round(n.v)); }
@@ -410,6 +416,7 @@ void main(){
         .fromTo('.hw-clip img', { scale: 1.3 }, { scale: 1, ease: 'none', duration: 1 }, 0)
         .fromTo('.hero-stage', { yPercent: 0 }, { yPercent: -18, ease: 'none', duration: .8, immediateRender: false }, 0)
         .fromTo('.hw-motto', { autoAlpha: 0, y: 40 }, { autoAlpha: 1, y: 0, duration: .25, ease: 'power2.out', immediateRender: false }, .72)
+        .fromTo('.hw-motto-sub', { autoAlpha: 0, y: 24 }, { autoAlpha: 1, y: 0, duration: .22, ease: 'power2.out', immediateRender: false }, .8)
         .to({}, { duration: .12 });
       pins.set(hero, t.scrollTrigger);
     } else {
@@ -432,7 +439,7 @@ void main(){
     /* 1 · Portes d’ascenseur des métiers */
     if (desk) {
       const t = gsap.timeline({
-        scrollTrigger: { trigger: '.hall', start: 'top top', end: '+=250%', pin: true, scrub: 1, anticipatePin: 1 }
+        scrollTrigger: { trigger: '.hall', start: 'top top', end: '+=250%', pin: true, scrub: 1, anticipatePin: 1, onToggle: self => root.classList.toggle('pin-own-dial', self.isActive) }
       });
       doors.forEach((door, i) => {
         const at = i * 1.15;
@@ -511,13 +518,13 @@ void main(){
       const mdial = $('.numeral-dial');
       gsap.set(steps.slice(1), { autoAlpha: 0, yPercent: 30 });
       const t = gsap.timeline({
-        scrollTrigger: { trigger: '.method', start: 'top top', end: '+=260%', pin: true, scrub: 1, anticipatePin: 1 }
+        scrollTrigger: { trigger: '.method', start: 'top top', end: '+=260%', pin: true, scrub: 1, anticipatePin: 1, onToggle: self => root.classList.toggle('pin-own-dial', self.isActive) }
       });
       t.to({}, { duration: .35 });
       const mv = { v: 0 };
       for (let k = 1; k < 4; k++) {
         const at = .35 + (k - 1) * 1.1;
-        t.to(reel, { yPercent: -25 * k, duration: .75, ease: 'power3.inOut' }, at)
+        t.to(reel, { yPercent: -100 * k, duration: .75, ease: 'power3.inOut' }, at)
           .to(cabin, { y: () => -(rail.offsetHeight - cabin.offsetHeight) * k / 3, duration: .75, ease: 'power2.inOut' }, at)
           .to(steps[k - 1], { autoAlpha: 0, yPercent: -30, duration: .4, ease: 'power2.in' }, at)
           .to(steps[k], { autoAlpha: 1, yPercent: 0, duration: .5, ease: 'power2.out' }, at + .3)
@@ -532,12 +539,17 @@ void main(){
      En-tête : thème sombre sur les salons bruns
      ------------------------------------------------------------------------ */
   const lobby = $('.lobby');
-  $$('.dark').forEach(sec => {
-    ScrollTrigger.create({
-      trigger: sec, start: 'top 40px', end: 'bottom 40px',
-      onToggle: self => lobby.classList.toggle('on-dark', self.isActive)
-    });
-  });
+  const darkSecs = $$('.dark');
+  let onDark = null;
+  const syncHeader = () => {
+    const y = 40;
+    const d = darkSecs.some(sec => { const r = sec.getBoundingClientRect(); return r.top <= y && r.bottom > y; });
+    if (d !== onDark) { onDark = d; lobby.classList.toggle('on-dark', d); }
+  };
+  if (lenis) lenis.on('scroll', syncHeader);
+  addEventListener('scroll', syncHeader, { passive: true });
+  ScrollTrigger.addEventListener('refresh', syncHeader);
+  syncHeader();
 
   /* ------------------------------------------------------------------------
      Indicateur d’étage : l’aiguille suit la progression de la page
@@ -574,7 +586,7 @@ void main(){
     if (hasSplit) {
       $$('[data-split]').forEach(el => {
         window.SplitText.create(el, {
-          type: 'lines', mask: 'lines', linesClass: 'split-line', autoSplit: true,
+          type: 'lines', mask: 'lines', linesClass: 'split-line', autoSplit: true, aria: el.tagName === 'SPAN' ? 'none' : 'auto',
           onSplit: self => gsap.from(self.lines, {
             yPercent: 112, duration: 1.4, ease: 'expo.out', stagger: .09,
             scrollTrigger: { trigger: el, start: 'top 88%', once: true }
@@ -654,4 +666,7 @@ void main(){
   }
 
   addEventListener('load', () => ScrollTrigger.refresh());
+  };
+  const fontsOk = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+  Promise.race([fontsOk, new Promise(r => setTimeout(r, 900))]).then(boot);
 })();

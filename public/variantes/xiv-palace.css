@@ -345,8 +345,9 @@ html.anim .dark.stepped {
 .dial-svg .d-tick { stroke: currentColor; stroke-width: 1; }
 .dial-svg .d-num {
   fill: currentColor;
-  font-family: var(--display);
-  font-size: 15px;
+  font-family: var(--sans);
+  font-weight: 400;
+  font-size: 13px;
   text-anchor: middle;
   dominant-baseline: central;
   opacity: .5;
@@ -450,9 +451,12 @@ html.anim .floor {
   clip-path: polygon(var(--c) 0, calc(100% - var(--c)) 0, 100% var(--c), 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, var(--c) 100%, 0 calc(100% - var(--c)), 0 var(--c));
   opacity: 0;
   pointer-events: none;
+  transition: transform .7s var(--ease), filter .7s;
 }
+/* Les séquences qui ont leur propre cadran (portes, ascenseur) escamotent l’indicateur */
+html.anim.pin-own-dial .floor { transform: translateY(calc(100% + 30px)); }
 .floor-dial { width: 78px; }
-.floor-dial .d-num { font-size: 19px; }
+.floor-dial .d-num { font-size: 17px; }
 .floor-label { display: grid; gap: 2px; min-width: 104px; }
 .floor-kicker {
   font: 500 9px/1 var(--sans);
@@ -603,11 +607,11 @@ html.gl-on .hero-sun { display: none; }
   left: 50%;
   top: var(--t);
   z-index: 0;
-  width: 600px;
-  height: 300px;
-  margin: -300px 0 0 -300px;
+  width: 500px;
+  height: 250px;
+  margin: -250px 0 0 -250px;
   color: var(--bronze);
-  opacity: .55;
+  opacity: .5;
   pointer-events: none;
 }
 .sun-rings path { stroke-dasharray: 1; stroke-dashoffset: 0; }
@@ -731,7 +735,10 @@ html.gl-on .hero-sun { display: none; }
   letter-spacing: .3em;
   text-transform: uppercase;
 }
+.hw-motto-sub { display: none; font: 400 italic clamp(17px, 1.5vw, 22px)/1.2 var(--serif-it); margin: 2px 0 8px; }
 html.anim .hw-motto { display: block; opacity: 0; }
+@media (min-width: 1025px) { html.anim .hw-motto-sub { display: block; opacity: 0; } }
+html.anim:not(.booted) :is(.hero-stage, .hero > .plaque, .hero-window, .sun-rings) { visibility: hidden; }
 
 /* --------------------------------------------------------------------------
    Frise territoire (or)
@@ -799,7 +806,7 @@ html.anim .hw-motto { display: block; opacity: 0; }
   color: var(--gold);
 }
 .door-dial { width: 92px; }
-.door-dial .d-num { font-size: 22px; }
+.door-dial .d-num { font-size: 19px; }
 .door-num {
   font: 400 15px/1 var(--display);
   letter-spacing: .2em;
@@ -874,12 +881,24 @@ html.anim .hw-motto { display: block; opacity: 0; }
 .door.is-open .leaf-r, .door:focus-within .leaf-r { transform: translateX(101%) !important; }
 .door:focus-within .leaf { transition: transform .8s var(--ease); }
 
-@media (max-height: 860px) and (min-width: 1025px) {
-  .door-text { display: none; }
-  .hall-intro { font-size: 15px; }
-  .door-emblem { width: 76px; height: 50px; }
-  .door-room { gap: 8px; padding-top: 34px; }
-  .door-list li { padding: 6px 2px; font-size: 13.5px; }
+/* Desktop animé : les trois portes tiennent dans un seul écran épinglé */
+@media (min-width: 1025px) {
+  html.anim .hall-inner { gap: clamp(18px, 2.6vh, 30px); padding: calc(var(--header-h) + 22px) var(--gutter) 26px; min-height: 100vh; min-height: 100svh; }
+  html.anim .hall-head { gap: 12px 48px; }
+  html.anim .hall-head h2 { font-size: clamp(36px, 3.7vw, 62px); }
+  html.anim .hall-intro { font-size: 15.5px; line-height: 1.6; }
+  html.anim .door { gap: 10px; }
+  html.anim .door-dial { width: 74px; }
+  html.anim .door-room { gap: 8px; padding: clamp(24px, 3.4vh, 38px) clamp(18px, 1.8vw, 30px) 20px; }
+  html.anim .door-emblem { width: 80px; height: 52px; margin-bottom: 0; }
+  html.anim .door-room h3 { font-size: clamp(30px, 2.6vw, 44px); }
+  html.anim .door-text { font-size: 14.5px; line-height: 1.55; }
+  html.anim .door-list { margin: 4px 0 0; }
+  html.anim .door-list li { padding: 6px 2px; font-size: 13.5px; line-height: 1.4; }
+}
+@media (min-width: 1025px) and (max-height: 820px) {
+  html.anim .door-emblem { display: none; }
+  html.anim .door-room { padding-top: 22px; }
 }
 
 /* --------------------------------------------------------------------------
@@ -895,7 +914,8 @@ html.anim .hw-motto { display: block; opacity: 0; }
   margin: 0 auto;
 }
 .service-title { margin: 22px 0 30px; font-size: clamp(46px, 7.6vw, 128px); }
-.service-title .alt { padding-left: 1.1em; }
+.service-title { font-size: clamp(46px, 6.8vw, 116px); }
+.service-title .alt { padding-left: .6em; white-space: nowrap; }
 .service-text { max-width: 52ch; font-size: 18px; color: #3B2D1B; }
 .service-links {
   display: flex;
@@ -1003,6 +1023,7 @@ html.anim .hw-motto { display: block; opacity: 0; }
   font-family: var(--serif-it);
   font-style: italic;
   text-transform: none;
+  white-space: nowrap;
   font-size: .86em;
   letter-spacing: -.01em;
   color: var(--gold);
@@ -1188,7 +1209,7 @@ html:not(.anim) .shaft-numeral { display: none; }
   color: var(--gold);
 }
 .numeral-dial { width: 140px; margin-top: 22px; }
-.numeral-dial .d-num { font-size: 20px; }
+.numeral-dial .d-num { font-size: 18px; }
 
 .shaft { position: relative; align-self: center; padding-left: 44px; }
 .shaft-rail {
@@ -1606,6 +1627,9 @@ dialog[open] { animation: dlg .7s var(--ease-out); }
   body { font-size: 16px; padding-bottom: 64px; }
   .brand { width: 132px; }
   html.anim .floor { display: none; }
+  .dark { --rx: calc(var(--rs) * 4%); --rw: calc(var(--rs) * 1.4%); --rh: calc(var(--rs) * 34px); }
+  .eyebrow { font-size: 10px; letter-spacing: .22em; gap: 10px; }
+  .eyebrow-left::after { display: none; }
 
   .hero {
     --w: 46%;
@@ -1623,8 +1647,8 @@ dialog[open] { animation: dlg .7s var(--ease-out); }
   .sun-anchor { top: auto; bottom: 0; }
   .sun-rings { display: none; }
   .hero-stage { position: relative; inset: auto; padding: 0 16px; }
-  .hero-eyebrow { font-size: 10px; letter-spacing: .24em; gap: 10px; }
-  .hero-eyebrow::before, .hero-eyebrow::after { width: 18px; }
+  .hero-eyebrow { font-size: 9.5px; letter-spacing: .2em; gap: 9px; white-space: nowrap; }
+  .hero-eyebrow::before, .hero-eyebrow::after { display: none; }
   .hero-title .t1 { font-size: 16.4vw; white-space: normal; line-height: .9; max-width: 6.2em; }
   .hero-title .t2 { font-size: 4.6vw; letter-spacing: .26em; margin-right: -.26em; gap: 12px; }
   .hero-title .t2::before, .hero-title .t2::after { width: 26px; }
@@ -1640,7 +1664,7 @@ dialog[open] { animation: dlg .7s var(--ease-out); }
   .hero-window figcaption { bottom: 14px; }
 
   .frieze-inner { justify-content: center; text-align: center; padding: 22px 0; font-size: 10px; letter-spacing: .24em; }
-  .frieze-inner p { width: 100%; order: -1; font-size: 26px; letter-spacing: .16em; }
+  .frieze-inner p { width: 100%; order: -1; font-size: 21px; letter-spacing: .08em; white-space: nowrap; }
   .frieze .lozenge { display: none; }
 
   .hall { margin-top: 64px; }

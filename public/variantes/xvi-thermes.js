@@ -388,9 +388,27 @@
     new ResizeObserver(resize).observe(xpCanvas);
     visibleWatch(xp, s => { vis = s; });
     xp.addEventListener('pointermove', e => { mx = e.clientX / innerWidth - 0.5; }, { passive: true });
+    // Mobile : pas de pin, le défilement tactile est composité hors du fil principal.
+    // Le canvas est alors déplacé DANS la niche la plus proche du centre de l’écran,
+    // pour défiler avec elle sans décalage (au lieu d’un canvas collant partagé).
+    const small = matchMedia('(max-width: 899px)');
+    const home = xpCanvas.parentNode, homeNext = xpCanvas.nextSibling;
+    let host = null;
+    const setHost = n => {
+      if (host === n) return;
+      if (host) host.classList.remove('has-gl');
+      host = n;
+      if (n) { n.prepend(xpCanvas); n.classList.add('has-gl'); }
+      else home.insertBefore(xpCanvas, homeNext);
+    };
     let um = 0;
     gsap.ticker.add(() => {
       if (!vis || tabHidden) return;
+      if (small.matches) {
+        let best = null, bd = Infinity;
+        niches.forEach(n => { const r = n.getBoundingClientRect(); const dd = Math.abs(r.top + r.height / 2 - innerHeight / 2); if (dd < bd) { bd = dd; best = n; } });
+        setHost(best);
+      } else if (host) setHost(null);
       const cr = xpCanvas.getBoundingClientRect();
       const dpr = xpCanvas.width / Math.max(1, cr.width);
       niches.forEach((n, i) => {
@@ -570,7 +588,7 @@
           const p = self.progress;
           xp.style.backgroundColor = toneAt(p);
           gsap.set(bar, { scaleX: p });
-          const idx = p < 0.5 ? 0 : p < 0.82 ? 1 : 2;
+          const idx = p < 0.42 ? 0 : p < 0.8 ? 1 : 2;
           legend.forEach((s, i) => s.classList.toggle('is-on', i === idx));
         },
       },

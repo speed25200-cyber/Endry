@@ -338,7 +338,7 @@ h2 em { color: var(--bronze-t); }
     linear-gradient(160deg, rgba(249, 219, 163, .22), transparent 55%),
     linear-gradient(180deg, #2a221b, #4a3d30);
 }
-.gl-xp .niche { background: none; }
+@media (min-width: 900px) { .gl-xp .niche { background: none; } }
 .niche::before {
   content: ""; position: absolute; left: -22%; right: -22%; bottom: 0; height: 1px;
   background: linear-gradient(90deg, transparent, rgba(249, 219, 163, .55), transparent);
@@ -809,6 +809,8 @@ dialog::backdrop { background: rgba(23, 17, 12, .72); -webkit-backdrop-filter: b
   .xp-panel { grid-template-columns: 1fr; gap: 44px; padding: 8vh 6vw 8vh; }
   .niche { width: 84%; max-width: 380px; }
   .niche-word { font-size: 15vw; }
+  .gl-xp .xp-gl { display: none; }
+  .gl-xp .niche .xp-gl { display: block; position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; }
   .xp-copy h3 { font-size: 17vw; }
 
   /* Dépannage */

@@ -1014,3 +1014,11 @@ dialog[open] { animation: dlg-in .8s var(--ease-out); }
 
 /* Loupe : positionneurs */
 .loupe-pos, .loupe-dotpos { position: absolute; left: 0; top: 0; }
+
+/* Lisibilité du héros : aiguilles en retrait derrière le titre, halo ivoire autour des lettres. */
+.hands { opacity: .38; }
+.hero-title, .hero-sub, .hero-eyebrow, .hero-phone {
+  text-shadow: 0 0 22px #f7f2e9, 0 0 10px #f7f2e9, 0 0 3px #f7f2e9;
+}
+/* Numéros de téléphone : chiffres alignés pour la lisibilité. */
+a[href^="tel:"], a[href^="tel:"] * { font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "lnum" 1, "tnum" 1; }

@@ -582,7 +582,7 @@ void main(){
     tl.to(knurl, {y: -28, duration: .85, ease: 'power1.inOut'}, 0)
       .to(sweepArc, {strokeDashoffset: 0, duration: .95, ease: 'power2.inOut'}, .05)
       .to(glState, {sweep: 1, duration: 1, ease: 'power2.inOut'}, .08)
-      .to('.hands', {opacity: 1, duration: .3, ease: 'none'}, .35)
+      .to('.hands', {opacity: .38, duration: .3, ease: 'none'}, .35)
       .to(spin, {k: 0, duration: 1.05, ease: 'expo.inOut'}, .4)
       .to(glState, {zoom: 1, duration: 1.05, ease: 'expo.inOut'}, 1.0)
       .to(dialWrap, {scale: 1, duration: 1.05, ease: 'expo.inOut'}, 1.0)

@@ -14,6 +14,208 @@
   const lib = window.gsap && window.ScrollTrigger;
   const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 
+  /* ------------------------------------------------------------------------
+     Motifs horlogers générés à l’exécution (cadran des complications,
+     mouvement, mini-cadrans) : allège le HTML de ~180 Ko de tracés SVG.
+     Sans JS, ces éléments purement décoratifs sont masqués par le CSS.
+     ------------------------------------------------------------------------ */
+  (() => {
+    const f = n => +n.toFixed(2);
+    const rad = d => d * Math.PI / 180;
+    // point à l'angle a (degrés, 0 = midi, sens horaire)
+    const P = (cx, cy, r, a) => [f(cx + r * Math.sin(rad(a))), f(cy - r * Math.cos(rad(a)))];
+    const ticks = (cx, cy, r1, r2, n, skip = () => false) => {
+      let d = '';
+      for (let i = 0; i < n; i++) { if (skip(i)) continue; const a = 360 * i / n; const [x1, y1] = P(cx, cy, r1, a), [x2, y2] = P(cx, cy, r2, a); d += `M${x1} ${y1}L${x2} ${y2}`; }
+      return d;
+    };
+    const ROMAN = ['XII', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
+    const circ = (cx, cy, r, extra = '') => `<circle cx="${cx}" cy="${cy}" r="${r}"${extra}/>`;
+
+    // ---------- Engrenages ----------
+    function gear(cx, cy, N, m, {spokes = 5, hub = .22, rim = .78, pinion = 0} = {}) {
+      const r = m * N / 2, ra = r + m * .9, rr = r - m * 1.15, step = 360 / N;
+      let d = '';
+      for (let i = 0; i < N; i++) {
+        const a = i * step;
+        const pts = [[rr, a - step * .5], [rr, a - step * .26], [r, a - step * .2], [ra, a - step * .12], [ra, a + step * .12], [r, a + step * .2], [rr, a + step * .26]];
+        pts.forEach(([rad_, ang], j) => { const [x, y] = P(0, 0, rad_, ang); d += (i === 0 && j === 0 ? 'M' : 'L') + x + ' ' + y; });
+      }
+      d += 'Z';
+      const rimR = rr * rim, hubR = Math.max(rr * hub, 6);
+      let sp = '';
+      const w = Math.max(3, rr * .09);
+      for (let i = 0; i < spokes; i++) {
+        const a = i * 360 / spokes;
+        const dh = Math.asin(Math.min(.9, w / hubR)) * 180 / Math.PI, dr = Math.asin(w / rimR) * 180 / Math.PI;
+        const [x1, y1] = P(0, 0, hubR, a - dh), [x2, y2] = P(0, 0, rimR, a - dr), [x3, y3] = P(0, 0, rimR, a + dr), [x4, y4] = P(0, 0, hubR, a + dh);
+        sp += `M${x1} ${y1}L${x2} ${y2}A${f(rimR)} ${f(rimR)} 0 0 1 ${x3} ${y3}L${x4} ${y4}A${f(hubR)} ${f(hubR)} 0 0 0 ${x1} ${y1}Z`;
+      }
+      let pin = '';
+      if (pinion) {
+        const pr = m * .55 * pinion / 2 + 2, pa = pr + 2.2, prr = pr - 2.6, ps = 360 / pinion;
+        let pd = '';
+        for (let i = 0; i < pinion; i++) { const a = i * ps; [[prr, a - ps * .5], [prr, a - ps * .22], [pa, a - ps * .1], [pa, a + ps * .1], [prr, a + ps * .22]].forEach(([q, g], j) => { const [x, y] = P(0, 0, q, g); pd += (i === 0 && j === 0 ? 'M' : 'L') + x + ' ' + y; }); }
+        pin = `<path class="g-pinion" d="${pd}Z"/>`;
+      }
+      return {r, svg: `<g class="gear" data-n="${N}" transform="translate(${f(cx)} ${f(cy)})"><g class="gear-rot"><path class="g-teeth" d="${d}"/><path class="g-spokes" d="${sp}"/>${circ(0, 0, f(rimR * .96), ' class="g-ring"')}${pin}${circ(0, 0, f(hubR * .6), ' class="g-hub"')}</g><g class="jewel">${circ(0, 0, 7.5, ' class="j-set"')}${circ(0, 0, 3.6, ' class="j-stone"')}</g></g>`};
+    }
+    function escapeWheel(cx, cy, N, r) {
+      let d = '';
+      const step = 360 / N;
+      for (let i = 0; i < N; i++) {
+        const a = i * step;
+        const pts = [[r * .78, a], [r * .98, a + step * .18], [r * 1.02, a + step * .32], [r * .9, a + step * .38], [r * .78, a + step * .5]];
+        pts.forEach(([q, g], j) => { const [x, y] = P(0, 0, q, g); d += (i === 0 && j === 0 ? 'M' : 'L') + x + ' ' + y; });
+      }
+      let sp = '';
+      for (let i = 0; i < 4; i++) { const a = i * 90; const [x1, y1] = P(0, 0, 8, a), [x2, y2] = P(0, 0, r * .74, a); sp += `M${x1} ${y1}L${x2} ${y2}`; }
+      return `<g class="gear gear-escape" data-n="${N}" transform="translate(${f(cx)} ${f(cy)})"><g class="gear-rot"><path class="g-teeth" d="${d}Z"/>${circ(0, 0, f(r * .74), ' class="g-ring"')}<path class="g-spokes" d="${sp}"/></g><g class="jewel">${circ(0, 0, 6.5, ' class="j-set"')}${circ(0, 0, 3, ' class="j-stone"')}</g></g>`;
+    }
+    function balance(cx, cy, r) {
+      let spiral = '';
+      for (let t = 0; t <= 14 * Math.PI; t += .12) { const q = 7 + t * (r * .55) / (14 * Math.PI); const x = f(Math.cos(t) * q), y = f(Math.sin(t) * q); spiral += (t === 0 ? 'M' : 'L') + x + ' ' + y; }
+      let screws = '';
+      for (let i = 0; i < 12; i++) { const [x, y] = P(0, 0, r + 4, i * 30 + 15); screws += circ(x, y, 3.2, ' class="b-screw"'); }
+      const arms = [0, 120, 240].map(a => { const [x1, y1] = P(0, 0, 10, a), [x2, y2] = P(0, 0, r - 5, a); return `M${x1} ${y1}L${x2} ${y2}`; }).join('');
+      return `<g class="balance" transform="translate(${cx} ${cy})"><path class="b-spring" d="${spiral}"/><g class="balance-rot">${circ(0, 0, r, ' class="b-rim"')}${circ(0, 0, r - 6, ' class="b-rim b-rim--in"')}<path class="b-arms" d="${arms}"/>${screws}</g><g class="jewel">${circ(0, 0, 8, ' class="j-set"')}${circ(0, 0, 3.8, ' class="j-stone"')}</g></g>`;
+    }
+    function screw(x, y, a = 30) { const [x1, y1] = P(x, y, 5.5, a), [x2, y2] = P(x, y, 5.5, a + 180); return `<g class="screw">${circ(x, y, 8)}<path d="M${x1} ${y1}L${x2} ${y2}"/></g>`; }
+
+    // ---------- Cadran des trois complications (800, centre 400) ----------
+    function complicationDial() {
+      const c = 400;
+      const names = ['SANITAIRE', 'CHAUFFAGE', 'VENTILATION'], nums = ['I', 'II', 'III'];
+      // motifs guillochés des plaques centrales
+      let eau = '';
+      for (let i = 0; i < 26; i++) eau += circ(c, c, f(22 + i * 9.6));
+      let feu = '';
+      for (let i = 0; i < 144; i++) { const a = i * 2.5; let d = ''; for (let k = 0; k <= 24; k++) { const q = 30 + k * 10.5; const w = a + 3.2 * Math.sin(k * .7); const [x, y] = P(c, c, q, w); d += (k ? 'L' : 'M') + x + ' ' + y; } feu += `<path d="${d}"/>`; }
+      let air = '';
+      for (let j = 0; j < 3; j++) { let d = ''; for (let t = 0; t <= 16 * Math.PI; t += .08) { const q = 14 + t * 4.95; const [x, y] = P(c, c, q, t * 180 / Math.PI + j * 120); d += (t ? 'L' : 'M') + x + ' ' + y; } air += `<path d="${d}"/>`; }
+      let rose = '';
+      for (let i = 0; i < 48; i++) { const [x, y] = P(c, c, 80, i * 7.5); rose += circ(x, y, 80); }
+      let disc = '';
+      nums.forEach((n, i) => {
+        const a = i * 120; const [x, y] = P(c, c, 330, a);
+        disc += `<g class="disc-sector" transform="rotate(${a} ${c} ${c})"><text class="disc-num" x="${c}" y="${c - 318}" text-anchor="middle">${n}</text></g>`;
+        disc += `<text class="disc-name"><textPath href="#disc-arc-${i}" startOffset="50%" text-anchor="middle">${names[i]}</textPath></text>`;
+      });
+      let arcs = '';
+      [0, 120, 240].forEach((a, i) => { arcs += `<path id="disc-arc-${i}" d="M${P(c, c, 336, a + 14).join(' ')}A336 336 0 0 1 ${P(c, c, 336, a + 106).join(' ')}"/>`; });
+      let diamonds = '';
+      [60, 180, 300].forEach(a => { const [x, y] = P(c, c, 322, a); diamonds += `<path d="M${x} ${y - 6}l5 6-5 6-5-6z"/>`; });
+      return `<svg class="cx-dial" viewBox="0 0 800 800" aria-hidden="true" focusable="false">
+      <defs>${arcs}<clipPath id="cx-plate"><circle cx="${c}" cy="${c}" r="286"/></clipPath></defs>
+      <g fill="none" stroke="currentColor">
+        ${circ(c, c, 398, ' stroke-width="1.2"')}${circ(c, c, 392, ' stroke-width=".4"')}
+        <path stroke-width=".35" d="${ticks(c, c, 378, 388, 240, i => i % 4 === 0)}"/>
+        <path stroke-width=".9" d="${ticks(c, c, 372, 388, 60)}"/>
+        ${circ(c, c, 368, ' stroke-width=".5"')}
+      </g>
+      <g class="cx-disc">
+        <g fill="none" stroke="currentColor">${circ(c, c, 360, ' stroke-width=".6"')}${circ(c, c, 296, ' stroke-width=".6"')}${circ(c, c, 302, ' stroke-width=".3"')}
+          <path stroke-width=".3" d="${ticks(c, c, 352, 358, 180)}"/></g>
+        <g class="disc-text" fill="currentColor">${disc}</g>
+      </g>
+      <path class="cx-index" d="M${c} 364l-9 -22h18z" fill="currentColor"/>
+      <g clip-path="url(#cx-plate)" fill="none" stroke="currentColor" stroke-width=".45">
+        <g class="cx-motif cx-motif--1">${eau}</g>
+        <g class="cx-motif cx-motif--2">${feu}</g>
+        <g class="cx-motif cx-motif--3">${air}</g>
+        <g class="cx-rose" stroke-width=".3">${rose}</g>
+      </g>
+      ${circ(c, c, 286, ' fill="none" stroke="currentColor" stroke-width=".8"')}
+      <g class="cx-hand">
+        <path d="M${c} ${c + 60}V${c - 262}" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M${c} ${c - 282}l-6 18 6 8 6-8z" fill="currentColor"/>
+        <circle cx="${c}" cy="${c + 72}" r="12" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      </g>
+      ${circ(c, c, 11, ' fill="currentColor"')}${circ(c, c, 4, ' fill="var(--pearl)"')}
+    </svg>`;
+    }
+
+    // ---------- Mouvement mécanique (800, centre 400) ----------
+    function movement() {
+      const c = 400, m = 3.2;
+      const cA = [285, 285], rA = m * 84 / 2;
+      const A = gear(cA[0], cA[1], 84, m, {spokes: 6, hub: .34, rim: .88});
+      const rB = m * 64 / 2, cB = P(cA[0], cA[1], rA + rB, 120);
+      const B = gear(cB[0], cB[1], 64, m, {spokes: 5, pinion: 10});
+      const rC = m * 48 / 2, cC = P(cB[0], cB[1], rB + rC, 190);
+      const C = gear(cC[0], cC[1], 48, m, {spokes: 4, pinion: 8});
+      const rD = m * 36 / 2, cD = P(cC[0], cC[1], rC + rD, 250);
+      const D = gear(cD[0], cD[1], 36, m, {spokes: 4, pinion: 8});
+      const rE = 34, cE = P(cD[0], cD[1], rD + rE + 2, 232);
+      const E = escapeWheel(cE[0], cE[1], 20, rE);
+      // rochet (sur le barillet) et roue de couronne
+      const rR = 86, cK = P(cA[0], cA[1], rR + 58, 58);
+      const K = gear(cK[0], cK[1], 36, 3.2, {spokes: 0, hub: .5});
+      let ratchet = '';
+      for (let i = 0; i < 48; i++) { const a = i * 360 / 48; const [x1, y1] = P(0, 0, rR - 9, a), [x2, y2] = P(0, 0, rR + 1, a + 6), [x3, y3] = P(0, 0, rR - 9, a + 360 / 48); ratchet += (i ? 'L' : 'M') + x1 + ' ' + y1 + 'L' + x2 + ' ' + y2 + 'L' + x3 + ' ' + y3; }
+      const cBal = [172, 548];
+      const bal = balance(cBal[0], cBal[1], 80);
+      let perl = '';
+      for (let y = 30; y < 790; y += 24) for (let x = 30 + ((y / 24) % 2) * 12; x < 790; x += 24) { if (Math.hypot(x - c, y - c) < 376) perl += circ(x, y, 14); }
+      // ponts : tracés épais (contour = double trait)
+      const bridges = [
+        {d: `M${cA.join(' ')}L${cK.join(' ')}L${P(c, c, 330, 40).join(' ')}`, w: 50},
+        {d: `M${P(c, c, 360, 100).join(' ')}Q${P(c, c, 250, 110).join(' ')} ${cB.join(' ')}Q${f((cB[0] + cC[0]) / 2 + 40)} ${f((cB[1] + cC[1]) / 2)} ${cC.join(' ')}L${cD.join(' ')}`, w: 32},
+        {d: `M${P(c, c, 372, 232).join(' ')}Q${f(cBal[0] - 40)} ${f(cBal[1] + 90)} ${cBal.join(' ')}`, w: 26},
+      ];
+      const bridgeSvg = bridges.map(b => `<path class="mv-bridge-o" d="${b.d}" stroke-width="${b.w + 2}"/><path class="mv-bridge" d="${b.d}" stroke-width="${b.w}"/><path class="mv-bridge-c" d="${b.d}" stroke-width="${b.w - 8}"/>`).join('');
+      const jewel = (p, r = 8.5) => `<g class="jewel jewel--top">${circ(p[0], p[1], r, ' class="j-set"')}${circ(p[0], p[1], r * .48, ' class="j-stone"')}</g>`;
+      return {
+        svg: `<svg class="mv-svg" viewBox="0 0 800 800" aria-hidden="true" focusable="false">
+      <defs>
+        <clipPath id="mv-plate"><circle cx="${c}" cy="${c}" r="376"/></clipPath>
+        <pattern id="mv-cotes" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(28)"><rect width="14" height="14" fill="#2c2319"/><rect width="7" height="14" fill="#3b2f22"/></pattern>
+        <radialGradient id="mv-stone" cx=".35" cy=".35" r=".8"><stop offset="0" stop-color="#FFF3DA"/><stop offset=".45" stop-color="#F9DBA3"/><stop offset="1" stop-color="#9F722A"/></radialGradient>
+      </defs>
+      <g class="mv-plate">
+        ${circ(c, c, 398, ' class="mv-case"')}${circ(c, c, 390, ' class="mv-case mv-case--thin"')}
+        <path class="mv-ticks" d="${ticks(c, c, 378, 388, 120)}"/>
+        <g class="mv-perlage" clip-path="url(#mv-plate)">${perl}</g>
+        ${circ(c, c, 376, ' class="mv-case"')}
+      </g>
+      <g class="mv-train">
+        <g class="mv-a">${A.svg}</g>
+        <g class="mv-ratchet" transform="translate(${cA.join(' ')})"><g class="ratchet-rot"><path d="${ratchet}Z"/>${circ(0, 0, 60)}${circ(0, 0, 36)}<path d="M-36 0H36M0 -36V36"/></g></g>
+        <g class="mv-k">${K.svg}</g>
+        <g class="mv-b">${B.svg}</g>
+        <g class="mv-c">${C.svg}</g>
+        <g class="mv-d">${D.svg}</g>
+        <g class="mv-e">${E}</g>
+      </g>
+      <g class="mv-bal">${bal}</g>
+      <g class="mv-bridges">${bridgeSvg}
+        ${screw(...P(c, c, 330, 40), 20)}${screw(...P(c, c, 360, 100), 70)}${screw(...P(c, c, 372, 232).map((v, i) => v + (i ? -14 : 12)), 140)}
+      </g>
+      <g class="mv-jewels">${[cA, cK, cB, cC, cD].map(p => jewel(p)).join('')}${jewel(cBal, 9)}</g>
+    </svg>`, meta: {A: [...cA, 84], K: [...cK, 36], B: [...cB, 64], C: [...cC, 48], D: [...cD, 36], E: [...cE, 20], Bal: cBal}
+      };
+    }
+
+
+    // ---------- Mini-cadrans (mobile / sans animation) ----------
+    function mini(i) {
+      const c = 100;
+      let motif = '';
+      if (i === 0) for (let k = 0; k < 16; k++) motif += circ(c, c, f(8 + k * 4.2));
+      if (i === 1) for (let k = 0; k < 72; k++) { const a = k * 5; let d = ''; for (let j = 0; j <= 10; j++) { const q = 12 + j * 6; const [x, y] = P(c, c, q, a + 3 * Math.sin(j * .8)); d += (j ? 'L' : 'M') + x + ' ' + y; } motif += `<path d="${d}"/>`; }
+      if (i === 2) { let d = ''; for (let t = 0; t <= 12 * Math.PI; t += .1) { const q = 6 + t * 1.75; const [x, y] = P(c, c, q, t * 180 / Math.PI); d += (t ? 'L' : 'M') + x + ' ' + y; } motif = `<path d="${d}"/>`; }
+      return `<svg class="mini-dial" viewBox="0 0 200 200" aria-hidden="true" focusable="false">
+      <g fill="none" stroke="currentColor">${circ(c, c, 98, ' stroke-width=".9"')}${circ(c, c, 93, ' stroke-width=".4"')}<path stroke-width=".4" d="${ticks(c, c, 84, 90, 60)}"/><path stroke-width="1.2" d="${ticks(c, c, 80, 90, 12)}"/>${circ(c, c, 76, ' stroke-width=".5"')}<g stroke-width=".35">${motif}</g></g>
+      <text x="100" y="42" text-anchor="middle" class="mini-num" fill="currentColor">${['I', 'II', 'III'][i]}</text>
+      ${circ(c, c, 4, ' fill="currentColor"')}
+    </svg>`;
+    }
+
+
+    const make = {'cx-dial': complicationDial, 'movement': () => movement().svg, 'mini-0': () => mini(0), 'mini-1': () => mini(1), 'mini-2': () => mini(2)};
+    document.querySelectorAll('[data-svg]').forEach(slot => { const fn = make[slot.dataset.svg]; if (fn) slot.outerHTML = fn(); });
+  })();
+
   const endIntro = () => root.classList.remove('is-intro');
   if (!lib) { endIntro(); }
 
@@ -520,7 +722,7 @@ void main(){
       {y: 0, rotateX: 0, opacity: 1, ease: 'none', scrollTrigger: {trigger: '.repair', start: 'top 95%', end: 'top 25%', scrub: .8}});
     const seal = $('.cert-seal', cert);
     gsap.fromTo(seal, {scale: 1.6, rotation: -40, opacity: 0}, {scale: 1, rotation: 0, opacity: 1, duration: 1, ease: 'back.out(1.6)',
-      scrollTrigger: {trigger: cert, start: 'top 55%', once: true}});
+      scrollTrigger: {trigger: cert, start: 'top 80%', once: true}});
     gsap.to($('.seal-text', cert), {rotation: 120, svgOrigin: '120 120', ease: 'none', scrollTrigger: {trigger: '.repair', start: 'top bottom', end: 'bottom top', scrub: true}});
     gsap.from($$('.cert-lines > div, .cert-actions > *', cert), {opacity: 0, y: 24, duration: 1, stagger: .08, ease: 'expo.out', scrollTrigger: {trigger: $('.cert-lines', cert), start: 'top 88%', once: true}});
   }

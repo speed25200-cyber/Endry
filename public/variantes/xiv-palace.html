@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="fr-CH">
 <head>
-  <script>document.documentElement.classList.add('js');if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&!location.hash)document.documentElement.classList.add('intro')</script>
+  <script>document.documentElement.classList.add('js');if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&!location.hash){document.documentElement.classList.add('intro');setTimeout(function(){document.documentElement.classList.remove('intro')},4000)}</script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Endry SA — Maquette XIV · Palace</title>
@@ -88,7 +88,7 @@
 
   <!-- Curseur (décor, pointeur fin uniquement) -->
   <div class="cursor" aria-hidden="true">
-    <span class="cursor-sun"><svg viewBox="-20 -20 40 40"><g stroke="currentColor" stroke-width="1" fill="none"><circle r="5.5"/><path d="M0-9.5V-16M0 9.5V16M-9.5 0H-16M9.5 0H16M6.7-6.7l4.6-4.6M-6.7 6.7l-4.6 4.6M6.7 6.7l4.6 4.6M-6.7-6.7l-4.6-4.6"/></g></svg></span>
+    <span class="cursor-sun"><svg viewBox="-20 -20 40 40"><g stroke="currentColor" stroke-width="1" fill="none"><path d="M0-15L15 0 0 15-15 0Z"/><path d="M0-19v3M0 16v3M-19 0h3M16 0h3" stroke-linecap="square"/></g></svg></span>
     <span class="cursor-dot"></span>
   </div>
 

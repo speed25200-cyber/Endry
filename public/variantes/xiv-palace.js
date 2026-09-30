@@ -380,7 +380,10 @@ void main(){
     const dL = $('.lift-door-l', lift), dR = $('.lift-door-r', lift);
     const dial = $('.lift-dial', lift), needle = $('.d-needle-g', dial), lamp = $('.d-lamp', dial);
     const n = { v: 7 };
+    // Si les polices ont retardé le démarrage, l’intro accélère pour finir avant 2,5 s.
+    const left = Math.max(.9, 2.45 - performance.now() / 1000);
     const tl = gsap.timeline();
+    tl.timeScale(Math.max(1, 2.32 / left));
     tl.add(() => { endIntro(); syncLock(); ScrollTrigger.refresh(); }, 2.32);
     tl.to(n, {
       v: 0, duration: 1.05, ease: 'power2.inOut',
@@ -392,7 +395,7 @@ void main(){
       .to(dR, { xPercent: 101, duration: 1.1, ease: LUX }, 1.2)
       .add(heroIn(0), 1.3);
     // Garde-fou : l’intro ne bloque jamais plus de 2,5 s.
-    setTimeout(() => { if (root.classList.contains('intro')) { tl.progress(1); } }, 2600);
+    setTimeout(() => { if (root.classList.contains('intro')) { tl.progress(1); } }, Math.max(300, 2600 - performance.now()));
   } else {
     endIntro();
     heroIn(.1);
@@ -410,11 +413,12 @@ void main(){
     /* E · la fenêtre à gradins s’ouvre en plein écran */
     if (desk) {
       const t = gsap.timeline({
-        scrollTrigger: { trigger: hero, start: 'top top', end: '+=115%', pin: true, scrub: 1, anticipatePin: 1 }
+        scrollTrigger: { trigger: hero, start: 'top top', end: '+=115%', pin: true, scrub: 1, anticipatePin: 1, onUpdate: self => hero.classList.toggle('is-open', self.progress > .3) }
       });
       t.to(hero, { '--w': '50%', '--t': '0%', '--s': '0px', ease: 'power2.inOut', duration: 1 }, 0)
         .fromTo('.hw-clip img', { scale: 1.3 }, { scale: 1, ease: 'none', duration: 1 }, 0)
         .fromTo('.hero-stage', { yPercent: 0 }, { yPercent: -18, ease: 'none', duration: .8, immediateRender: false }, 0)
+        .to(hero, { '--o': 0, ease: 'power1.in', duration: .32 }, .2)
         .fromTo('.hw-motto', { autoAlpha: 0, y: 40 }, { autoAlpha: 1, y: 0, duration: .25, ease: 'power2.out', immediateRender: false }, .72)
         .fromTo('.hw-motto-sub', { autoAlpha: 0, y: 24 }, { autoAlpha: 1, y: 0, duration: .22, ease: 'power2.out', immediateRender: false }, .8)
         .to({}, { duration: .12 });
@@ -645,7 +649,6 @@ void main(){
     const dx = gsap.quickTo(dot, 'x', { duration: .08, ease: 'power3' }), dy = gsap.quickTo(dot, 'y', { duration: .08, ease: 'power3' });
     const sxq = gsap.quickTo(sun, 'x', { duration: .5, ease: 'power3' }), syq = gsap.quickTo(sun, 'y', { duration: .5, ease: 'power3' });
     gsap.set([dot, sun], { x: -100, y: -100 });
-    gsap.to(sun, { rotation: 360, duration: 16, ease: 'none', repeat: -1 });
     addEventListener('pointermove', e => { dx(e.clientX); dy(e.clientY); sxq(e.clientX); syq(e.clientY); }, { passive: true });
     document.addEventListener('pointerover', e => {
       cur.classList.toggle('is-hover', !!e.target.closest('a, button, summary, label, .project-image'));

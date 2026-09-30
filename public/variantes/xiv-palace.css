@@ -494,7 +494,7 @@ html.has-cursor .cursor {
 }
 .cursor-sun { width: 40px; height: 40px; margin: -20px 0 0 -20px; }
 .cursor-sun svg { width: 100%; height: 100%; transition: transform .5s var(--ease-out); }
-html.has-cursor .cursor.is-hover .cursor-sun svg { transform: scale(1.7) rotate(45deg); }
+html.has-cursor .cursor.is-hover .cursor-sun svg { transform: scale(1.55) rotate(90deg); }
 html.has-cursor, html.has-cursor a, html.has-cursor button, html.has-cursor summary { cursor: none; }
 html.has-cursor input, html.has-cursor textarea, html.has-cursor select { cursor: auto; }
 
@@ -579,6 +579,7 @@ body.is-scrolled .lobby.on-dark { background: rgba(33, 26, 19, .9); box-shadow: 
    E · Héros
    -------------------------------------------------------------------------- */
 .hero {
+  --o: 1;
   --w: 17%;
   --t: 67%;
   --s: 15px;
@@ -738,6 +739,9 @@ html.gl-on .hero-sun { display: none; }
 .hw-motto-sub { display: none; font: 400 italic clamp(17px, 1.5vw, 22px)/1.2 var(--serif-it); margin: 2px 0 8px; }
 html.anim .hw-motto { display: block; opacity: 0; }
 @media (min-width: 1025px) { html.anim .hw-motto-sub { display: block; opacity: 0; } }
+html.anim .hero-stage { opacity: var(--o, 1); }
+html.anim .hero > .plaque { filter: opacity(var(--o, 1)); }
+.hero.is-open .hero-stage, .hero.is-open > .plaque { pointer-events: none; }
 html.anim:not(.booted) :is(.hero-stage, .hero > .plaque, .hero-window, .sun-rings) { visibility: hidden; }
 
 /* --------------------------------------------------------------------------
@@ -1177,7 +1181,7 @@ html.anim:not(.booted) :is(.hero-stage, .hero > .plaque, .hero-window, .sun-ring
 .numeral-window {
   --s: 20px;
   position: relative;
-  width: min(100%, 40vh, 380px);
+  width: min(100%, 36vh, 360px);
   aspect-ratio: 3 / 4;
   overflow: hidden;
   background:
@@ -1208,7 +1212,7 @@ html:not(.anim) .shaft-numeral { display: none; }
   font: 400 min(38vh, 360px)/1 var(--display);
   color: var(--gold);
 }
-.numeral-dial { width: 140px; margin-top: 22px; }
+.numeral-dial { width: 128px; margin-top: 18px; }
 .numeral-dial .d-num { font-size: 18px; }
 
 .shaft { position: relative; align-self: center; padding-left: 44px; }
@@ -1524,7 +1528,7 @@ dialog[open] { animation: dlg .7s var(--ease-out); }
 
 @media (max-width: 1024px) {
   :root { --header-h: 72px; }
-  .brand { grid-column: 1; justify-self: start; width: 150px; }
+  .brand { grid-column: 1; justify-self: start; width: 150px; z-index: 3; }
   .menu-toggle {
     grid-column: 3;
     grid-row: 1;
@@ -1624,7 +1628,7 @@ dialog[open] { animation: dlg .7s var(--ease-out); }
    -------------------------------------------------------------------------- */
 @media (max-width: 760px) {
   :root { --header-h: 64px; }
-  body { font-size: 16px; padding-bottom: 64px; }
+  body { font-size: 16px; }
   .brand { width: 132px; }
   html.anim .floor { display: none; }
   .dark { --rx: calc(var(--rs) * 4%); --rw: calc(var(--rs) * 1.4%); --rh: calc(var(--rs) * 34px); }
@@ -1716,7 +1720,7 @@ dialog[open] { animation: dlg .7s var(--ease-out); }
   .field-row { grid-template-columns: 1fr; }
   #project-form .brass { justify-self: stretch; }
 
-  .foyer { padding: 80px 16px 36px; }
+  .foyer { padding: 80px 16px calc(36px + 60px + env(safe-area-inset-bottom, 0px)); }
   .foyer-contact { flex-direction: column; gap: 0; }
   .foyer-contact .lozenge { display: none; }
   .foyer-bottom { flex-direction: column; align-items: center; padding-left: 0; }

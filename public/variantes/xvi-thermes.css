@@ -905,3 +905,6 @@ dialog::backdrop { background: rgba(23, 17, 12, .72); -webkit-backdrop-filter: b
 @media print {
   .hdr, .mobile-contact, .cursor, .hero-gl, .xp-gl { display: none !important; }
 }
+
+/* Numéros de téléphone : chiffres alignés pour la lisibilité. */
+a[href^="tel:"], a[href^="tel:"] * { font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "lnum" 1, "tnum" 1; }

@@ -316,7 +316,7 @@ struct ArgentView: View {
         .accessibilityElement(children: .combine)
         .accessibilityHint(Text("Détail des heures, relevés PDF et Excel du bureau"))
         .accessibilityIdentifier("heures-secretariat")
-        .sheet(item: $heuresOuvertes) { HeuresSecretariatView(heures: $0) }
+        .sheet(item: $heuresOuvertes) { HeuresSecretariatView(heures: $0).apercuDocuments() }
     }
 }
 

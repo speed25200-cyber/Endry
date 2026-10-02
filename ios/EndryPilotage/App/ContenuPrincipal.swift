@@ -39,7 +39,6 @@ struct ContenuPrincipal: View {
 
     var body: some View {
         @Bindable var app = app
-        @Bindable var documents = app.documents
         ZStack(alignment: .bottom) {
             ZStack {
                 ecran(.aujourdhui) { if let m = app.decisions { DecisionsView(modele: m).id(ObjectIdentifier(m)) } }
@@ -71,36 +70,28 @@ struct ContenuPrincipal: View {
         }
         .animation(.endry, value: app.session.connexionPerdue)
         .toast($app.toast)
-        .quickLookPreview($documents.apercu)
-        .alert("Document indisponible", isPresented: Binding(
-            get: { app.documents.erreur != nil },
-            set: { if !$0 { app.documents.erreur = nil } }
-        )) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(app.documents.erreur ?? "")
-        }
+        .apercuDocuments()
         .sheet(isPresented: $app.reglagesPresentes) {
             ReglagesView()
         }
         .fullScreenCover(isPresented: $app.assistantPresente) {
-            VueAssistantVocal()
+            VueAssistantVocal().apercuDocuments()
         }
         // Plein écran : l'app derrière cesse de se dessiner (la feuille gardait l'accueil animé dessous : saccades).
         .fullScreenCover(isPresented: $app.conversationPresentee) {
             if let modele = app.conversation { ConversationView(modele: modele) }
         }
         .sheet(isPresented: $app.recherchePresentee) {
-            RechercheView()
+            RechercheView().apercuDocuments()
         }
         .sheet(isPresented: $app.briefingPresente) {
-            BriefingView()
+            BriefingView().apercuDocuments()
         }
         .sheet(item: $app.creation) { creation in
-            NouveauDocumentView(creation: creation, dossier: app.dossier(creation.chantierId))
+            NouveauDocumentView(creation: creation, dossier: app.dossier(creation.chantierId)).apercuDocuments()
         }
         .sheet(item: Binding(get: { app.suiviOuvert.map(IdentifiantSuivi.init) }, set: { app.suiviOuvert = $0?.id })) { cible in
-            if let modele = app.suiviActions { FicheSuiviView(modele: modele, id: cible.id) }
+            if let modele = app.suiviActions { FicheSuiviView(modele: modele, id: cible.id).apercuDocuments() }
         }
         // Le bureau a répondu pendant que la conversation était fermée : on le signale.
         .onChange(of: app.conversation?.derniereArrivee?.id) { _, id in

@@ -48,6 +48,7 @@ struct DecisionsView: View {
         .sheet(item: $fiche) { carte in
             // La tuile grandit jusqu'à devenir la fiche.
             FicheDecision(carte: carte, modele: modele)
+                .apercuDocuments()
                 .navigationTransition(.zoom(sourceID: carte.reference, in: zoom))
         }
         .onChange(of: app.referenceCiblee) { _, reference in

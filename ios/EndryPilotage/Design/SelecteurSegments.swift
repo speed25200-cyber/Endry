@@ -11,6 +11,8 @@ struct OptionSegment<Valeur: Hashable>: Identifiable {
 struct SelecteurSegments<Valeur: Hashable>: View {
     var options: [OptionSegment<Valeur>]
     @Binding var selection: Valeur
+    /// Segments étirés sur toute la largeur (Finances) ; sinon, pastille compacte (Chantiers, en haut à droite).
+    var pleineLargeur = true
     @Namespace private var espace
 
     var body: some View {
@@ -25,8 +27,8 @@ struct SelecteurSegments<Valeur: Hashable>: View {
                         .foregroundStyle(actif ? Color.encre : Color.encreDouce)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
-                        .padding(.horizontal, 10)
-                        .frame(maxWidth: .infinity, minHeight: 34)
+                        .padding(.horizontal, pleineLargeur ? 10 : 14)
+                        .frame(maxWidth: pleineLargeur ? .infinity : nil, minHeight: 34)
                         .background {
                             if actif {
                                 Capsule()

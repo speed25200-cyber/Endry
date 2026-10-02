@@ -139,22 +139,24 @@ struct FondMaison: View {
     @Environment(\.colorScheme) private var schema
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            Color.fond
-            if let photo {
-                Image(photo)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 520, height: 520)
-                    .blur(radius: 70)
-                    .saturation(1.3)
-                    .opacity(schema == .dark ? 0.34 : 0.2)
-                    .offset(x: -90, y: -170)
-                    .allowsHitTesting(false)
+        // La photo est posée en calque : elle ne doit jamais élargir l'écran (520 pt > largeur d'un iPhone).
+        Color.fond
+            .overlay(alignment: .topLeading) {
+                if let photo {
+                    Image(photo)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 520, height: 520)
+                        .blur(radius: 70)
+                        .saturation(1.3)
+                        .opacity(schema == .dark ? 0.34 : 0.2)
+                        .offset(x: -90, y: -170)
+                        .allowsHitTesting(false)
+                }
             }
-        }
-        .ignoresSafeArea()
-        .accessibilityHidden(true)
+            .clipped()
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
     }
 }
 

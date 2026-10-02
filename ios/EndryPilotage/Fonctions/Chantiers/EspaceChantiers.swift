@@ -26,7 +26,8 @@ struct EspaceChantiers: View {
                 SelecteurSegments(options: [
                     OptionSegment(valeur: VueChantiers.pipeline, titre: "Pipeline"),
                     OptionSegment(valeur: VueChantiers.planning, titre: "Planning"),
-                ], selection: $app.vueChantiers)
+                ], selection: $app.vueChantiers, pleineLargeur: false)
+                .fixedSize()
                 .padding(.trailing, Espace.bord)
                 .padding(.top, Espace.s)
                 .transition(.opacity)

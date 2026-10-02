@@ -36,18 +36,17 @@ struct AuroreOr: View {
     }
 }
 
-/// Fond des écrans : noir chaud (ou ivoire), aurore or presque imperceptible, grain photographique léger
-/// (shader Metal). Figé : rendu une fois, le défilement ne le redessine pas.
 /// Fond des écrans secondaires (Maison Endry) : brun profond ou papier, une lueur crème à peine posée en haut.
 /// Aucun dégradé animé ni grain : rien ne se recalcule pendant le défilement.
+/// Même trame de points que l'accueil (poste de pilotage).
 struct FondAmbiant: View {
     var body: some View {
-        Color.fond
+        FondMaison(photo: nil)
             .overlay(alignment: .topLeading) {
                 RadialGradient(colors: [Color.signal.opacity(0.10), .clear], center: .topLeading, startRadius: 0, endRadius: 420)
+                    .ignoresSafeArea()
                     .allowsHitTesting(false)
             }
-            .ignoresSafeArea()
             .accessibilityHidden(true)
     }
 }
@@ -73,151 +72,8 @@ struct MatiereEspresso: View {
 
 // MARK: - Effets
 
-/// Reflet lumineux qui traverse un texte doré toutes les quelques secondes.
-struct RefletDore: ViewModifier {
-    @State private var phase: CGFloat = -1
-    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
-
-    func body(content: Content) -> some View {
-        content
-            .overlay {
-                GeometryReader { geo in
-                    LinearGradient(colors: [.clear, Color.white.opacity(0.65), .clear], startPoint: .leading, endPoint: .trailing)
-                        .frame(width: max(geo.size.width * 0.3, 1))
-                        .rotationEffect(.degrees(18))
-                        .offset(x: phase * geo.size.width * 1.3)
-                        .blendMode(.plusLighter)
-                }
-                .mask(content)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-            }
-            .onAppear {
-                guard !reduireAnimations else { return }
-                // Un seul passage à l'apparition : aucune animation perpétuelle.
-                withAnimation(.easeInOut(duration: 2.6).delay(0.8)) {
-                    phase = 1.4
-                }
-            }
-    }
-}
-
-extension View {
-    func refletDore() -> some View { modifier(RefletDore()) }
-}
-
-/// Montant qui « compte » depuis zéro à l'apparition, puis défile à chaque changement.
-struct MontantAnime: View {
-    var montant: Double
-    var taille: CGFloat = 34
-    var dore = false
-    var couleur: Color = .encre
-    var afficherCentimes = true
-    var style: Font.TextStyle = .largeTitle
-
-    @State private var affiche: Double = 0
-    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
-
-    var body: some View {
-        MontantView(montant: affiche, taille: taille, couleur: couleur,
-                    couleurDevise: dore ? Color.or.opacity(0.75) : nil,
-                    afficherCentimes: afficherCentimes, style: style, dore: dore)
-            .onAppear {
-                if reduireAnimations {
-                    affiche = montant
-                } else {
-                    withAnimation(.endry.delay(0.15)) { affiche = montant }
-                }
-            }
-            .onChange(of: montant) { _, nouveau in
-                withAnimation(.endry) { affiche = nouveau }
-            }
-            .accessibilityLabel(Text(FormatSuisse.chf(montant)))
-    }
-}
 
 // MARK: - Carte héros
-
-/// Carte héros « Trésorerie » de l'écran Aujourd'hui.
-struct CarteHeros: View {
-    var encaisser: Encaisser
-    var offres: Offres
-    var payer: Payer
-    @AppStorage(ModeDevantClient.cle) private var devantClient = false
-    var ouvrirFinances: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Espace.l) {
-            HStack(alignment: .center) {
-                Label("Trésorerie", systemImage: "sparkle")
-                    .font(Police.texte(11, relativeTo: .caption2, graisse: .semibold))
-                    .textCase(.uppercase)
-                    .tracking(1.6)
-                    .foregroundStyle(Color.or)
-                Spacer()
-                Text("\(encaisser.factures.count) factures ouvertes")
-                    .font(Police.texte(11, relativeTo: .caption2, graisse: .medium))
-                    .foregroundStyle(Color.orClair.opacity(0.55))
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("À encaisser")
-                    .styleTexte(14, relativeTo: .subheadline, graisse: .medium)
-                    .foregroundStyle(Color.orClair.opacity(0.7))
-                MontantAnime(montant: encaisser.total, taille: 50, dore: true)
-                    .refletDore()
-            }
-
-            BarreAnciennete(segments: [
-                .init(libelle: "À échoir", montant: encaisser.anciennete.aEchoir, couleur: Color.orClair),
-                .init(libelle: "0–30 j", montant: encaisser.anciennete.jours0a30, couleur: Color.or),
-                .init(libelle: "> 30 j", montant: encaisser.anciennete.plus30, couleur: Color(hex: 0xE0674E)),
-            ], hauteur: 6, surFondSombre: true)
-
-            HStack(spacing: Espace.s) {
-                TuileVerre(titre: "Offres en attente", montant: offres.total, detail: "\(offres.offres.count) offres", icone: "doc.richtext")
-                if !devantClient {
-                    TuileVerre(titre: "À payer · 7 jours", montant: payer.totalSemaine, detail: "\(payer.cetteSemaine.count) échéances", icone: "calendar.badge.clock")
-                }
-            }
-        }
-        .padding(Espace.l)
-        .background(MatiereEspresso())
-        .contentShape(RoundedRectangle(cornerRadius: Espace.rayon, style: .continuous))
-        .onTapGesture(perform: ouvrirFinances)
-        .accessibilityElement(children: .combine)
-        .accessibilityHint(Text("Ouvre l’espace Finances"))
-        .accessibilityAddTraits(.isButton)
-    }
-}
-
-/// Petite tuile en verre posée sur une matière sombre.
-struct TuileVerre: View {
-    var titre: String
-    var montant: Double
-    var detail: String
-    var icone: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Image(systemName: icone)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color.or)
-            Text(titre)
-                .styleTexte(11, relativeTo: .caption2, graisse: .medium)
-                .foregroundStyle(Color.orClair.opacity(0.6))
-                .lineLimit(1)
-            MontantAnime(montant: montant, taille: 19, couleur: .orClair, afficherCentimes: false, style: .headline)
-            Text(detail)
-                .styleTexte(10, relativeTo: .caption2)
-                .foregroundStyle(Color.orClair.opacity(0.45))
-        }
-        .padding(Espace.s)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Color.white.opacity(0.08), lineWidth: 0.6))
-    }
-}
 
 #Preview("Carte héros") {
     let a = Fixtures.accueil

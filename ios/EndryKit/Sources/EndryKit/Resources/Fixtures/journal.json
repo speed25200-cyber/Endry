@@ -1,0 +1,71 @@
+{
+  "entrees": [
+    {
+      "id": "J-2051",
+      "horodatage": "2026-09-27T12:40:00",
+      "agent": "secretariat",
+      "type": "email_prepare",
+      "titre": "Réponse préparée pour Mme Rey",
+      "detail": "Variante WC suspendu avec lave-mains, offre OF-00037-B jointe.",
+      "decision_reference": "V-7K3F9Q"
+    },
+    {
+      "id": "J-2050",
+      "horodatage": "2026-09-27T12:35:00",
+      "agent": "comptabilite",
+      "type": "action",
+      "titre": "4 paiements rapprochés dans Bexio",
+      "detail": "Raiffeisen, relevé du 27.09.2026."
+    },
+    {
+      "id": "J-2049",
+      "horodatage": "2026-09-27T11:52:00",
+      "agent": "secretariat",
+      "type": "info",
+      "titre": "E-mail de la régie Dubois",
+      "detail": "Demande de débouchage, appartement 3e étage, Rue du Midi 12."
+    },
+    {
+      "id": "J-2048",
+      "horodatage": "2026-09-27T11:10:00",
+      "agent": "comptabilite",
+      "type": "decision",
+      "titre": "Facture RE-00416 prête à valider",
+      "detail": "Régie Dubois, débouchage, 6 h 30 et un déplacement.",
+      "decision_reference": "V-2M8R4T"
+    },
+    {
+      "id": "J-2047",
+      "horodatage": "2026-09-27T10:05:00",
+      "agent": "chantiers",
+      "type": "action",
+      "titre": "Note ajoutée au dossier Villa Morel",
+      "detail": "Citerne dégazée, démontage lundi.",
+      "chantier_id": "18"
+    },
+    {
+      "id": "J-2046",
+      "horodatage": "2026-09-27T09:20:00",
+      "agent": "offres",
+      "type": "action",
+      "titre": "Variante WC chiffrée pour Mme Rey",
+      "detail": "Plus-value CHF 1'180.00 HT, pose comprise."
+    },
+    {
+      "id": "J-2045",
+      "horodatage": "2026-09-27T08:02:00",
+      "agent": "secretariat",
+      "type": "info",
+      "titre": "Boîte info@ triée",
+      "detail": "12 e-mails : 3 clients, 5 fournisseurs, 4 publicités archivées."
+    },
+    {
+      "id": "J-2044",
+      "horodatage": "2026-09-26T17:10:00",
+      "agent": "achats",
+      "type": "info",
+      "titre": "Agent mis en pause",
+      "detail": "En attente des nouveaux tarifs Sanitas Troesch."
+    }
+  ]
+}

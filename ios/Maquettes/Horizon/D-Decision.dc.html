@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Décision — Horizon</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:var(--encre)}a:hover{opacity:.7}
+@keyframes entre{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fondu{from{opacity:0}to{opacity:1}}
+@keyframes coche{from{stroke-dashoffset:24}to{stroke-dashoffset:0}}
+.entre{animation:entre 1.1s cubic-bezier(.16,1,.3,1) both}
+.fondu{animation:fondu 1.4s cubic-bezier(.16,1,.3,1) both}
+.coche{stroke-dasharray:24;animation:coche .6s cubic-bezier(.16,1,.3,1) both}
+.tuile{background:var(--surface);backdrop-filter:blur(30px) saturate(150%);-webkit-backdrop-filter:blur(30px) saturate(150%);box-shadow:inset 0 0 0 .5px var(--filet),inset 0 1px 0 var(--reflet),0 20px 40px -24px rgba(var(--rgb-ombre),.6)}
+.verre{background:var(--verre);backdrop-filter:blur(26px) saturate(160%);-webkit-backdrop-filter:blur(26px) saturate(160%);box-shadow:inset 0 0 0 .5px var(--filet),inset 1px 1px 0 var(--reflet),0 18px 40px -16px rgba(var(--rgb-ombre),.55)}
+.mono{font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase}
+</style>
+</helmet>
+<div style="{{theme}}; width: 390px; height: 844px; position: relative; overflow: hidden; background: var(--fond); font-family: 'Geist', -apple-system, system-ui, sans-serif; color: var(--encre)">
+
+<img src="/_blob/3666d668375cea4cde6227e3d9cc176d" alt="" style="position: absolute; left: -60px; top: -120px; width: 510px; height: 520px; object-fit: cover; filter: blur(80px) saturate(1.3); opacity: var(--ambiance); pointer-events: none">
+
+<div class="fondu" style="position: absolute; left: 16px; right: 16px; top: 56px; display: flex; align-items: center; justify-content: space-between">
+<button class="verre" aria-label="Retour" style="width: 40px; height: 40px; border: 0; border-radius: 20px; color: var(--encre); display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg>
+</button>
+<div class="verre mono" style="height: 40px; padding: 0 14px; border-radius: 20px; display: flex; align-items: center; font-size: 10px">E-mail · V-7K3F9Q · 1 / 4</div>
+</div>
+
+<div class="entre" style="position: absolute; left: 20px; right: 20px; top: 120px; animation-delay: .1s">
+<div class="mono" style="color: var(--doux)">Proposé par Secrétariat · il y a 2 h</div>
+<div style="font-size: 30px; font-weight: 300; letter-spacing: -1px; line-height: 1.08; margin-top: 10px">Réponse à Mme Rey — variante WC</div>
+</div>
+
+<div class="tuile entre" style="position: absolute; left: 16px; right: 16px; top: 226px; border-radius: 24px; padding: 4px 16px; animation-delay: .2s">
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 11px 0; border-bottom: .5px solid var(--filet); font-size: 13px"><span class="mono" style="color: var(--doux)">À</span><span style="grid-column: span 3">c.rey@exemple.ch</span></div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 11px 0; border-bottom: .5px solid var(--filet); font-size: 13px"><span class="mono" style="color: var(--doux)">Objet</span><span style="grid-column: span 3">Votre offre OF-00037 — variante WC</span></div>
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 11px 0; font-size: 13px"><span class="mono" style="color: var(--doux)">Pièce</span><span style="grid-column: span 3">OF-00037-B.pdf · 2 pages</span></div>
+</div>
+
+<div class="entre" style="position: absolute; left: 20px; right: 20px; top: 382px; animation-delay: .3s">
+<div class="mono" style="color: var(--doux)">Contrôle</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px">
+<div class="tuile" style="border-radius: 16px; padding: 10px 12px; display: flex; align-items: center; gap: 8px; font-size: 12px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color: var(--vert)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path class="coche" d="M5 12.5l4.5 4.5L19 7.5" style="animation-delay: .7s"></path></svg>Montant</div>
+<div class="tuile" style="border-radius: 16px; padding: 10px 12px; display: flex; align-items: center; gap: 8px; font-size: 12px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color: var(--vert)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path class="coche" d="M5 12.5l4.5 4.5L19 7.5" style="animation-delay: .9s"></path></svg>Adresse</div>
+<div class="tuile" style="border-radius: 16px; padding: 10px 12px; display: flex; align-items: center; gap: 8px; font-size: 12px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color: var(--vert)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path class="coche" d="M5 12.5l4.5 4.5L19 7.5" style="animation-delay: 1.1s"></path></svg>Pièce</div>
+</div>
+</div>
+
+<div class="entre" style="position: absolute; left: 20px; right: 20px; top: 474px; animation-delay: .4s">
+<div class="mono" style="color: var(--doux)">Message</div>
+<p style="margin: 10px 0 0 0; font-size: 15px; line-height: 1.55; font-weight: 300; text-wrap: pretty">Bonjour Madame Rey, le WC suspendu peut être remplacé par un modèle avec lave-mains intégré. La variante représente une plus-value de CHF 1’180.00 HT, pose comprise.</p>
+</div>
+
+<div class="verre entre" style="position: absolute; left: 12px; right: 12px; bottom: 26px; border-radius: 32px; padding: 12px 14px 4px 14px; animation-delay: .5s">
+<div style="position: relative; height: 48px">
+<div style="position: absolute; left: 22px; right: 22px; top: 24px; height: .5px; background: var(--filet-fort)"></div>
+<div style="position: absolute; left: 22px; top: 23.5px; height: 1.5px; width: 64px; background: var(--encre)"></div>
+<div class="mono" style="position: absolute; right: 2px; top: 0; height: 48px; display: flex; align-items: center; color: var(--doux)">Glisser pour envoyer</div>
+<div class="tuile" style="position: absolute; left: 64px; top: 2px; width: 44px; height: 44px; border-radius: 22px; display: flex; align-items: center; justify-content: center">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l16-8-6 16-2.5-6.5z"></path></svg>
+</div>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: .5px solid var(--filet); margin-top: 8px">
+<button class="mono" style="height: 46px; border: 0; background: transparent; color: var(--rouge); cursor: pointer">Non</button>
+<button class="mono" style="height: 46px; border: 0; border-left: .5px solid var(--filet); background: transparent; color: var(--encre); cursor: pointer">Corriger</button>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"sombre":{"editor":"boolean","default":true,"section":"Thème"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const sombre = this.props.sombre ?? true;
+const theme = sombre
+? '--fond:#0D0C0A;--surface:rgba(255,255,255,.045);--verre:rgba(255,255,255,.06);--encre:#ECE7DF;--doux:#958D81;--filet:rgba(236,231,223,.1);--filet-fort:rgba(236,231,223,.28);--reflet:rgba(255,255,255,.16);--vert:#8FD1A0;--rouge:#F08F75;--rgb-ombre:0,0,0;--ambiance:.32'
+: '--fond:#F2F0EB;--surface:rgba(255,255,255,.62);--verre:rgba(255,255,255,.55);--encre:#141210;--doux:#6B655C;--filet:rgba(20,18,16,.09);--filet-fort:rgba(20,18,16,.26);--reflet:rgba(255,255,255,1);--vert:#2F7A47;--rouge:#B4492E;--rgb-ombre:20,18,16;--ambiance:.2';
+return { theme };
+}
+}
+</script>
+</body>
+</html>

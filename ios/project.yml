@@ -1,0 +1,148 @@
+# Projet Xcode généré par XcodeGen (https://github.com/yonaskolb/XcodeGen).
+#   brew install xcodegen && cd ios && xcodegen generate && open EndryPilotage.xcodeproj
+# Le fichier .xcodeproj n'est pas versionné : ce fichier fait foi.
+name: EndryPilotage
+
+options:
+  bundleIdPrefix: com.endrysa
+  deploymentTarget:
+    iOS: "18.0"
+  developmentLanguage: fr
+  createIntermediateGroups: true
+  groupSortPosition: top
+  generateEmptyDirectories: true
+
+packages:
+  EndryKit:
+    path: EndryKit
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
+    # iPhone et iPad (app universelle).
+    TARGETED_DEVICE_FAMILY: "1,2"
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    VERSIONING_SYSTEM: apple-generic
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+
+targets:
+  EndryPilotage:
+    type: application
+    platform: iOS
+    sources:
+      - path: EndryPilotage
+        excludes:
+          - "**/*.md"
+    dependencies:
+      - package: EndryKit
+    entitlements:
+      path: EndryPilotage/EndryPilotage.entitlements
+      properties:
+        aps-environment: development
+    info:
+      path: EndryPilotage/Info.plist
+      properties:
+        CFBundleDisplayName: Endry
+        CFBundleDevelopmentRegion: fr
+        CFBundleLocalizations: [fr]
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.business
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen:
+          UIColorName: FondLancement
+        # iPhone : portrait. iPad : toutes les orientations, Split View et Stage Manager.
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UIRequiresFullScreen: false
+        # ProMotion : animations et défilement à 120 Hz sur les iPhone Pro.
+        CADisableMinimumFrameDurationOnPhone: true
+        UIAppFonts:
+          - CormorantGaramond-Medium.ttf
+          - CormorantGaramond-SemiBold.ttf
+          - CormorantGaramond-MediumItalic.ttf
+          - Cinzel-SemiBold.ttf
+        CFBundleURLTypes:
+          - CFBundleURLName: com.endrysa.endry
+            CFBundleURLSchemes: [endrypilotage]
+        NSAppTransportSecurity:
+          # Réseau privé Tailscale (http://100.x.y.z:8080) : connexions locales autorisées, rien d'autre.
+          NSAllowsLocalNetworking: true
+        NSMicrophoneUsageDescription: "Le micro sert à dicter vos consignes et vos saisies de chantier, et à parler à l’assistant vocal."
+        NSSpeechRecognitionUsageDescription: "La reconnaissance vocale transforme votre dictée en texte, sur l’iPhone lorsque c’est possible."
+        NSCameraUsageDescription: "L’appareil photo sert à scanner des bons, des factures et des QR codes d’accès."
+        NSPhotoLibraryUsageDescription: "Vos photos de chantier peuvent être jointes à une saisie."
+        NSFaceIDUsageDescription: "Face ID protège l’accès aux données de l’entreprise."
+        NSLocationWhenInUseUsageDescription: "La position sert à vous rappeler, en arrivant sur un chantier, ce qui vous y attend. Elle ne quitte jamais l’iPhone."
+        NSLocationAlwaysAndWhenInUseUsageDescription: "Pour le rappel à l’arrivée sur un chantier, même quand l’app est fermée. La position ne quitte jamais l’iPhone ; désactivable dans Réglages."
+        # Briefing du matin : rafraîchi en arrière-plan juste avant la notification.
+        BGTaskSchedulerPermittedIdentifiers: [com.endrysa.endry.briefing]
+        UIBackgroundModes: [fetch]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.endrysa.endry
+        PRODUCT_NAME: EndryPilotage
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: YES
+        ENABLE_PREVIEWS: YES
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: EndryPilotage/Info.plist
+        # Apple Intelligence (iOS 26) : lié faiblement, l'app reste lançable sur iOS 18.
+        OTHER_LDFLAGS: ["$(inherited)", "-weak_framework", "FoundationModels"]
+
+  EndryPilotageTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests/EndryPilotageTests
+    dependencies:
+      # EndryKit est déjà lié dans l'app hôte (TEST_HOST) : ne pas le lier une seconde fois.
+      - target: EndryPilotage
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.endrysa.endry.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/EndryPilotage.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/EndryPilotage
+        BUNDLE_LOADER: $(TEST_HOST)
+
+  EndryPilotageUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/EndryPilotageUITests
+    dependencies:
+      - target: EndryPilotage
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.endrysa.endry.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: EndryPilotage
+
+schemes:
+  EndryPilotage:
+    build:
+      targets:
+        EndryPilotage: all
+    run:
+      config: Debug
+      commandLineArguments:
+        "-demo": false
+    test:
+      config: Debug
+      gatherCoverageData: true
+      targets:
+        - name: EndryPilotageTests
+        - name: EndryPilotageUITests
+    archive:
+      config: Release

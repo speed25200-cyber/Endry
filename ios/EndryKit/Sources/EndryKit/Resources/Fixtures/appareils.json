@@ -1,0 +1,18 @@
+[
+  {
+    "id": "app-7f3c",
+    "nom": "iPhone de la direction",
+    "modele": "iPhone 16 Pro",
+    "cree": "2026-09-27T08:00:00",
+    "vu": "2026-09-27T12:41:00",
+    "actuel": true
+  },
+  {
+    "id": "app-2b91",
+    "nom": "iPad du bureau",
+    "modele": "iPad Air",
+    "cree": "2026-06-02T09:15:00",
+    "vu": "2026-09-25T17:02:00",
+    "actuel": false
+  }
+]

@@ -10,3 +10,15 @@ dist/
 .wrangler/
 .dev.vars
 wrangler.jsonc
+
+# iOS
+ios/**/.build/
+ios/**/.swiftpm/
+ios/*.xcodeproj/
+ios/**/xcuserdata/
+ios/build/
+ios/DerivedData/
+*.ipa
+*.dSYM.zip
+*.p8
+*.mobileprovision

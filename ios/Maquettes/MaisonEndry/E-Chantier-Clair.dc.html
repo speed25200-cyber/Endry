@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Chantier — Maison Endry clair</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&amp;family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&amp;family=Geist:wght@300;400;500&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:var(--encre)}a:hover{opacity:.7}
+@keyframes entre{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fondu{from{opacity:0}to{opacity:1}}
+@keyframes ouverture{from{clip-path:inset(18% 18% 18% 18% round 60px)}to{clip-path:inset(0 0 0 0 round 30px)}}
+@keyframes recul{from{transform:scale(1.2)}to{transform:scale(1.03)}}
+@keyframes trace{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.entre{animation:entre 1.1s cubic-bezier(.16,1,.3,1) both}
+.fondu{animation:fondu 1.4s cubic-bezier(.16,1,.3,1) both}
+.fenetre{animation:ouverture 1.5s cubic-bezier(.77,0,.18,1) both}
+.photo{animation:recul 1.8s cubic-bezier(.77,0,.18,1) both}
+.trace{transform-origin:left;animation:trace 1.6s cubic-bezier(.16,1,.3,1) both}
+.tuile{background:var(--surface);backdrop-filter:blur(30px) saturate(150%);-webkit-backdrop-filter:blur(30px) saturate(150%);box-shadow:inset 0 0 0 .5px var(--filet),inset 0 1px 0 var(--reflet),0 20px 40px -24px rgba(var(--rgb-ombre),.55)}
+.verre{background:rgba(255,255,255,.1);backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.2),inset 1px 1px 0 rgba(255,255,255,.4),0 12px 30px -10px rgba(0,0,0,.4)}
+.cinzel{font-family:'Cinzel',serif;font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase}
+.mono{font-family:'Geist Mono',ui-monospace,monospace;font-size:10px;letter-spacing:.03em}
+.serif{font-family:'Cormorant Garamond',serif}
+</style>
+</helmet>
+<div style="{{theme}}; width: 390px; height: 844px; position: relative; overflow: hidden; background: var(--fond); font-family: 'Geist', -apple-system, system-ui, sans-serif; color: var(--encre)">
+
+<div class="fenetre" style="position: absolute; left: 10px; top: 10px; width: 370px; height: 290px; border-radius: 30px; overflow: hidden">
+<img class="photo" src="/_blob/c2d64d2d3e07e6286a86c3ea44f387fb" alt="" style="width: 370px; height: 290px; object-fit: cover; filter: saturate(.8) brightness(.85)">
+<div style="position: absolute; left: 0; top: 0; width: 370px; height: 290px; background: linear-gradient(180deg, rgba(23,17,12,.5) 0%, rgba(23,17,12,0) 30%, rgba(23,17,12,.75) 100%)"></div>
+<div class="fondu" style="position: absolute; left: 12px; right: 12px; top: 44px; display: flex; justify-content: space-between; animation-delay: 1s">
+<button class="verre" aria-label="Retour" style="width: 40px; height: 40px; border: 0; border-radius: 20px; color: #F6F0E6; display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button>
+<button class="verre" aria-label="Itinéraire" style="height: 40px; padding: 0 14px; border: 0; border-radius: 20px; color: #F6F0E6; display: flex; align-items: center; gap: 6px; font-family: inherit; font-size: 12px; cursor: pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>Epalinges · 18 min</button>
+</div>
+<div class="entre" style="position: absolute; left: 18px; right: 18px; bottom: 16px; color: #F6F0E6; animation-delay: 1.1s">
+<div class="cinzel" style="color: #F9DBA3">Gérance Morel SA</div>
+<div class="serif" style="font-size: 34px; line-height: 1; margin-top: 4px">Villa Morel — <span style="font-style: italic">PAC air-eau</span></div>
+</div>
+</div>
+
+<div class="entre" style="position: absolute; left: 20px; right: 20px; top: 318px; animation-delay: .3s">
+<div style="display: flex; justify-content: space-between; align-items: baseline"><span class="cinzel" style="color: var(--bronze-texte)">Avancement</span><span class="mono" style="color: var(--doux)">Étape 4 / 7 · Planifié</span></div>
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 10px">
+<sc-for list="{{etapes}}" as="e" hint-placeholder-count="7">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span class="trace" style="display: block; height: 3px; border-radius: 2px; background: {{e.couleur}}; animation-delay: {{e.delai}}"></span>
+<span style="font-size: 9.5px; color: {{e.texte}}">{{e.nom}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div class="tuile entre" style="position: absolute; left: 16px; right: 16px; top: 392px; border-radius: 24px; padding: 4px 16px; animation-delay: .4s">
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 12px 0; border-bottom: .5px solid var(--filet)">
+<div><div class="mono" style="color: var(--doux)">Offre</div><div class="serif" style="font-size: 22px; margin-top: 2px">39’100</div></div>
+<div><div class="mono" style="color: var(--doux)">Période</div><div style="font-size: 13px; margin-top: 6px">28.09 – 02.10</div></div>
+<div><div class="mono" style="color: var(--doux)">Équipe</div><div style="display: flex; margin-top: 4px"><span style="width: 24px; height: 24px; border-radius: 12px; background: var(--puce); display: flex; align-items: center; justify-content: center; font-size: 10px">M</span><span style="width: 24px; height: 24px; border-radius: 12px; background: var(--puce); display: flex; align-items: center; justify-content: center; font-size: 10px; margin-left: -6px; box-shadow: 0 0 0 2px var(--fond)">J</span></div></div>
+</div>
+<div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0">
+<span style="font-size: 13px">Décision en attente · <span style="color: var(--doux)">commande de robinetterie</span></span>
+<span style="width: 8px; height: 8px; border-radius: 4px; background: var(--signal)"></span>
+</div>
+</div>
+
+<div class="entre" style="position: absolute; left: 16px; right: 16px; top: 532px; animation-delay: .5s">
+<div class="cinzel" style="color: var(--bronze-texte); padding: 0 4px">Sur place</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px">
+<sc-for list="{{outils}}" as="o" hint-placeholder-count="4">
+<button class="tuile" style="height: 58px; border: 0; border-radius: 18px; display: flex; align-items: center; gap: 10px; padding: 0 14px; color: var(--encre); font-family: inherit; font-size: 13px; text-align: left; cursor: pointer">
+<span style="width: 32px; height: 32px; border-radius: 16px; background: var(--puce); display: flex; align-items: center; justify-content: center; font-family: 'Geist Mono', monospace; font-size: 10px">{{o.code}}</span>
+<span style="display: flex; flex-direction: column"><span>{{o.nom}}</span><span style="font-size: 10.5px; color: var(--doux)">{{o.detail}}</span></span>
+</button>
+</sc-for>
+</div>
+</div>
+
+<div class="entre" style="position: absolute; left: 16px; right: 16px; top: 682px; animation-delay: .6s">
+<div class="cinzel" style="color: var(--bronze-texte); padding: 0 4px">Documents</div>
+<div style="display: flex; gap: 8px; margin-top: 10px">
+<a href="#" class="tuile mono" style="height: 36px; padding: 0 12px; border-radius: 18px; display: flex; align-items: center; text-decoration: none">Offre OF-00031.pdf</a>
+<a href="#" class="tuile mono" style="height: 36px; padding: 0 12px; border-radius: 18px; display: flex; align-items: center; text-decoration: none">Plan PAC.pdf</a>
+<a href="#" class="tuile mono" style="height: 36px; padding: 0 12px; border-radius: 18px; display: flex; align-items: center; text-decoration: none">+ 3</a>
+</div>
+</div>
+
+<button class="entre" style="position: absolute; left: 16px; right: 16px; bottom: 24px; height: 56px; border: 0; border-radius: 28px; background: var(--bouton); color: var(--bouton-texte); font-family: inherit; font-size: 15px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; box-shadow: 0 14px 30px -12px rgba(var(--rgb-ombre),.6); animation-delay: .7s">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 10v4M9 7v10M13 4v16M17 8v8M21 11v2"></path></svg>
+Dicter pour ce chantier
+</button>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"sombre":{"editor":"boolean","default":false,"section":"Thème"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const sombre = this.props.sombre ?? false;
+const theme = sombre
+? '--fond:#17110C;--surface:rgba(249,219,163,.045);--encre:#F6F0E6;--doux:#B2A38B;--filet:rgba(249,219,163,.12);--filet-fort:rgba(249,219,163,.3);--reflet:rgba(255,236,200,.22);--bronze-texte:#D2A764;--signal:#F9DBA3;--puce:rgba(249,219,163,.12);--bouton:#F9DBA3;--bouton-texte:#211A13;--rgb-ombre:0,0,0'
+: '--fond:#F6F5F2;--surface:rgba(255,255,255,.72);--encre:#211A13;--doux:#74695A;--filet:rgba(33,26,19,.1);--filet-fort:rgba(33,26,19,.28);--reflet:#FFFFFF;--bronze-texte:#8A6223;--signal:#9F722A;--puce:rgba(249,219,163,.55);--bouton:#211A13;--bouton-texte:#F9DBA3;--rgb-ombre:33,26,19';
+const noms = ['Offre', 'Signée', 'Commande', 'Planifié', 'Réalisé', 'Facturé', 'Payé'];
+const etapes = noms.map((nom, i) => ({
+nom,
+couleur: i < 3 ? 'var(--encre)' : i === 3 ? 'var(--signal)' : 'var(--filet-fort)',
+texte: i <= 3 ? 'var(--encre)' : 'var(--doux)',
+delai: (0.4 + i * 0.08) + 's'
+}));
+const outils = [
+{ code: 'RG', nom: 'Bon de régie', detail: 'Signé sur place' },
+{ code: 'BL', nom: 'Bon de livraison', detail: 'Scanner' },
+{ code: 'PH', nom: 'Photos', detail: '12 au dossier' },
+{ code: '3D', nom: 'Relevé 3D', detail: 'LiDAR' }
+];
+return { theme, etapes, outils };
+}
+}
+</script>
+</body>
+</html>

@@ -479,6 +479,27 @@ final class EndryPilotageUITests: XCTestCase {
         }
     }
 
+    /// Les pages défilent de haut en bas seulement : tirées de côté, elles ne bougent pas (pas de « page web »).
+    @MainActor
+    func testAucunGlissementLateral() {
+        let app = lancer()
+        XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 8))
+        for onglet in ["onglet-aujourdhui", "onglet-finances", "onglet-entreprise", "onglet-chantiers"] {
+            app.buttons[onglet].tap()
+            sleep(1)
+            let repere = app.buttons["onglet-aujourdhui"]
+            let titre = app.staticTexts.element(boundBy: 0)
+            XCTAssertTrue(titre.waitForExistence(timeout: 5))
+            let avant = titre.frame.minX
+            // Glissement horizontal dans le haut de la page (hors des carrousels).
+            let depart = app.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.22))
+            let arrivee = app.coordinate(withNormalizedOffset: CGVector(dx: 0.15, dy: 0.24))
+            depart.press(forDuration: 0.05, thenDragTo: arrivee, withVelocity: .slow, thenHoldForDuration: 0.3)
+            XCTAssertEqual(titre.frame.minX, avant, accuracy: 1, "La page \(onglet) a glissé de côté.")
+            XCTAssertTrue(repere.exists)
+        }
+    }
+
     // MARK: - Terrain, suivi, équipe (v1.3)
 
     /// Bon de régie : chantier, travaux, heures, signature du client au doigt, transmis → facture à valider.

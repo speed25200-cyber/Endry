@@ -61,7 +61,7 @@ struct ChantiersView: View {
             }
             .scrollIndicators(.hidden)
             .tirerPourActualiser { await modele.actualiser() }
-            .background(FondMaison(photo: nil))
+            .background(FondMaison(discret: true))
             .toolbar(.hidden, for: .navigationBar)
             .onChange(of: app.dossierCible, initial: true) { _, _ in ouvrirCible() }
             // Lancement à froid : le chantier demandé arrive avec la liste.

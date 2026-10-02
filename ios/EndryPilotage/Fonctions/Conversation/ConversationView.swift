@@ -65,7 +65,7 @@ struct ConversationView: View {
                 .safeAreaInset(edge: .bottom, spacing: 0) { ComposeurConversation(modele: modele, clavier: $clavier) }
             }
         }
-        .background(FondMaison(photo: nil))
+        .background(FondMaison(discret: true))
         .sheet(isPresented: $historique) {
             HistoriqueConversations(modele: modele)
                 .presentationDetents([.medium, .large])
@@ -432,7 +432,7 @@ private struct HistoriqueConversations: View {
                 .padding(.vertical, Espace.m)
                 .verrouillerLargeur()
             }
-            .background(FondMaison(photo: nil))
+            .background(FondMaison(discret: true))
             .navigationTitle("Conversations")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -157,7 +157,7 @@ struct EntrepriseView: View {
                 await app.argent?.charger()
                 await app.chantiers?.charger()
             }
-            .background(FondMaison(photo: nil))
+            .background(FondMaison(discret: true))
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: $appareilsOuverts) { AppareilsView() }
         }

@@ -231,41 +231,127 @@ struct BarreFine: View {
     }
 }
 
-/// Fond Maison Endry : brun profond (ou papier) et, en haut à gauche, la photo d'ambiance fondue en halo.
-/// La photo est réduite une seule fois à quelques pixels puis agrandie en douceur : le même halo qu'un flou de
-/// 70 pt, sans filtre à recalculer.
+/// Fond du poste de pilotage : une aurore liquide bronze et or (brun profond, ou papier ivoire en clair), rendue une
+/// seule fois en haute résolution avec un grain photographique fin, qui dérive très lentement ; par-dessus, la trame
+/// de points. Couvre toute la largeur (iPhone, iPad, paysage), sans rien couper. Seule une image figée se déplace :
+/// rien n'est recalculé pendant le défilement. Pause sous les écrans pleins et avec « Réduire les animations ».
 struct FondMaison: View {
-    var photo: String? = PhotosMarque.accueil
+    /// Écrans secondaires : aurore plus discrète.
+    var discret = false
     @Environment(\.colorScheme) private var schema
+    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
+    @Environment(\.animationsEnPause) private var enPause
 
     var body: some View {
-        // La photo est posée en calque : elle ne doit jamais élargir l'écran (520 pt > largeur d'un iPhone).
+        let sombre = schema == .dark
         Color.fond
-            // Trame de points du poste de pilotage, qui s'efface vers le bas (motif de 22 pt répété, sans masque).
             .overlay(alignment: .top) {
-                Image(uiImage: GrilleTechnique.motif(sombre: schema == .dark))
-                    .resizable(resizingMode: .tile)
-                    .frame(height: 480)
-                    .overlay {
-                        LinearGradient(stops: [.init(color: Color.fond.opacity(0), location: 0.15), .init(color: Color.fond, location: 1)],
-                                       startPoint: .top, endPoint: .bottom)
-                    }
-                    .allowsHitTesting(false)
-            }
-            .overlay(alignment: .topLeading) {
-                if let photo, let halo = HaloAmbiance.image(photo) {
-                    Image(uiImage: halo)
+                GeometryReader { geo in
+                    let aurore = Image(uiImage: AuroreRendue.image(sombre: sombre))
                         .resizable()
                         .interpolation(.high)
-                        .frame(width: 560, height: 560)
-                        .opacity(schema == .dark ? 0.38 : 0.22)
-                        .offset(x: -110, y: -190)
-                        .allowsHitTesting(false)
+                        .scaledToFill()
+                        .frame(width: geo.size.width * 1.15, height: geo.size.height * 0.95)
+                    Group {
+                        if reduireAnimations || enPause || Configuration.testsUI {
+                            aurore
+                        } else {
+                            // Dérive lente (cycles de 20 à 30 s) : une simple transformation de l'image, sur le GPU.
+                            TimelineView(.animation(minimumInterval: 1 / 30, paused: enPause)) { contexte in
+                                let t = contexte.date.timeIntervalSinceReferenceDate
+                                aurore
+                                    .scaleEffect(1.04 + 0.03 * sin(t / 9.5))
+                                    .offset(x: geo.size.width * 0.04 * sin(t / 13), y: 14 * cos(t / 11))
+                            }
+                        }
+                    }
+                    .frame(width: geo.size.width, height: geo.size.height * 0.95, alignment: .top)
+                    .opacity(discret ? 0.55 : 1)
                 }
+                .allowsHitTesting(false)
+            }
+            // Trame de points du poste de pilotage, qui s'efface vers le bas (motif de 22 pt répété, sans masque).
+            .overlay(alignment: .top) {
+                Image(uiImage: GrilleTechnique.motif(sombre: sombre))
+                    .resizable(resizingMode: .tile)
+                    .frame(height: 520)
+                    .allowsHitTesting(false)
+            }
+            // Fondu vers le fond en bas de l'aurore : les tuiles restent lisibles.
+            .overlay {
+                LinearGradient(stops: [.init(color: Color.fond.opacity(0), location: 0.25),
+                                       .init(color: Color.fond.opacity(0.85), location: 0.72),
+                                       .init(color: Color.fond, location: 1)],
+                               startPoint: .top, endPoint: .bottom)
+                    .allowsHitTesting(false)
             }
             .clipped()
             .ignoresSafeArea()
             .accessibilityHidden(true)
+    }
+}
+
+/// L'aurore, rendue une fois par apparence (dégradé maillé 4 × 4 et grain fin) puis gardée en mémoire.
+@MainActor
+enum AuroreRendue {
+    private static var cache: [Bool: UIImage] = [:]
+
+    static func image(sombre: Bool) -> UIImage {
+        if let deja = cache[sombre] { return deja }
+        let taille = CGSize(width: 900, height: 1_300)
+        let rendu = ImageRenderer(content: Aurore(sombre: sombre).frame(width: taille.width, height: taille.height))
+        rendu.scale = 2
+        let image = rendu.uiImage ?? UIImage()
+        cache[sombre] = image
+        return image
+    }
+}
+
+/// Aurore bronze et or : quelques coulées de lumière chaude sur un noir brun (ou un papier ivoire), grain fin.
+private struct Aurore: View {
+    var sombre: Bool
+
+    var body: some View {
+        ZStack {
+            MeshGradient(
+                width: 4, height: 4,
+                points: [
+                    [0, 0], [0.33, 0], [0.67, 0], [1, 0],
+                    [0, 0.30], [0.28, 0.22], [0.70, 0.36], [1, 0.26],
+                    [0, 0.62], [0.36, 0.70], [0.62, 0.55], [1, 0.66],
+                    [0, 1], [0.33, 1], [0.67, 1], [1, 1],
+                ],
+                colors: sombre ? [
+                    Color(hex: 0x2B1D10), Color(hex: 0x6E4A22), Color(hex: 0x1A120B), Color(hex: 0x0F0C09),
+                    Color(hex: 0x120E0A), Color(hex: 0xB0884E), Color(hex: 0x3A2814), Color(hex: 0x14100C),
+                    Color(hex: 0x0E0B08), Color(hex: 0x24180E), Color(hex: 0x5C3D1C), Color(hex: 0x0E0B08),
+                    Color(hex: 0x0D0B09), Color(hex: 0x0D0B09), Color(hex: 0x0D0B09), Color(hex: 0x0D0B09),
+                ] : [
+                    Color(hex: 0xEADBC0), Color(hex: 0xD8B983), Color(hex: 0xF1E8D8), Color(hex: 0xF6F2EA),
+                    Color(hex: 0xF4EEE3), Color(hex: 0xE2C695), Color(hex: 0xEDDFC6), Color(hex: 0xF5F1EA),
+                    Color(hex: 0xF6F3EC), Color(hex: 0xEFE4D1), Color(hex: 0xE0C9A0), Color(hex: 0xF6F3EC),
+                    Color(hex: 0xF6F5F2), Color(hex: 0xF6F5F2), Color(hex: 0xF6F5F2), Color(hex: 0xF6F5F2),
+                ],
+                smoothsColors: true
+            )
+            // Reflet crème, comme une lumière rasante sur du métal brossé.
+            RadialGradient(colors: [Color(hex: sombre ? 0xF9DBA3 : 0xFFFFFF).opacity(sombre ? 0.16 : 0.5), .clear],
+                           center: UnitPoint(x: 0.3, y: 0.2), startRadius: 0, endRadius: 420)
+                .blendMode(sombre ? .plusLighter : .normal)
+            // Grain photographique fin (tirage fixe : le même à chaque lancement).
+            Canvas { ctx, taille in
+                var graine: UInt64 = 0x9E37_79B9_7F4A_7C15
+                func suivant() -> Double {
+                    graine = graine &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+                    return Double(graine >> 11) / Double(1 << 53)
+                }
+                let couleur = sombre ? Color.white : Color.black
+                for _ in 0..<18_000 {
+                    let point = CGRect(x: suivant() * taille.width, y: suivant() * taille.height, width: 0.6, height: 0.6)
+                    ctx.fill(Path(point), with: .color(couleur.opacity(0.035 + 0.05 * suivant())))
+                }
+            }
+        }
     }
 }
 
@@ -284,35 +370,6 @@ enum GrilleTechnique {
         }
         cache[sombre] = image
         return image
-    }
-}
-
-/// Photos d'ambiance réduites à 24 px, fondu radial intégré (calculées une fois, gardées en mémoire) :
-/// ni flou, ni masque, ni filtre de couleur à recalculer à chaque image.
-@MainActor
-enum HaloAmbiance {
-    private static var cache: [String: UIImage] = [:]
-
-    static func image(_ nom: String) -> UIImage? {
-        if let deja = cache[nom] { return deja }
-        guard let source = UIImage(named: nom) else { return nil }
-        let cote: CGFloat = 24
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1
-        let petite = UIGraphicsImageRenderer(size: CGSize(width: cote, height: cote), format: format).image { contexte in
-            source.draw(in: CGRect(x: 0, y: 0, width: cote, height: cote))
-            // Fondu radial : opaque au centre, transparent sur les bords.
-            let cg = contexte.cgContext
-            cg.setBlendMode(.destinationIn)
-            let couleurs = [UIColor.black.cgColor, UIColor.black.withAlphaComponent(0).cgColor] as CFArray
-            if let degrade = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: couleurs, locations: [0.15, 1]) {
-                let centre = CGPoint(x: cote / 2, y: cote / 2)
-                cg.drawRadialGradient(degrade, startCenter: centre, startRadius: 0, endCenter: centre, endRadius: cote / 2,
-                                      options: [])
-            }
-        }
-        cache[nom] = petite
-        return petite
     }
 }
 

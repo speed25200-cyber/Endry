@@ -58,7 +58,7 @@ struct FicheDecision: View {
                 .padding(.horizontal, 12)
                 .padding(.bottom, 8)
         }
-        .background(FondMaison(photo: nil))
+        .background(FondMaison(discret: true))
         .opacity(enCours ? 0.85 : 1)
         .toast(Binding(get: { modele.toast }, set: { modele.toast = $0 }), decalageBas: 200)
         .sensoryFeedback(.warning, trigger: confirmationNon) { _, nouveau in nouveau }

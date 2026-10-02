@@ -122,7 +122,7 @@ struct DossierView: View {
             .verrouillerLargeur()
         }
         .scrollIndicators(.hidden)
-        .background(FondMaison(photo: nil))
+        .background(FondMaison(discret: true))
         .toolbar(.hidden, for: .navigationBar)
         .task {
             visible = true

@@ -82,7 +82,7 @@ struct ArgentView: View {
             }
             .scrollIndicators(.hidden)
             .tirerPourActualiser { await modele.charger() }
-            .background(FondMaison(photo: nil))
+            .background(FondMaison(discret: true))
             .toolbar(.hidden, for: .navigationBar)
         }
         .task {

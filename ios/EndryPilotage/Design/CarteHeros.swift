@@ -41,7 +41,7 @@ struct AuroreOr: View {
 /// Même trame de points que l'accueil (poste de pilotage).
 struct FondAmbiant: View {
     var body: some View {
-        FondMaison(photo: nil)
+        FondMaison(discret: true)
             .overlay(alignment: .topLeading) {
                 RadialGradient(colors: [Color.signal.opacity(0.10), .clear], center: .topLeading, startRadius: 0, endRadius: 420)
                     .ignoresSafeArea()

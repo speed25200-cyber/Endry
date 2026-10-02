@@ -236,7 +236,7 @@ struct BarreFine: View {
 /// de points. Couvre toute la largeur (iPhone, iPad, paysage), sans rien couper. Seule une image figée se déplace :
 /// rien n'est recalculé pendant le défilement. Pause sous les écrans pleins et avec « Réduire les animations ».
 struct FondMaison: View {
-    /// Écrans secondaires : aurore plus discrète.
+    /// Écrans secondaires : éclipse plus discrète.
     var discret = false
     @Environment(\.colorScheme) private var schema
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
@@ -318,8 +318,8 @@ private struct Aurore: View {
             let l = geo.size.width
             let h = geo.size.height
             // Astre hors champ, en haut à droite : seul son bord est visible.
-            let rayon = l * 0.95
-            let centre = CGPoint(x: l * 1.12, y: -h * 0.12)
+            let rayon = l * 0.5
+            let centre = CGPoint(x: l * 1.0, y: -h * 0.08)
             let disque = Path(ellipseIn: CGRect(x: centre.x - rayon, y: centre.y - rayon, width: rayon * 2, height: rayon * 2))
             let or = Color(hex: sombre ? 0xF2C98A : 0xC9A061)
             ZStack {
@@ -328,15 +328,15 @@ private struct Aurore: View {
                 RadialGradient(colors: [or.opacity(sombre ? 0.22 : 0.28), or.opacity(sombre ? 0.06 : 0.08), .clear],
                                center: UnitPoint(x: centre.x / l, y: centre.y / h), startRadius: rayon * 0.9, endRadius: rayon * 1.55)
                 // Halo du bord, large puis serré.
-                disque.stroke(or.opacity(sombre ? 0.30 : 0.25), lineWidth: 46).blur(radius: 38)
-                disque.stroke(or.opacity(sombre ? 0.55 : 0.4), lineWidth: 10).blur(radius: 9)
+                disque.stroke(or.opacity(sombre ? 0.30 : 0.25), lineWidth: 90).blur(radius: 70)
+                disque.stroke(or.opacity(sombre ? 0.55 : 0.4), lineWidth: 20).blur(radius: 18)
                 // Le corps de l'astre, plus sombre que la nuit.
                 disque.fill(sombre ? Color(hex: 0x060504) : Color(hex: 0xEFE8DB))
                 // L'arc lui-même : un trait d'or net, plus vif là où la lumière l'attrape.
                 disque.stroke(
                     AngularGradient(colors: [or.opacity(0.0), or.opacity(0.35), or, Color(hex: 0xFFF1D6), or, or.opacity(0.35), or.opacity(0.0)],
                                     center: UnitPoint(x: centre.x / l, y: centre.y / h), startAngle: .degrees(80), endAngle: .degrees(200)),
-                    lineWidth: 1.6)
+                    lineWidth: 3)
                 // Grain photographique fin (tirage fixe : le même à chaque lancement).
                 Canvas { ctx, taille in
                     var graine: UInt64 = 0x9E37_79B9_7F4A_7C15

@@ -31,71 +31,33 @@ struct VueAssistantVocal: View {
     var body: some View {
         ZStack {
             fond
+            // Une seule disposition, jamais deux superposées : quand une réponse ou une carte arrive, l'anneau rétrécit
+            // simplement et le texte prend la place. Aucun fondu croisé, aucun mot animé un par un.
             VStack(spacing: 0) {
                 barreHaute
                     .opacity(apparu ? 1 : 0)
-                if !compact { Spacer(minLength: Espace.s) }
-                // Réponse longue ou carte à l'écran : la sphère se range en haut à gauche, le texte prend la place.
-                let disposition = compact ? AnyLayout(HStackLayout(alignment: .center, spacing: Espace.m))
-                                          : AnyLayout(VStackLayout(spacing: 0))
-                disposition {
-                    sphere
-                    VStack(alignment: compact ? .leading : .center, spacing: 0) {
-                        // L'anneau affiche l'état en grand ; en disposition « lecture », il passe en petites capitales.
-                        if compact {
-                            EtatAssistant(phase: assistant?.phase ?? .preparation)
-                        }
-                        if let nom = assistant?.nomMoteur, !nom.isEmpty {
-                            Label(nom, systemImage: nom.contains("Apple Intelligence") ? "sparkles" : "waveform")
-                                .font(Police.mono(11.5))
-                                .foregroundStyle(Color.encreDouce.opacity(0.7))
-                                .padding(.top, 6)
-                                .accessibilityLabel(Text("Moteur vocal : \(nom)"))
-                                .transition(.opacity)
-                        }
-                        if assistant?.phase == .parole, assistant?.nomMoteur.contains("continue") == true {
-                            Text("Parlez pour l’interrompre")
-                                .font(PoliceAssistant.texte(12, .medium, relativeTo: .caption))
-                                .foregroundStyle(Color.orClair.opacity(0.6))
-                                .padding(.top, 6)
-                                .transition(.opacity)
-                        }
-                        if assistant?.phase == .ecoute, ReglageVoix.reponseAuToucher {
-                            Text("Touchez la sphère quand vous avez fini")
-                                .font(PoliceAssistant.texte(12, .medium, relativeTo: .caption))
-                                .foregroundStyle(Color.orClair.opacity(0.6))
-                                .padding(.top, 6)
-                                .transition(.opacity)
-                                .accessibilityIdentifier("aide-toucher-sphere")
-                        }
-                    }
+                sphere
+                    .frame(height: compact ? 128 : 300)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, compact ? Espace.xs : Espace.l)
+                infos
                     .opacity(apparu ? 1 : 0)
-                    if compact { Spacer(minLength: 0) }
-                }
-                .padding(.top, compact ? Espace.s : 0)
-                if compact {
-                    ReponseLisible(assistant: assistant)
-                        .frame(maxHeight: .infinity)
-                        .transition(.opacity)
-                        // Toucher la réponse pendant qu'Endry parle l'interrompt (comme la sphère).
-                        .onTapGesture {
-                            if assistant?.phase == .parole { assistant?.interrompre() } else { clavier = false }
-                        }
-                } else {
-                    TranscriptionAssistant(assistant: assistant)
-                        .padding(.top, Espace.l)
-                        .opacity(apparu ? 1 : 0)
-                    Spacer(minLength: Espace.s)
-                }
+                ZoneTexte(assistant: assistant)
+                    .frame(maxHeight: .infinity)
+                    .padding(.top, Espace.s)
+                    .contentShape(Rectangle())
+                    // Toucher le texte pendant qu'Endry parle l'interrompt (comme la sphère).
+                    .onTapGesture {
+                        if assistant?.phase == .parole { assistant?.interrompre() } else { clavier = false }
+                    }
                 cartes
                 if assistant?.cartes.isEmpty ?? true, !(assistant?.reponseAffichee ?? false), !clavier {
                     suggestions
                         .padding(.bottom, Espace.s)
-                        .transition(.opacity.combined(with: .offset(y: 12)))
+                        .transition(.opacity)
                 }
                 champQuestion
                     .opacity(apparu ? 1 : 0)
-                    .offset(y: apparu ? 0 : 30)
             }
             // iPad : une colonne centrée, la sphère et la lueur gardent tout l'écran.
             .largeurLisible(Adaptatif.assistant)
@@ -112,7 +74,7 @@ struct VueAssistantVocal: View {
         .environment(\.colorScheme, .dark)
         .presentationBackground(.clear)
         .animation(.endry(reduire: reduireAnimations), value: assistant?.cartes ?? [])
-        .animation(.spring(response: 0.55, dampingFraction: 0.86), value: compact)
+        .animation(.easeInOut(duration: 0.3), value: compact)
         .task {
             withAnimation(reduireAnimations ? .fonduDoux : .spring(response: 0.42, dampingFraction: 0.9)) { apparu = true }
             let nouvel = app.nouvelAssistant()
@@ -207,15 +169,35 @@ struct VueAssistantVocal: View {
         .padding(.top, Espace.xs)
     }
 
-    private var sphere: some View {
-        Group {
-            if compact {
-                OrbeSiri(diametre: 56, actif: assistant?.phase == .parole || assistant?.phase == .ecoute)
-            } else {
-                AnneauVoix(assistant: assistant, debut: debutPhase)
+    /// État et moteur, une ligne centrée sous l'anneau (aides selon le réglage).
+    private var infos: some View {
+        VStack(spacing: 4) {
+            if let nom = assistant?.nomMoteur, !nom.isEmpty {
+                Label(nom, systemImage: nom.contains("Apple Intelligence") ? "sparkles" : "waveform")
+                    .font(Police.mono(11.5))
+                    .foregroundStyle(Color.encreDouce.opacity(0.8))
+                    .lineLimit(1)
+                    .accessibilityLabel(Text("Moteur vocal : \(nom)"))
+            }
+            if assistant?.phase == .parole, assistant?.nomMoteur.contains("continue") == true {
+                Text("Parlez pour l’interrompre")
+                    .font(PoliceAssistant.texte(12, .medium, relativeTo: .caption))
+                    .foregroundStyle(Color.encreDouce)
+            }
+            if assistant?.phase == .ecoute, ReglageVoix.reponseAuToucher {
+                Text("Touchez l’anneau quand vous avez fini")
+                    .font(PoliceAssistant.texte(12, .medium, relativeTo: .caption))
+                    .foregroundStyle(Color.encreDouce)
+                    .accessibilityIdentifier("aide-toucher-sphere")
             }
         }
-            .frame(maxWidth: compact ? 64 : 330, maxHeight: compact ? 64 : 330)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 6)
+    }
+
+    private var sphere: some View {
+        AnneauVoix(assistant: assistant, debut: debutPhase)
+            .aspectRatio(1, contentMode: .fit)
             .scaleEffect(apparu ? 1 : 0.6)
             .opacity(apparu ? 1 : 0)
             .contentShape(Circle().scale(0.6))
@@ -372,58 +354,48 @@ private struct EtatAssistant: View {
     }
 }
 
-/// Vos mots s'écrivent pendant que vous parlez, en grand ; quand Endry répond, ils se retirent en petit au-dessus
-/// de la réponse, qui s'allume mot à mot au rythme de la voix. Vue séparée : seule elle se redessine.
-private struct TranscriptionAssistant: View {
+/// Le texte de l'échange, en deux blocs seulement (jamais un mot par vue) : ce que dit le patron, puis la réponse,
+/// dont la partie déjà dite s'allume au fil de la voix. Défile quand la réponse est longue ; aucune animation de
+/// mise en page : le texte ne peut ni se chevaucher ni déborder.
+private struct ZoneTexte: View {
     var assistant: AssistantVocal?
-    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
     var body: some View {
-        let reponse = assistant?.reponse ?? ""
-        let enReponse = !reponse.isEmpty
-        VStack(alignment: .leading, spacing: Espace.m) {
-            if let assistant, !(assistant.definitif.isEmpty && assistant.provisoire.isEmpty) {
-                if !enReponse {
-                    VStack(spacing: 10) {
-                        HStack {
-                            Text("Transcription")
-                            Spacer()
-                            Text("FR-CH")
-                        }
-                        .font(Police.mono(11.5))
-                        .textCase(.uppercase)
-                        .foregroundStyle(Color.encreDouce)
-                        Rectangle().fill(Color.filetFort).frame(height: Espace.filet)
-                    }
-                    .transition(.opacity)
-                    .accessibilityHidden(true)
+        ScrollView {
+            VStack(alignment: .leading, spacing: Espace.m) {
+                if let assistant, !(assistant.definitif.isEmpty && assistant.provisoire.isEmpty) {
+                    let enReponse = !assistant.reponse.isEmpty
+                    let espace = assistant.definitif.isEmpty || assistant.provisoire.isEmpty ? "" : " "
+                    Text("\(Text(assistant.definitif).foregroundStyle(Color.encre.opacity(enReponse ? 0.55 : 1)))\(Text(espace))\(Text(assistant.provisoire).foregroundStyle(Color.encre.opacity(enReponse ? 0.35 : 0.5)))")
+                        .font(PoliceAssistant.texte(enReponse ? 15 : 24, enReponse ? .medium : .regular, relativeTo: .title3))
+                        .lineSpacing(3)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(Text("\(assistant.definitif) \(assistant.provisoire)"))
+                        .accessibilityIdentifier("transcription-patron")
                 }
-                MotsEnDirect(definitif: assistant.definitif, provisoire: assistant.provisoire,
-                             taille: enReponse ? 17 : 36, poids: enReponse ? .medium : .regular,
-                             opacite: enReponse ? 0.5 : 1)
-                    .transition(.opacity)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(Text("\(assistant.definitif) \(assistant.provisoire)"))
-                    .accessibilityIdentifier("transcription-patron")
+                if let assistant, !assistant.reponse.isEmpty {
+                    let (dit, reste) = Self.decouper(assistant.reponse, lu: assistant.reponseLue)
+                    Text("\(Text(BlocTexte.sansBalises(dit)).foregroundStyle(Color.encre))\(Text(BlocTexte.sansBalises(reste)).foregroundStyle(Color.encre.opacity(0.4)))")
+                        .font(PoliceAssistant.texte(20, .regular, relativeTo: .body))
+                        .lineSpacing(5)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityLabel(Text(assistant.reponse))
+                        .accessibilityIdentifier("reponse-assistant")
+                }
             }
-            if let assistant, enReponse {
-                let (dit, reste) = Self.decouper(reponse, lu: assistant.reponseLue)
-                Text("\(Text(dit).foregroundStyle(Color.encre))\(Text(reste).foregroundStyle(Color.encre.opacity(0.3)))")
-                    .font(Police.serif(28, relativeTo: .title2))
-                    .tracking(-0.3)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .lineSpacing(3)
-                    .minimumScaleFactor(0.75)
-                    .lineLimit(8)
-                    .transition(.opacity.combined(with: .offset(y: 10)))
-                    .animation(.easeOut(duration: 0.18), value: assistant.reponseLue)
-                    .accessibilityLabel(Text(reponse))
-                    .accessibilityIdentifier("reponse-assistant")
-            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.vertical, Espace.xs)
         }
-        .frame(maxWidth: .infinity)
-        .animation(.endry(reduire: reduireAnimations), value: enReponse)
+        .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize)
+        .defaultScrollAnchor(.top)
+        // Le texte change sans animation de mise en page.
+        .transaction { $0.animation = nil }
     }
 
     /// Partie déjà dite / partie à venir (décalage UTF-16 donné par la synthèse vocale).
@@ -434,51 +406,6 @@ private struct TranscriptionAssistant: View {
         let index = utf.index(utf.startIndex, offsetBy: borne)
         guard let dit = String(utf[..<index]), let reste = String(utf[index...]) else { return (texte, "") }
         return (dit, reste)
-    }
-}
-
-/// Disposition « lecture » : votre question en petit, puis la réponse alignée à gauche, en texte courant,
-/// qui défile doucement (fondu en haut et en bas) ; les mots déjà dits s'allument au rythme de la voix.
-private struct ReponseLisible: View {
-    var assistant: AssistantVocal?
-    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
-
-    var body: some View {
-        let reponse = assistant?.reponse ?? ""
-        ScrollView {
-            VStack(alignment: .leading, spacing: Espace.m) {
-                if let assistant, !(assistant.definitif.isEmpty && assistant.provisoire.isEmpty) {
-                    Text([assistant.definitif, assistant.provisoire].filter { !$0.isEmpty }.joined(separator: " "))
-                        .font(PoliceAssistant.texte(15, .medium, relativeTo: .subheadline))
-                        .foregroundStyle(Color.orClair.opacity(0.5))
-                        .lineLimit(3)
-                        .accessibilityIdentifier("transcription-patron")
-                }
-                if let assistant, !reponse.isEmpty {
-                    let (dit, reste) = TranscriptionAssistant.decouper(reponse, lu: assistant.reponseLue)
-                    Text("\(Text(BlocTexte.sansBalises(dit)).foregroundStyle(Color(hex: 0xFBEBD0)))\(Text(BlocTexte.sansBalises(reste)).foregroundStyle(Color.orClair.opacity(0.35)))")
-                        .font(PoliceAssistant.texte(19, .regular, relativeTo: .body))
-                        .lineSpacing(6)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .animation(.easeOut(duration: 0.18), value: assistant.reponseLue)
-                        .accessibilityLabel(Text(reponse))
-                        .accessibilityIdentifier("reponse-assistant")
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, Espace.m)
-            .verrouillerLargeur()
-        }
-        .scrollIndicators(.hidden)
-        .scrollBounceBehavior(.basedOnSize)
-        .mask(
-            LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.05),
-                                   .init(color: .black, location: 0.92), .init(color: .clear, location: 1)],
-                           startPoint: .top, endPoint: .bottom)
-        )
-        .animation(.endry(reduire: reduireAnimations), value: reponse.isEmpty)
     }
 }
 
@@ -527,105 +454,6 @@ private struct LienConversation: View {
         .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.or.opacity(0.2), lineWidth: Espace.filet))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("carte-claude")
-    }
-}
-
-/// Chaque mot reconnu apparaît en fondu, en remontant légèrement ;
-/// les mots encore provisoires restent plus pâles jusqu'à ce que la reconnaissance les confirme.
-private struct MotsEnDirect: View {
-    var definitif: String
-    var provisoire: String
-    var taille: CGFloat
-    var poids: Font.Weight
-    var opacite: Double
-    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
-
-    var body: some View {
-        let confirmes = Self.mots(definitif)
-        let enCours = Self.mots(provisoire)
-        let tous = confirmes.map { ($0, true) } + enCours.map { ($0, false) }
-        LigneCentree(espacement: taille * 0.24, interligne: taille * 0.05, aGauche: true) {
-            ForEach(Array(tous.enumerated()), id: \.offset) { index, element in
-                Text(element.0)
-                    .font(taille > 20 ? Police.serif(taille, relativeTo: .title) : PoliceAssistant.texte(taille, poids, relativeTo: .title))
-                    .tracking(-0.4)
-                    .foregroundStyle(Color.encre.opacity((element.1 ? 1 : 0.4) * opacite))
-                    .transition(reduireAnimations ? .opacity : .asymmetric(
-                        insertion: .modifier(active: MotQuiApparait(etat: 0), identity: MotQuiApparait(etat: 1)),
-                        removal: .opacity))
-            }
-        }
-        .animation(.spring(response: 0.32, dampingFraction: 0.9), value: tous.count)
-        .animation(.endry(reduire: reduireAnimations), value: taille)
-    }
-
-    static func mots(_ texte: String) -> [String] {
-        texte.split(whereSeparator: \.isWhitespace).map(String.init)
-    }
-}
-
-/// Apparition d'un mot : fondu et légère montée (sans flou : un flou par mot coûtait une passe hors écran chacun).
-private struct MotQuiApparait: ViewModifier {
-    var etat: Double
-
-    func body(content: Content) -> some View {
-        content
-            .opacity(etat)
-            .offset(y: (1 - etat) * 6)
-    }
-}
-
-/// Mots posés ligne à ligne, chaque ligne centrée (comme un sous-titre).
-private struct LigneCentree: Layout {
-    var espacement: CGFloat
-    var interligne: CGFloat
-    /// Lignes alignées à gauche (transcription Maison Endry) plutôt que centrées.
-    var aGauche = false
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let largeur = proposal.width ?? .infinity
-        let lignes = decouper(subviews, largeur: largeur)
-        let hauteur = lignes.reduce(0) { $0 + $1.hauteur } + interligne * CGFloat(max(lignes.count - 1, 0))
-        let plusLarge = lignes.map(\.largeur).max() ?? 0
-        return CGSize(width: proposal.width ?? plusLarge, height: hauteur)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var y = bounds.minY
-        for ligne in decouper(subviews, largeur: bounds.width) {
-            var x = aGauche ? bounds.minX : bounds.midX - ligne.largeur / 2
-            for index in ligne.indices {
-                let taille = subviews[index].sizeThatFits(.unspecified)
-                subviews[index].place(at: CGPoint(x: x, y: y + ligne.hauteur - taille.height), proposal: .unspecified)
-                x += taille.width + espacement
-            }
-            y += ligne.hauteur + interligne
-        }
-    }
-
-    private struct Ligne {
-        var indices: [Int] = []
-        var largeur: CGFloat = 0
-        var hauteur: CGFloat = 0
-    }
-
-    private func decouper(_ subviews: Subviews, largeur: CGFloat) -> [Ligne] {
-        var lignes: [Ligne] = []
-        var courante = Ligne()
-        for (index, vue) in subviews.enumerated() {
-            let taille = vue.sizeThatFits(.unspecified)
-            let ajout = courante.indices.isEmpty ? taille.width : courante.largeur + espacement + taille.width
-            if ajout > largeur, !courante.indices.isEmpty {
-                lignes.append(courante)
-                courante = Ligne()
-            }
-            courante.largeur = courante.indices.isEmpty ? taille.width : courante.largeur + espacement + taille.width
-            courante.hauteur = max(courante.hauteur, taille.height)
-            courante.indices.append(index)
-        }
-        if !courante.indices.isEmpty { lignes.append(courante) }
-        // Garde les dernières lignes : ce que vous venez de dire reste toujours visible.
-        return Array(lignes.suffix(4))
     }
 }
 
@@ -888,7 +716,6 @@ struct CarteClaude: View {
                         .foregroundStyle(Color(hex: 0xFBEBD0))
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .textSelection(.enabled)
-                    .verrouillerLargeur()
                 }
                 .frame(maxHeight: 170)
                 .scrollBounceBehavior(.basedOnSize)

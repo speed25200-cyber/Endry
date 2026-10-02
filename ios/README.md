@@ -258,7 +258,7 @@ Codemagic n’a pas besoin de fastlane : sa CLI (`app-store-connect`, `xcode-pro
 ### À faire une seule fois (vous)
 
 > **Configuration actuelle** : le workflow `ios-testflight` utilise l’intégration App Store Connect
-> **« PetMind ASC API »** (la clé d’équipe App Store Connect déjà configurée dans Codemagic) et la signature
+> **« Dev »** (la clé d’équipe App Store Connect déjà configurée dans Codemagic) et la signature
 > automatique de Codemagic (`ios_signing`, bundle `com.endrysa.endry`). Il lance **tous** les tests
 > (EndryKit, app, UI) avant de construire l’IPA. Rien n’est stocké dans le dépôt.
 >

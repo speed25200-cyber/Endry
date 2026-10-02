@@ -6,7 +6,7 @@
 #                  à chaque push et pull request qui touche ios/ ou ce fichier.
 #   ios-testflight signature + IPA + envoi TestFlight, sur un tag « ios-v* » ou lancé à la main.
 #
-# Aucun secret dans ce fichier : la signature utilise l’intégration App Store Connect « PetMind ASC API »
+# Aucun secret dans ce fichier : la signature utilise l’intégration App Store Connect « Dev »
 # (déjà configurée dans l’équipe Codemagic) et le certificat de distribution enregistré
 # dans l'équipe Codemagic (Code signing identities). Voir ios/README.md.
 
@@ -169,7 +169,7 @@ workflows:
     max_build_duration: 90
     # Intégration App Store Connect de l’équipe Codemagic (Teams › Integrations).
     integrations:
-      app_store_connect: PetMind ASC API
+      app_store_connect: Dev
     environment:
       xcode: latest
       # Signature automatique Codemagic : certificat de distribution de l'équipe

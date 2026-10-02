@@ -32,6 +32,8 @@ final class MoteurTempsReel: MoteurVoix {
     private var oreille: (any Oreille)?
     /// La transcription définitive du serveur est arrivée pour ce tour : elle fait foi.
     private var transcriptionServeurRecue = false
+    /// Mise à jour du texte de la réponse en attente (regroupement des fragments).
+    private var emissionTexte: Task<Void, Never>?
 
     init(session: SessionVoix, executeur: ExecuteurOutils) {
         self.session = session
@@ -105,13 +107,40 @@ final class MoteurTempsReel: MoteurVoix {
         )
         audio = canal
 
-        reception = Task { [weak self] in
-            await self?.boucleReception(socket)
+        // Lecture hors du fil principal : JSON, base64 et conversion audio ne passent plus par l'écran ;
+        // seul ce qui change l'affichage revient sur le fil principal, dans l'ordre d'arrivée.
+        reception = Task.detached(priority: .userInitiated) { [weak self] in
+            var itemCourant: String?
+            while !Task.isCancelled {
+                let data: Data
+                do {
+                    let message = try await socket.receive()
+                    data = Self.donnees(message)
+                } catch {
+                    if !Task.isCancelled {
+                        await self?.changerPhase(.erreur("La conversation s’est interrompue. Touchez la sphère pour reprendre."))
+                    }
+                    return
+                }
+                let evenement = EvenementRealtime.lire(data)
+                if case .audio(let pcm, let itemId) = evenement {
+                    if let itemId, itemId != itemCourant {
+                        itemCourant = itemId
+                        canal.nouvelItem()
+                    }
+                    let niveau = canal.jouer(pcm)
+                    await self?.audioJoue(itemId: itemId, niveau: niveau)
+                } else {
+                    await self?.traiter(evenement)
+                }
+            }
         }
         changerPhase(.ecoute)
     }
 
     func arreter() {
+        emissionTexte?.cancel()
+        emissionTexte = nil
         reception?.cancel()
         reception = nil
         socket?.cancel(with: .normalClosure, reason: nil)
@@ -133,22 +162,37 @@ final class MoteurTempsReel: MoteurVoix {
 
     // MARK: - Réception
 
-    private func boucleReception(_ socket: URLSessionWebSocketTask) async {
-        while !Task.isCancelled {
-            do {
-                let message = try await socket.receive()
-                traiter(Self.donnees(message))
-            } catch {
-                if !Task.isCancelled {
-                    changerPhase(.erreur("La conversation s’est interrompue. Touchez la sphère pour reprendre."))
-                }
-                return
-            }
+    /// Morceau de voix déjà mis en lecture (hors du fil principal) : la sphère suit son niveau.
+    private func audioJoue(itemId: String?, niveau: Float) {
+        if let itemId { itemEnCours = itemId }
+        reponseTerminee = false
+        changerPhase(.parole)
+        surEvenement?(.niveauVoix(niveau))
+    }
+
+    /// Texte de la réponse : au plus dix mises à jour par seconde (chaque fragment redessinait l'écran).
+    private func emettreTexte(immediat: Bool) {
+        if immediat {
+            emissionTexte?.cancel()
+            emissionTexte = nil
+            surEvenement?(.assistant(texteAssistant))
+            return
+        }
+        guard emissionTexte == nil else { return }
+        emissionTexte = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(100))
+            guard let self, !Task.isCancelled else { return }
+            self.emissionTexte = nil
+            self.surEvenement?(.assistant(self.texteAssistant))
         }
     }
 
     private func traiter(_ data: Data) {
-        switch EvenementRealtime.lire(data) {
+        traiter(EvenementRealtime.lire(data))
+    }
+
+    private func traiter(_ evenement: EvenementRealtime) {
+        switch evenement {
         case .sessionPrete, .autre:
             break
         case .paroleDebut:
@@ -158,6 +202,8 @@ final class MoteurTempsReel: MoteurVoix {
             patronDefinitif = ""
             patronProvisoire = ""
             texteAssistant = ""
+            emissionTexte?.cancel()
+            emissionTexte = nil
             surEvenement?(.nouveauTour)
             changerPhase(.ecoute)
         case .paroleFin:
@@ -174,18 +220,13 @@ final class MoteurTempsReel: MoteurVoix {
                 return
             }
             surEvenement?(.patron(definitif: patronDefinitif, provisoire: patronProvisoire))
-        case .audio(let pcm, let itemId):
-            if let itemId, itemId != itemEnCours {
-                itemEnCours = itemId
-                audio?.nouvelItem()
-            }
-            reponseTerminee = false
+        case .audio(let pcm, _):
+            // Normalement joué dès la réception (hors du fil principal) ; ici seulement par sécurité.
             let niveau = audio?.jouer(pcm) ?? 0
-            changerPhase(.parole)
-            surEvenement?(.niveauVoix(niveau))
+            audioJoue(itemId: nil, niveau: niveau)
         case .transcriptionAssistant(let texte, let finale):
             if finale { texteAssistant = texte } else { texteAssistant += texte }
-            surEvenement?(.assistant(texteAssistant))
+            emettreTexte(immediat: finale)
         case .appelOutil(let callId, let nom, let arguments):
             changerPhase(.reflexion)
             Task { await executer(callId: callId, nom: nom, arguments: arguments) }

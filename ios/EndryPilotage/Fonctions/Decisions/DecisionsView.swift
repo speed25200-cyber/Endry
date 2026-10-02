@@ -10,6 +10,7 @@ struct DecisionsView: View {
     @AppStorage(ModeDevantClient.cle) private var devantClient = false
     @Environment(ModeleApp.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
+    @Environment(\.animationsEnPause) private var enPause
     var modele: ModeleDecisions
 
     @State private var visible = false
@@ -38,6 +39,8 @@ struct DecisionsView: View {
                     .tirerPourActualiser { await modele.charger() }
                 }
             }
+            // Fiche d'une décision ouverte par-dessus : l'accueil cesse d'animer.
+            .environment(\.animationsEnPause, enPause || fiche != nil)
             .toolbar(.hidden, for: .navigationBar)
         }
         .toast(Binding(get: { modele.toast }, set: { modele.toast = $0 }))

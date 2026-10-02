@@ -15,12 +15,13 @@ public enum Planning {
         public var duree: Int { fin - debut + 1 }
     }
 
-    private static var calendrier: Calendar {
+    /// Créé une fois (un calendrier neuf par appel coûtait cher dans les listes et la frise).
+    private static let calendrier: Calendar = {
         var c = Calendar(identifier: .gregorian)
         c.timeZone = DateEndry.fuseau
         c.firstWeekday = 2
         return c
-    }
+    }()
 
     /// Lundi de la semaine contenant `date`, décalé de `semaines`.
     public static func lundi(de date: Date, decalage semaines: Int = 0) -> Date {
@@ -69,12 +70,16 @@ public enum Planning {
     /// « 28.09 – 02.10 » ou « 05.10 » à partir des vraies dates.
     public static func libelleDates(_ d: Dossier) -> String? {
         guard let debut = d.debut else { return d.dates }
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "fr_CH")
-        f.timeZone = DateEndry.fuseau
-        f.dateFormat = "dd.MM"
         let fin = d.fin ?? debut
-        return calendrier.isDate(debut, inSameDayAs: fin) ? f.string(from: debut) : "\(f.string(from: debut)) – \(f.string(from: fin))"
+        return calendrier.isDate(debut, inSameDayAs: fin) ? jourMois(debut) : "\(jourMois(debut)) – \(jourMois(fin))"
+    }
+
+    /// « 05.10 », sans formateur.
+    private static func jourMois(_ date: Date) -> String {
+        let c = calendrier.dateComponents([.day, .month], from: date)
+        let jour = c.day ?? 0
+        let mois = c.month ?? 0
+        return (jour < 10 ? "0" : "") + "\(jour)." + (mois < 10 ? "0" : "") + "\(mois)"
     }
 
     /// Nombre de jours ouvrables (lun–ven) du chantier.

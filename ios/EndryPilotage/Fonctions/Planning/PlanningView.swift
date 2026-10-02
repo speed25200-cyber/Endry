@@ -322,13 +322,16 @@ struct PlanningView: View {
         .background(MatiereEspresso())
     }
 
-    private func iso(_ date: Date) -> String {
+    private func iso(_ date: Date) -> String { Self.formatIso.string(from: date) }
+
+    /// Créé une fois : un formateur neuf à chaque appel coûtait plus que tout le reste du calcul.
+    private static let formatIso: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.timeZone = DateEndry.fuseau
         f.dateFormat = "yyyy-MM-dd"
-        return f.string(from: date)
-    }
+        return f
+    }()
 }
 
 extension String {

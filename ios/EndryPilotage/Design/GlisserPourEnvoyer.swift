@@ -64,7 +64,8 @@ struct GlisserPourEnvoyer: View {
                     .padding(.leading, marge + diametre / 2)
 
                 Circle()
-                    .fill(Color.bouton)
+                    // Ombre portée par le remplissage : dessinée avec la forme, sans passe hors écran pendant le glissement.
+                    .fill(Color.bouton.shadow(.drop(color: Color.ombre, radius: 9, y: 6)))
                     .frame(width: diametre, height: diametre)
                     .overlay {
                         if enCours {
@@ -77,7 +78,6 @@ struct GlisserPourEnvoyer: View {
                         }
                     }
                     .overlay(Circle().strokeBorder(Color.white.opacity(0.25), lineWidth: Espace.filet))
-                    .shadow(color: Color.ombre, radius: 9, y: 6)
                     .scaleEffect(1 + 0.06 * progression)
                     .offset(x: marge + decalage)
                     .gesture(

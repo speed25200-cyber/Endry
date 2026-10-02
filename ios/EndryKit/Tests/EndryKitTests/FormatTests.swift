@@ -33,6 +33,26 @@ final class FormatTests: XCTestCase {
         XCTAssertEqual(DateEndry.jourAbrege(DateEndry.semaine(contenant: d)[0]), "lun.")
     }
 
+    /// Lecture rapide (sans formateur) : mêmes instants que les formateurs du système.
+    func testLectureRapideIdentiqueAuxFormateurs() {
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime]
+        XCTAssertEqual(DateEndry.lire("2026-09-26T07:42:00+02:00"), iso.date(from: "2026-09-26T07:42:00+02:00"))
+        XCTAssertEqual(DateEndry.lire("2026-09-26T05:42:00Z"), iso.date(from: "2026-09-26T05:42:00Z"))
+        XCTAssertEqual(DateEndry.lire("2026-09-26T07:42:00-0130"), iso.date(from: "2026-09-26T07:42:00-01:30"))
+        // Sans fuseau : heure suisse (UTC+2 en été).
+        XCTAssertEqual(DateEndry.lire("2026-09-26T07:42:00"), iso.date(from: "2026-09-26T05:42:00Z"))
+        XCTAssertEqual(DateEndry.lire("2026-09-26 07:42:00"), iso.date(from: "2026-09-26T05:42:00Z"))
+        XCTAssertEqual(DateEndry.lire("2026-09-26T07:42"), iso.date(from: "2026-09-26T05:42:00Z"))
+        let fraction = DateEndry.lire("2026-09-26T07:42:00.250000")
+        XCTAssertEqual(fraction?.timeIntervalSince1970 ?? 0, (iso.date(from: "2026-09-26T05:42:00Z")?.timeIntervalSince1970 ?? 0) + 0.25, accuracy: 0.001)
+        // Formes rares toujours lues ; dates impossibles refusées ; résultat gardé en mémoire.
+        XCTAssertNotNil(DateEndry.lire("26.09.2026"))
+        XCTAssertNil(DateEndry.isoRapide("2026-13-26T07:42:00"))
+        XCTAssertNil(DateEndry.isoRapide("2026-09-26T07:42:00 et plus"))
+        XCTAssertEqual(DateEndry.lire("2026-09-26T07:42:00"), DateEndry.lire("2026-09-26T07:42:00"))
+    }
+
     func testIlYa() {
         let maintenant = Date()
         XCTAssertEqual(DateEndry.ilYa(maintenant.addingTimeInterval(-10), maintenant: maintenant), "à l’instant")

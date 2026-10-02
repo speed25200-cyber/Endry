@@ -135,7 +135,7 @@ struct BarreOnglets: View {
     }
 }
 
-/// Fond de la barre : verre (Liquid Glass sur iOS 26), teinte crème, filet et ombre portée.
+/// Fond de la barre : verre (Liquid Glass sur iOS 26), teinte crème et filet.
 private struct FondBarre: View {
     var body: some View {
         Capsule()
@@ -148,8 +148,8 @@ private struct FondBarre: View {
                                   lineWidth: 1)
                     .opacity(0.5)
             }
-            // Barre fixe : son ombre ne change jamais (l'orbe animé est posé au-dessus, hors de ce calque).
-            .shadow(color: Color.ombre, radius: 20, y: 14)
+            // Pas d'ombre de vue sur le verre : elle imposait une passe hors écran à chaque image du défilement
+            // (le verre d'iOS 26 porte déjà sa propre profondeur).
     }
 }
 
@@ -223,7 +223,6 @@ struct ToastView: View {
         .frame(maxWidth: 560)
         // Bandeau aux coins arrondis : une capsule devient une bulle ronde dès que le texte fait plusieurs lignes.
         .verre(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .shadow(color: Color.ombre, radius: 18, y: 8)
         .padding(.horizontal, Espace.l)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isStaticText)

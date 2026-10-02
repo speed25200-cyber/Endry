@@ -77,25 +77,105 @@ public enum DateEndry {
 
     public static var fuseau: TimeZone { calendrier.timeZone }
 
+    /// Date lue (gardée en mémoire : les mêmes horodatages reviennent à chaque affichage d'une liste).
     public static func lire(_ texte: String) -> Date? {
         let s = texte.trimmingCharacters(in: .whitespaces)
         guard !s.isEmpty else { return nil }
+        if let connue = memoire.valeur(s) { return connue }
+        let date = analyser(s)
+        memoire.garder(s, date)
+        return date
+    }
+
+    private static func analyser(_ s: String) -> Date? {
         if s.count == 10, let d = jourSimple(s) { return d }
-        let iso = ISO8601DateFormatter()
-        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let d = iso.date(from: s) { return d }
-        iso.formatOptions = [.withInternetDateTime]
-        if let d = iso.date(from: s) { return d }
-        // ISO sans fuseau (« 2026-09-22T08:15:00 ») : heure suisse.
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = fuseau
-        for format in ["yyyy-MM-dd'T'HH:mm:ss.SSSSSS", "yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd'T'HH:mm", "dd.MM.yyyy"] {
-            f.dateFormat = format
-            if let d = f.date(from: s) { return d }
-        }
+        if let d = isoRapide(s) { return d }
+        // Formes rares (« 22.09.2026 », ISO exotique) : formateurs créés une seule fois.
+        for f in formateursISO { if let d = f.date(from: s) { return d } }
+        for f in formateurs { if let d = f.date(from: s) { return d } }
         return nil
     }
+
+    /// ISO 8601 lu à la main, sans formateur : `2026-09-22T08:15:00`, `…:00.123456`, `…Z`, `…+02:00`,
+    /// `2026-09-22 08:15:00`, `2026-09-22T08:15`. Sans fuseau : heure suisse.
+    static func isoRapide(_ s: String) -> Date? {
+        let o = Array(s.utf8)
+        func nombre(_ debut: Int, _ longueur: Int) -> Int? {
+            guard debut >= 0, debut + longueur <= o.count else { return nil }
+            var v = 0
+            for i in debut..<(debut + longueur) {
+                let c = o[i]
+                guard c >= 48, c <= 57 else { return nil }
+                v = v * 10 + Int(c - 48)
+            }
+            return v
+        }
+        guard o.count >= 16, o[4] == 45, o[7] == 45, o[10] == 84 || o[10] == 32, o[13] == 58,
+              let an = nombre(0, 4), let mois = nombre(5, 2), let jour = nombre(8, 2),
+              let heure = nombre(11, 2), let minute = nombre(14, 2),
+              (1...12).contains(mois), (1...31).contains(jour), heure < 24, minute < 60 else { return nil }
+        var i = 16
+        var seconde = 0
+        var fraction = 0.0
+        if i < o.count, o[i] == 58 {
+            guard let sec = nombre(i + 1, 2), sec < 61 else { return nil }
+            seconde = sec
+            i += 3
+            if i < o.count, o[i] == 46 {
+                i += 1
+                var echelle = 0.1
+                while i < o.count, o[i] >= 48, o[i] <= 57 {
+                    fraction += Double(o[i] - 48) * echelle
+                    echelle /= 10
+                    i += 1
+                }
+            }
+        }
+        var zone = calendrier.timeZone
+        if i < o.count {
+            if o[i] == 90 {
+                zone = TimeZone(secondsFromGMT: 0) ?? zone
+                i += 1
+            } else if o[i] == 43 || o[i] == 45 {
+                let signe = o[i] == 43 ? 1 : -1
+                guard let hh = nombre(i + 1, 2) else { return nil }
+                var j = i + 3
+                if j < o.count, o[j] == 58 { j += 1 }
+                var mm = 0
+                if let m = nombre(j, 2) {
+                    mm = m
+                    j += 2
+                }
+                guard let decalage = TimeZone(secondsFromGMT: signe * (hh * 3_600 + mm * 60)) else { return nil }
+                zone = decalage
+                i = j
+            }
+        }
+        guard i == o.count else { return nil }
+        var composantes = DateComponents(year: an, month: mois, day: jour, hour: heure, minute: minute, second: seconde)
+        composantes.timeZone = zone
+        return calendrier.date(from: composantes)?.addingTimeInterval(fraction)
+    }
+
+    nonisolated(unsafe) private static let formateursISO: [ISO8601DateFormatter] = {
+        let fraction = ISO8601DateFormatter()
+        fraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let simple = ISO8601DateFormatter()
+        simple.formatOptions = [.withInternetDateTime]
+        return [fraction, simple]
+    }()
+
+    nonisolated(unsafe) private static let formateurs: [DateFormatter] = {
+        ["yyyy-MM-dd'T'HH:mm:ss.SSSSSS", "yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd'T'HH:mm", "dd.MM.yyyy"].map {
+            let f = DateFormatter()
+            f.locale = Locale(identifier: "en_US_POSIX")
+            f.timeZone = calendrier.timeZone
+            f.dateFormat = $0
+            return f
+        }
+    }()
+
+    private static let memoire = MemoireDates()
 
     private static func jourSimple(_ s: String) -> Date? {
         let morceaux = s.split(separator: "-").compactMap { Int($0) }
@@ -228,5 +308,24 @@ public enum DateEndry {
             let j = Int(secondes / 86_400)
             return j == 1 ? "hier" : "il y a \(j) jours"
         }
+    }
+}
+
+/// Dates déjà lues (texte → date, ou échec), partagées entre fils ; vidée au-delà de 2000 entrées.
+final class MemoireDates: @unchecked Sendable {
+    private let verrou = NSLock()
+    private var dates: [String: Date?] = [:]
+
+    func valeur(_ texte: String) -> Date?? {
+        verrou.lock()
+        defer { verrou.unlock() }
+        return dates[texte]
+    }
+
+    func garder(_ texte: String, _ date: Date?) {
+        verrou.lock()
+        defer { verrou.unlock() }
+        if dates.count > 2_000 { dates.removeAll(keepingCapacity: true) }
+        dates[texte] = .some(date)
     }
 }

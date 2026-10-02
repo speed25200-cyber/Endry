@@ -88,7 +88,7 @@ struct VueAssistantVocal: View {
                     Spacer(minLength: Espace.s)
                 }
                 cartes
-                if assistant?.cartes.isEmpty ?? true, assistant?.reponse.isEmpty ?? true, !clavier {
+                if assistant?.cartes.isEmpty ?? true, !(assistant?.reponseAffichee ?? false), !clavier {
                     suggestions
                         .padding(.bottom, Espace.s)
                         .transition(.opacity.combined(with: .offset(y: 12)))
@@ -133,7 +133,7 @@ struct VueAssistantVocal: View {
     /// Réponse longue ou carte à l'écran : disposition « lecture » (sphère réduite, texte à gauche, défilant).
     private var compact: Bool {
         guard let assistant else { return false }
-        return !assistant.cartes.isEmpty || assistant.reponse.count > 150
+        return !assistant.cartes.isEmpty || assistant.reponseLongue
     }
 
     /// Maison Endry : brun profond, un halo crème à peine posé autour de l'anneau.

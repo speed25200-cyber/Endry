@@ -14,6 +14,10 @@ final class ModeleApp {
     var onglet: Onglet = .aujourdhui
     /// Vue de l'espace Chantiers (Pipeline ou Planning), pilotable depuis l'accueil.
     var vueChantiers: VueChantiers = .pipeline
+    /// Un écran plein ou une feuille couvre les onglets : leurs animations (points en direct, orbe) s'arrêtent.
+    var ecranParDessus: Bool {
+        conversationPresentee || assistantPresente || recherchePresentee || reglagesPresentes || briefingPresente || outilTerrain != nil
+    }
     /// Vue de Finances à montrer (un instrument de l'accueil y mène directement).
     var vueFinances: ArgentView.VueFinances = .encaisser
     /// Carte à mettre en avant (toucher d'une notification).

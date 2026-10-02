@@ -42,11 +42,13 @@ final class ConversationTests: XCTestCase {
         let debut = Date(timeIntervalSince1970: 1_800_000_000)
         modele.consignerQuestion("Premier fil", source: .ecrit, le: debut)
         let premier = modele.identifiant
+        XCTAssertFalse(modele.aDesFilsPrecedents)
         modele.nouvelleConversation()
         modele.consignerQuestion("Second fil", source: .ecrit, le: debut.addingTimeInterval(60))
         XCTAssertEqual(modele.filCourant.map(\.texte), ["Second fil"])
         XCTAssertEqual(modele.filsPrecedents.map(\.titre), ["Premier fil"])
         XCTAssertEqual(modele.filsPrecedents.first?.id, premier)
+        XCTAssertTrue(modele.aDesFilsPrecedents)
 
         modele.reprendre(premier)
         XCTAssertEqual(modele.identifiant, premier)

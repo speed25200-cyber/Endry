@@ -26,8 +26,7 @@ struct MicroAnime: View {
                     // Maison Endry : bulle de verre au repos, crème dorée pendant l'écoute.
                     Group {
                         if ecoute {
-                            Circle().fill(Color.bouton)
-                                .shadow(color: Color.signal.opacity(0.35), radius: 26, y: 8)
+                            Circle().fill(Color.bouton.shadow(.drop(color: Color.signal.opacity(0.35), radius: 26, y: 8)))
                         } else {
                             Color.clear.verreMaison(Circle(), interactif: true)
                         }
@@ -68,14 +67,22 @@ struct FormeOnde: View {
     var historique: [Float]
     var active: Bool
 
+    /// Toutes les barres en un seul tracé (une barre animée par vue relançait 28 ressorts à chaque tampon audio).
     var body: some View {
-        HStack(alignment: .center, spacing: 3) {
-            ForEach(Array(historique.enumerated()), id: \.offset) { index, valeur in
-                Capsule()
-                    .fill(active ? Color.signal : Color.filetFort)
-                    .frame(width: 3, height: max(3, CGFloat(active ? valeur : 0.05) * 36 * enveloppe(index)))
-                    .animation(.endry, value: valeur)
+        Canvas { ctx, taille in
+            let n = historique.count
+            guard n > 0 else { return }
+            let largeur: CGFloat = 3
+            let ecart: CGFloat = 3
+            var x = (taille.width - CGFloat(n) * largeur - CGFloat(n - 1) * ecart) / 2
+            var barres = Path()
+            for (index, valeur) in historique.enumerated() {
+                let h = max(3, CGFloat(active ? valeur : 0.05) * taille.height * enveloppe(index))
+                barres.addRoundedRect(in: CGRect(x: x, y: (taille.height - h) / 2, width: largeur, height: h),
+                                      cornerSize: CGSize(width: largeur / 2, height: largeur / 2))
+                x += largeur + ecart
             }
+            ctx.fill(barres, with: .color(active ? Color.signal : Color.filetFort))
         }
     }
 

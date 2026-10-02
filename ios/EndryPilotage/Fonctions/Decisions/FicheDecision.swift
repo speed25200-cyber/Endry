@@ -318,7 +318,6 @@ struct FicheDecision: View {
             }
         }
         .verreMaison(RoundedRectangle(cornerRadius: 32, style: .continuous))
-        .shadow(color: Color.ombre, radius: 24, y: 12)
         .frame(maxWidth: 560)
     }
 }

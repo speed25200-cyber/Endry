@@ -52,7 +52,7 @@ struct ContenuPrincipal: View {
             BarreOnglets(selection: $app.onglet, badgeDecisions: app.decisions?.nombreDecisions ?? 0) {
                 app.ouvrirAssistant()
             }
-                .environment(\.animationsEnPause, app.conversationPresentee || app.assistantPresente)
+                .environment(\.animationsEnPause, app.ecranParDessus)
                 // iPad : un dock flottant centré, pas une barre étirée sur toute la largeur.
                 .frame(maxWidth: 520)
                 .padding(.bottom, 4)
@@ -146,7 +146,7 @@ struct ContenuPrincipal: View {
         let actif = app.onglet == onglet
         contenu()
             // Onglet caché ou écran plein par-dessus : ses animations (points en direct, orbe) s'arrêtent.
-            .environment(\.animationsEnPause, !actif || app.conversationPresentee || app.assistantPresente)
+            .environment(\.animationsEnPause, !actif || app.ecranParDessus)
             // Fondu seul (sans mise à l'échelle) : l'écran n'est pas redessiné image par image pendant le changement.
             .opacity(actif ? 1 : 0)
             .allowsHitTesting(actif)

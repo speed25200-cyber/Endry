@@ -170,6 +170,9 @@ public final class ModeleConversation {
     /// Le fil en cours, seul affiché à l'écran : les fils précédents ne s'accumulent plus dessous.
     public var filCourant: [MessageConversation] { messages.filter { $0.conversation == identifiant } }
 
+    /// Il existe au moins un fil précédent (test rapide, sans regrouper les messages).
+    public var aDesFilsPrecedents: Bool { messages.contains { $0.conversation != identifiant } }
+
     /// Fils précédents, du plus récent au plus ancien.
     public var filsPrecedents: [Fil] {
         var ordre: [String] = []

@@ -122,6 +122,11 @@ final class AssistantVocal {
     private(set) var definitif = ""
     private(set) var provisoire = ""
     private(set) var reponse = ""
+    /// Réponse longue (plus de 150 signes) : l'écran passe en disposition « lecture ». Changé seulement au
+    /// franchissement du seuil, pour que l'écran entier ne se redessine pas à chaque mot.
+    private(set) var reponseLongue = false
+    /// Une réponse est à l'écran (mêmes précautions).
+    private(set) var reponseAffichee = false
     /// Partie de la réponse déjà dite (UTF-16) ; `nil` : tout est affiché.
     private(set) var reponseLue: Int?
     private(set) var niveauMicro: Float = 0
@@ -296,6 +301,7 @@ final class AssistantVocal {
             // Réponse qui s'écrit (modèle en flux) : les mots déjà dits restent allumés.
             if !texte.hasPrefix(reponse) { reponseLue = nil }
             reponse = texte
+            majDisposition()
         case .progressionParole(let lu):
             reponseLue = lu
         case .niveauMicro(let n):
@@ -326,6 +332,7 @@ final class AssistantVocal {
             provisoire = ""
             reponse = ""
             reponseLue = nil
+            majDisposition()
         case .commande(let action):
             if action == .nouvelleConversation {
                 partagee?.nouvelleConversation()
@@ -334,6 +341,13 @@ final class AssistantVocal {
             }
             commande = (UUID(), action)
         }
+    }
+
+    private func majDisposition() {
+        let longue = reponse.count > 150
+        if longue != reponseLongue { reponseLongue = longue }
+        let affichee = !reponse.isEmpty
+        if affichee != reponseAffichee { reponseAffichee = affichee }
     }
 
     // MARK: - Claude, sur le PC

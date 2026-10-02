@@ -26,6 +26,8 @@ final class Dictee {
     private(set) var historique: [Float] = Array(repeating: 0, count: 28)
 
     @ObservationIgnored private let moteur = MoteurDictee()
+    @ObservationIgnored private var lisse: Float = 0
+    @ObservationIgnored private var dernierePublication = ContinuousClock.now
 
     var ecoute: Bool { etat == .ecoute }
 
@@ -51,12 +53,7 @@ final class Dictee {
                     }
                 },
                 surNiveau: { [weak self] valeur in
-                    Task { @MainActor in
-                        guard let self else { return }
-                        self.niveau = self.niveau * 0.6 + valeur * 0.4
-                        self.historique.removeFirst()
-                        self.historique.append(self.niveau)
-                    }
+                    Task { @MainActor in self?.recevoirNiveau(valeur) }
                 }
             ) }
             etat = .ecoute
@@ -65,10 +62,25 @@ final class Dictee {
         }
     }
 
+    /// Niveau du micro : lissé à chaque tampon, publié au plus ~16 fois par seconde (chaque publication
+    /// redessine l'onde et l'écran qui la porte).
+    private func recevoirNiveau(_ valeur: Float) {
+        lisse = lisse * 0.6 + valeur * 0.4
+        let maintenant = ContinuousClock.now
+        guard maintenant - dernierePublication >= .milliseconds(60) else { return }
+        dernierePublication = maintenant
+        var suite = historique
+        if !suite.isEmpty { suite.removeFirst() }
+        suite.append(lisse)
+        historique = suite
+        niveau = lisse
+    }
+
     func arreter() {
         FileAudio.lancer { [moteur] in moteur.arreter() }
         if ecoute { etat = .repos }
         niveau = 0
+        lisse = 0
         historique = Array(repeating: 0, count: historique.count)
     }
 }

@@ -10,15 +10,6 @@ struct ConversationView: View {
     @Environment(ModeleApp.self) private var app
     @Environment(\.dismiss) private var fermer
     @Bindable var modele: ModeleConversation
-    @State private var texte = ""
-    @State private var nature: MessageConversation.Nature = .question
-    /// Le patron a choisi lui-même Question / Demande : on ne devine plus.
-    @State private var natureChoisie = false
-    @State private var dictee = Dictee()
-    /// Texte présent avant la dictée : la dictée s'y ajoute.
-    @State private var avantDictee = ""
-    /// Le message en cours vient (au moins en partie) de la dictée.
-    @State private var dicte = false
     @State private var historique = false
     @FocusState private var clavier: Bool
 
@@ -71,7 +62,7 @@ struct ConversationView: View {
                 .onChange(of: fil.last?.etat) {
                     withAnimation(.endry) { defilement.scrollTo("fin", anchor: .bottom) }
                 }
-                .safeAreaInset(edge: .bottom, spacing: 0) { composeur }
+                .safeAreaInset(edge: .bottom, spacing: 0) { ComposeurConversation(modele: modele, clavier: $clavier) }
             }
         }
         .background(FondMaison(photo: nil))
@@ -83,16 +74,6 @@ struct ConversationView: View {
         .task { await modele.verifierEnAttente() }
         // Petit signe au toucher quand la réponse du bureau arrive.
         .sensoryFeedback(.impact(weight: .light), trigger: modele.derniereArrivee?.id)
-        .onDisappear { dictee.arreter() }
-        .onChange(of: dictee.transcription) { _, dit in
-            guard dictee.ecoute, !dit.isEmpty else { return }
-            texte = avantDictee.isEmpty ? dit : avantDictee + " " + dit
-            dicte = true
-        }
-        .onChange(of: texte) { _, nouveau in
-            guard !natureChoisie else { return }
-            nature = ModeleConversation.natureProbable(nouveau)
-        }
     }
 
     /// Dernière réponse reçue du fil en cours : elle porte les relances rapides.
@@ -157,8 +138,8 @@ struct ConversationView: View {
                 } contenu: {
                     Image(systemName: "clock.arrow.circlepath").font(.system(size: 15, weight: .medium))
                 }
-                .opacity(modele.filsPrecedents.isEmpty ? 0.4 : 1)
-                .disabled(modele.filsPrecedents.isEmpty)
+                .opacity(modele.aDesFilsPrecedents ? 1 : 0.4)
+                .disabled(!modele.aDesFilsPrecedents)
                 BoutonRondVerre(libelle: "Nouvelle conversation", identifiant: "nouvelle-conversation") {
                     clavier = false
                     withAnimation(.endry) { modele.nouvelleConversation() }
@@ -210,7 +191,7 @@ struct ConversationView: View {
             VStack(alignment: .leading, spacing: 10) {
                 ForEach(Array(Self.suggestions.enumerated()), id: \.offset) { index, suggestion in
                     Button {
-                        Task { await envoyer(suggestion, nature: .question) }
+                        Task { await modele.envoyer(suggestion, nature: .question, source: .ecrit) }
                     } label: {
                         HStack(spacing: Espace.s) {
                             Text(suggestion).styleTexte(15).foregroundStyle(Color.encre)
@@ -230,8 +211,37 @@ struct ConversationView: View {
             .padding(.top, Espace.xs)
         }
     }
+}
 
-    // MARK: Composeur
+/// Champ d'écriture et de dictée : il garde son propre état, pour que la frappe et le niveau du micro
+/// ne redessinent pas tout le fil à chaque lettre.
+private struct ComposeurConversation: View {
+    var modele: ModeleConversation
+    var clavier: FocusState<Bool>.Binding
+    @State private var texte = ""
+    @State private var nature: MessageConversation.Nature = .question
+    /// Le patron a choisi lui-même Question / Demande : on ne devine plus.
+    @State private var natureChoisie = false
+    @State private var dictee = Dictee()
+    /// Texte présent avant la dictée : la dictée s'y ajoute.
+    @State private var avantDictee = ""
+    /// Le message en cours vient (au moins en partie) de la dictée.
+    @State private var dicte = false
+
+    var body: some View {
+        composeur
+            .onDisappear { dictee.arreter() }
+            .onChange(of: dictee.transcription) { _, dit in
+                guard dictee.ecoute, !dit.isEmpty else { return }
+                texte = avantDictee.isEmpty ? dit : avantDictee + " " + dit
+                dicte = true
+            }
+            .onChange(of: texte) { _, nouveau in
+                guard !natureChoisie else { return }
+                let probable = ModeleConversation.natureProbable(nouveau)
+                if probable != nature { nature = probable }
+            }
+    }
 
     private var vide: Bool { texte.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
@@ -249,7 +259,7 @@ struct ConversationView: View {
                     .foregroundStyle(Color.encre)
                     .tint(Color.signal)
                     .lineLimit(1...6)
-                    .focused($clavier)
+                    .focused(clavier)
                     .accessibilityIdentifier("champ-conversation")
                 HStack(spacing: Espace.xs) {
                     choixNature
@@ -264,8 +274,8 @@ struct ConversationView: View {
             .padding(.bottom, 10)
             .verreMaison(RoundedRectangle(cornerRadius: 26, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .strokeBorder(Color.signal.opacity(clavier || dictee.ecoute ? 0.45 : 0), lineWidth: 1))
-            .animation(.endryVif, value: clavier)
+                .strokeBorder(Color.signal.opacity(clavier.wrappedValue || dictee.ecoute ? 0.45 : 0), lineWidth: 1))
+            .animation(.endryVif, value: clavier.wrappedValue)
         }
         .largeurLisible()
         .padding(.horizontal, 12)
@@ -310,7 +320,7 @@ struct ConversationView: View {
                 dictee.arreter()
             } else {
                 avantDictee = texte.trimmingCharacters(in: .whitespacesAndNewlines)
-                clavier = false
+                clavier.wrappedValue = false
                 Task { await dictee.demarrer() }
             }
         } label: {

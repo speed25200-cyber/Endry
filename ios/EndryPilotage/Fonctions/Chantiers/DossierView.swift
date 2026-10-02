@@ -110,8 +110,7 @@ struct DossierView: View {
                         .styleTexte(17, relativeTo: .body)
                         .foregroundStyle(Color.boutonTexte)
                         .frame(maxWidth: .infinity, minHeight: 56)
-                        .background(Color.bouton, in: Capsule())
-                        .shadow(color: Color.ombre, radius: 16, y: 10)
+                        .background { Capsule().fill(Color.bouton.shadow(.drop(color: Color.ombre, radius: 16, y: 10))) }
                 }
                 .buttonStyle(ActionPressee())
                 .padding(.top, Espace.xl)

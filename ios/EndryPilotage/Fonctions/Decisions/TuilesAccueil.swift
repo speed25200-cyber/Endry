@@ -117,6 +117,8 @@ struct TuileFinances: View {
 /// Tuile Chantiers : numéro de semaine et deux chantiers avec leur étape (n / 7).
 struct TuileChantiers: View {
     var semaine: [Semaine]
+    /// Chantiers en cours (acceptés → réalisés) : montrés quand la semaine n'a rien de planifié.
+    var enCours: [Dossier] = []
     var ouvrir: () -> Void
 
     var body: some View {
@@ -130,16 +132,24 @@ struct TuileChantiers: View {
                         .foregroundStyle(Color.encreDouce)
                 }
                 Spacer(minLength: Espace.s)
-                if semaine.isEmpty {
+                if !semaine.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(semaine.prefix(2)) { chantier in
+                            ligne(titre: chantier.titre, client: chantier.client,
+                                  etape: chantier.etape.flatMap(EtapeChantier.init(rawValue:)))
+                        }
+                    }
+                } else if !enCours.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(enCours.prefix(2)) { dossier in
+                            ligne(titre: dossier.titre, client: dossier.client,
+                                  etape: EtapeChantier.depuisIndex(dossier.etapeIndex))
+                        }
+                    }
+                } else {
                     Text("Rien de planifié")
                         .styleTexte(11.5, relativeTo: .caption)
                         .foregroundStyle(Color.encreDouce)
-                } else {
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(semaine.prefix(2)) { chantier in
-                            ligne(chantier)
-                        }
-                    }
                 }
             }
             .padding(14)
@@ -153,11 +163,10 @@ struct TuileChantiers: View {
         .accessibilityIdentifier("tuile-chantiers")
     }
 
-    private func ligne(_ chantier: Semaine) -> some View {
-        let etape = chantier.etape.flatMap(EtapeChantier.init(rawValue:))
-        return VStack(alignment: .leading, spacing: 4) {
+    private func ligne(titre: String, client: String?, etape: EtapeChantier?) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
-                Text(FriseSemaineView.titreCourt(chantier.titre))
+                Text(Self.nomCourt(titre: titre, client: client))
                     .styleTexte(11.5, relativeTo: .caption)
                     .foregroundStyle(Color.encre)
                     .lineLimit(1)
@@ -170,6 +179,12 @@ struct TuileChantiers: View {
             }
             BarreFine(part: etape.map { Double($0.index + 1) / Double(EtapeChantier.allCases.count) } ?? 0)
         }
+    }
+
+    /// Le client s'il est connu (« Villa Morel », « Kaveh Gordji »), sinon le début du titre.
+    static func nomCourt(titre: String, client: String?) -> String {
+        if let client, !client.isEmpty { return client }
+        return FriseSemaineView.titreCourt(titre)
     }
 
     static func numeroSemaine(_ date: Date = Date()) -> Int {

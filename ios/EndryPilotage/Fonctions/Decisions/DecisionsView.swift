@@ -104,28 +104,28 @@ struct DecisionsView: View {
         if let accueil = modele.accueil {
             FriseSemaineView(semaine: accueil.chantiers7Jours) { ouvrirPlanning() }
                 .padding(.horizontal, 20)
-                .padding(.top, 16)
+                .padding(.top, 26)
                 .apparitionEnCascade(index: 3, visible: visible)
         }
 
         TuileDecisions(modele: modele, visible: $carteVisible, zoom: zoom) { fiche = $0 }
-            .padding(.top, 16)
+            .padding(.top, 14)
             .apparitionEnCascade(index: 4, visible: visible)
 
         if !app.session.estOuvrier {
             ActionsTerrain()
                 .padding(.horizontal, Espace.bord)
-                .padding(.top, 14)
+                .padding(.top, 12)
                 .apparitionEnCascade(index: 5, visible: visible)
         }
 
         if let accueil = modele.accueil {
             HStack(alignment: .top, spacing: 10) {
                 TuileFinances(accueil: accueil) { app.onglet = .finances }
-                TuileChantiers(semaine: accueil.chantiers7Jours) { ouvrirPlanning() }
+                TuileChantiers(semaine: accueil.chantiers7Jours, enCours: chantiersEnCours) { ouvrirPlanning() }
             }
             .padding(.horizontal, Espace.bord)
-            .padding(.top, 14)
+            .padding(.top, 12)
             .apparitionEnCascade(index: 6, visible: visible)
         }
 
@@ -140,6 +140,11 @@ struct DecisionsView: View {
                 .padding(.top, Espace.l)
                 .transitionDefilement()
         }
+    }
+
+    /// Chantiers acceptés → réalisés, les plus avancés d'abord.
+    private var chantiersEnCours: [Dossier] {
+        (app.chantiers?.tous ?? []).filter { (2...4).contains($0.etapeIndex) }.sorted { $0.etapeIndex > $1.etapeIndex }
     }
 
     private func ouvrirPlanning() {

@@ -9,18 +9,18 @@ extension Color {
     // MARK: Fonds et surfaces
 
     /// Fond : brun du logo, ou papier du site.
-    static let fond = Color(clair: 0xF6F5F2, sombre: 0x211A13)
+    static let fond = Color(clair: 0xF6F5F2, sombre: 0x17110C)
     /// Surfaces posées sur le fond (panneaux, tuiles).
-    static let surface = Color(clair: 0xFFFFFF, sombre: 0x2B2219)
+    static let surface = Color(clair: 0xFFFFFF, sombre: 0x211A13)
     /// Surface creusée (champs, pistes, pastilles).
-    static let surfaceCreuse = Color(clair: 0xECE5D8, sombre: 0x3A3024)
+    static let surfaceCreuse = Color(clair: 0xECE5D8, sombre: 0x2E241A)
 
     // MARK: Encres (contraste AA sur fond et surface)
 
     static let encre = Color(clair: 0x241E17, sombre: 0xF7F2E9)
     static let encreDouce = Color(clair: 0x5F5850, sombre: 0xC1B7A7)
     static let encrePale = Color(clair: 0x6F6A63, sombre: 0x9C9282)
-    static let filet = Color(clair: 0xDDD9D2, sombre: 0x443A2C)
+    static let filet = Color(clair: 0xDDD9D2, sombre: 0x3A2E21)
 
     // MARK: Or de la maison
 
@@ -33,7 +33,7 @@ extension Color {
     static let bronze = Color(clair: 0x865D20, sombre: 0xF9DBA3)
     static let bronzeMoyen = Color(hex: 0x9F722A)
     /// Filet fin des surfaces.
-    static let bordureOr = Color(clair: 0xDDD9D2, sombre: 0x443A2C)
+    static let bordureOr = Color(clair: 0xDDD9D2, sombre: 0xF9DBA3, opaciteSombre: 0.14)
 
     // MARK: Papier (cartes de décision, fiches) : identique dans les deux thèmes
 
@@ -56,7 +56,7 @@ extension Color {
     static let vertControle = sauge
 
     static let ombre = Color(clair: 0x3A2819, sombre: 0x000000, opaciteClair: 0.08, opaciteSombre: 0.45)
-    static let reflet = Color(clair: 0xFFFFFF, sombre: 0xFFFFFF, opaciteClair: 0.6, opaciteSombre: 0.03)
+    static let reflet = Color(clair: 0xFFFFFF, sombre: 0xFFECC8, opaciteClair: 0.6, opaciteSombre: 0.05)
 
     init(hex: UInt32, opacite: Double = 1) {
         self.init(
@@ -85,7 +85,8 @@ extension Color {
 extension ShapeStyle where Self == LinearGradient {
     /// Or brossé : accents, bouton micro, curseur d'envoi.
     static var degradeOr: LinearGradient {
-        LinearGradient(colors: [.orClair, .or, Color(hex: 0xE6C88E)], startPoint: .topLeading, endPoint: .bottomTrailing)
+        // Maison Endry : crème dorée presque unie (plus de reflet brillant).
+        LinearGradient(colors: [Color(hex: 0xFBE2B2), .or], startPoint: .top, endPoint: .bottom)
     }
 
     /// Or pour le texte : reflet plus lumineux au centre.

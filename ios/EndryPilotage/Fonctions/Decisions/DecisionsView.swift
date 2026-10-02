@@ -193,6 +193,11 @@ struct DecisionsView: View {
                 VueErreur(erreur: erreur) { Task { await modele.charger() } }
             default:
                 decisions
+                if !app.session.estOuvrier {
+                    ActionsTerrain()
+                        .padding(.horizontal, Espace.bord)
+                        .transitionDefilement()
+                }
                 // iPad : ce qui a été fait et le briefing à gauche ; le bureau, l'argent et la semaine à droite.
                 Colonnes(ecart: 0) {
                     if let suiviActions = app.suiviActions {

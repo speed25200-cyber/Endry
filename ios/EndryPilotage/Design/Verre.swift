@@ -57,12 +57,14 @@ enum Onglet: String, CaseIterable, Identifiable, Hashable {
     }
 }
 
-/// Dock de la maison : pilule brune, icônes crème, micro crème au centre (toucher long : assistant vocal).
+/// Dock Maison Endry : capsule de verre, loupe liquide qui glisse d'un onglet à l'autre, orbe au centre
+/// (toucher : dictée ; toucher long : assistant vocal).
 struct BarreOnglets: View {
     @Binding var selection: Onglet
     var badgeDecisions: Int
     /// Toucher long du micro : assistant vocal plein écran.
     var ouvrirAssistant: () -> Void = {}
+    @Namespace private var loupe
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
     var body: some View {
@@ -77,12 +79,14 @@ struct BarreOnglets: View {
             bouton(.entreprise)
         }
         .padding(.horizontal, 6)
-        .frame(height: 66)
+        .frame(height: 68)
         .background {
             Capsule()
-                .fill(Color.espresso.opacity(0.94).shadow(.drop(color: .black.opacity(0.35), radius: 22, y: 10)))
-                .overlay(Capsule().stroke(Color(hex: 0x443A2C), lineWidth: 1))
+                .fill(Color.fond.opacity(0.42))
+                .shadow(color: Color.ombre, radius: 24, y: 12)
         }
+        .verre(Capsule())
+        .overlay(Capsule().strokeBorder(Color.bordureOr, lineWidth: Espace.filet))
         .padding(.horizontal, Espace.m)
         .sensoryFeedback(.selection, trigger: selection)
     }
@@ -90,30 +94,46 @@ struct BarreOnglets: View {
     private func bouton(_ onglet: Onglet) -> some View {
         let actif = selection == onglet
         return Button {
-            withAnimation(reduireAnimations ? .fonduDoux : .endryVif) {
+            withAnimation(reduireAnimations ? .fonduDoux : .spring(response: 0.38, dampingFraction: 0.78)) {
                 selection = onglet
             }
         } label: {
-            Image(systemName: actif ? onglet.iconeActive : onglet.icone)
-                .font(.system(size: 20, weight: actif ? .semibold : .regular))
-                .symbolEffect(.bounce.down, value: actif)
-                .foregroundStyle(actif ? Color.or : Color(hex: 0x8F8575))
-                .overlay(alignment: .topTrailing) {
-                    if onglet == .aujourdhui, badgeDecisions > 0 {
-                        Text("\(badgeDecisions)")
-                            .font(.system(size: 10, weight: .bold))
-                            .monospacedDigit()
-                            .foregroundStyle(Color.espresso)
-                            .padding(.horizontal, 4)
-                            .frame(minWidth: 16, minHeight: 16)
-                            .background(Color.or, in: Capsule())
-                            .offset(x: 11, y: -8)
-                            .contentTransition(.numericText(value: Double(badgeDecisions)))
-                            .accessibilityHidden(true)
+            VStack(spacing: 3) {
+                Image(systemName: actif ? onglet.iconeActive : onglet.icone)
+                    .font(.system(size: 19, weight: actif ? .semibold : .regular))
+                    .symbolEffect(.bounce.down, value: actif)
+                    .overlay(alignment: .topTrailing) {
+                        if onglet == .aujourdhui, badgeDecisions > 0 {
+                            Text("\(badgeDecisions)")
+                                .font(.system(size: 10, weight: .bold))
+                                .monospacedDigit()
+                                .foregroundStyle(Color.espresso)
+                                .padding(.horizontal, 4)
+                                .frame(minWidth: 16, minHeight: 16)
+                                .background(Color.or, in: Capsule())
+                                .offset(x: 11, y: -8)
+                                .contentTransition(.numericText(value: Double(badgeDecisions)))
+                                .accessibilityHidden(true)
+                        }
                     }
+                Text(onglet.titre)
+                    .font(.system(size: 9.5, weight: actif ? .semibold : .medium))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(actif ? Color.bronze : Color.encrePale)
+            .frame(maxWidth: .infinity, minHeight: 56)
+            .background {
+                // Loupe liquide : une seule forme qui glisse d'onglet en onglet.
+                if actif {
+                    Capsule()
+                        .fill(Color.encre.opacity(0.07))
+                        .overlay(Capsule().strokeBorder(Color.bordureOr, lineWidth: Espace.filet))
+                        .matchedGeometryEffect(id: "loupe", in: loupe)
+                        .padding(.horizontal, 2)
                 }
-                .frame(maxWidth: .infinity, minHeight: 56)
-                .contentShape(Rectangle())
+            }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .hoverEffect(.highlight)
@@ -123,7 +143,7 @@ struct BarreOnglets: View {
     }
 }
 
-/// Bouton micro doré, qui rayonne quand il est actif.
+/// Bouton central : l'orbe d'Endry, qui s'anime davantage quand il est actif.
 /// Toucher court : dictée (saisie terrain). Toucher long : assistant vocal plein écran.
 struct BoutonMicroCentral: View {
     var actif: Bool
@@ -143,20 +163,12 @@ struct BoutonMicroCentral: View {
             }
             action()
         } label: {
-            ZStack {
-                Circle()
-                    .stroke(Color.or.opacity(actif || presse ? 0.55 : 0.25), lineWidth: 1)
-                    .frame(width: 62, height: 62)
-                Circle()
-                    .fill(Color.or)
-                    .frame(width: 52, height: 52)
-                Image(systemName: presse ? "waveform" : "mic.fill")
-                    .font(.system(size: 21, weight: .semibold))
-                    .foregroundStyle(Color.espresso)
-                    .contentTransition(.symbolEffect(.replace))
-            }
-            .scaleEffect(presse ? 1.08 : 1)
-            .contentShape(Circle())
+            // Orbe Maison Endry : volutes de lumière qui s'animent, plus vives pendant l'appui ou la dictée.
+            OrbeSiri(diametre: 54, actif: actif || presse)
+                .shadow(color: Color.ombre, radius: 10, y: 6)
+                .frame(width: 62, height: 62)
+                .scaleEffect(presse ? 1.08 : 1)
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
         .simultaneousGesture(

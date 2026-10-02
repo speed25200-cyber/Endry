@@ -42,15 +42,21 @@ struct GlisserPourEnvoyer: View {
             let progression = min(max(decalage / course, 0), 1)
 
             ZStack(alignment: .leading) {
+                // Maison Endry : piste de verre et filet ; un trait de signal suit le pouce.
                 Capsule()
-                    .fill(surPapier ? Color.papierCreuse : Color.espresso)
-                    .overlay(Capsule().strokeBorder(surPapier ? Color.clear : Color.or.opacity(0.25), lineWidth: Espace.filet))
-
-                // Remplissage or : s'épaissit et s'éclaire avec le geste.
+                    .fill(surPapier ? Color.encrePapier.opacity(0.05) : Color.or.opacity(0.06))
+                    .overlay(Capsule().strokeBorder(surPapier ? Color.encrePapier.opacity(0.12) : Color.or.opacity(0.22),
+                                                    lineWidth: Espace.filet))
+                Rectangle()
+                    .fill((surPapier ? Color.encrePapier : Color.or).opacity(0.2))
+                    .frame(height: Espace.filet)
+                    .padding(.horizontal, marge + diametre / 2)
                 Capsule()
-                    .fill(LinearGradient(colors: [Color.orOmbre.opacity(0.25 + 0.45 * progression),
-                                                  (surPapier ? Color.orOmbre : Color.or).opacity(0.35 + 0.55 * progression)],
-                                         startPoint: .leading, endPoint: .trailing))
+                    .fill(surPapier ? Color.orOmbre : Color.or)
+                    .frame(width: max(decalage, 0), height: 2)
+                    .padding(.leading, marge + diametre / 2)
+                Capsule()
+                    .fill((surPapier ? Color.orOmbre : Color.or).opacity(0.16 * progression))
                     .frame(width: decalage + diametre + marge * 2)
 
                 HStack(spacing: Espace.xs) {
@@ -69,7 +75,7 @@ struct GlisserPourEnvoyer: View {
                 .padding(.leading, diametre * 0.6)
 
                 Circle()
-                    .fill(surPapier ? AnyShapeStyle(Color.espresso) : AnyShapeStyle(.degradeOr))
+                    .fill(surPapier ? Color.espresso : Color.or)
                     .frame(width: diametre, height: diametre)
                     .overlay {
                         if enCours {

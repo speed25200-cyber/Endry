@@ -44,23 +44,24 @@ struct GlisserPourEnvoyer: View {
             let progression = min(max(decalage / course, 0), 1)
 
             ZStack(alignment: .leading) {
-                Rectangle()
-                    .fill(Color.filetFort)
-                    .frame(height: Espace.filet)
-                    .padding(.horizontal, diametre / 2)
+                // Le filet s'arrête avant le libellé : il ne le barre jamais.
+                HStack(spacing: 12) {
+                    Rectangle()
+                        .fill(Color.filetFort)
+                        .frame(height: Espace.filet)
+                    Text(enCours ? (envoi ? "Envoi…" : "Validation…") : valide ? (envoi ? "Envoyé" : "Validé") : libelle)
+                        .font(Police.mono(12, relativeTo: .footnote))
+                        .foregroundStyle(Color.encreDouce)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .fixedSize()
+                        .opacity(1 - progression * 0.85)
+                }
+                .padding(.leading, diametre / 2)
                 Capsule()
                     .fill(Color.signal)
                     .frame(width: max(decalage, 0), height: 2)
                     .padding(.leading, marge + diametre / 2)
-
-                Text(enCours ? (envoi ? "Envoi…" : "Validation…") : valide ? (envoi ? "Envoyé" : "Validé") : libelle)
-                    .font(Police.mono(12, relativeTo: .footnote))
-                    .foregroundStyle(Color.encreDouce)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                    .padding(.leading, diametre + Espace.s)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .opacity(1 - progression * 0.85)
 
                 Circle()
                     .fill(Color.bouton)

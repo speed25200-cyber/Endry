@@ -2,9 +2,10 @@ import EndryKit
 import SwiftUI
 import UIKit
 
-/// « Conversation » : l'endroit réservé pour parler au bureau, par écrit ou en dictée, comme une session
-/// Claude ouverte sur le PC. Les questions partent tout de suite (le bureau s'en occupe) ; les demandes partent en
-/// saisie et se suivent ici jusqu'au résultat. Rien ne part chez un tiers sans le geste du patron à l'écran.
+/// « Conversation » avec le bureau, en plein écran (l'app derrière ne se dessine plus) : comme une session Claude
+/// ouverte sur le PC. L'écran ne montre que le fil en cours ; « Nouvelle conversation » repart d'une page blanche
+/// et les fils précédents restent dans l'historique. L'en-tête montre en direct ce que fait le bureau.
+/// Rien ne part chez un tiers sans le geste du patron à l'écran.
 struct ConversationView: View {
     @Environment(ModeleApp.self) private var app
     @Environment(\.dismiss) private var fermer
@@ -18,7 +19,7 @@ struct ConversationView: View {
     @State private var avantDictee = ""
     /// Le message en cours vient (au moins en partie) de la dictée.
     @State private var dicte = false
-    @State private var confirmerEffacement = false
+    @State private var historique = false
     @FocusState private var clavier: Bool
 
     private static let suggestions = [
@@ -29,60 +30,54 @@ struct ConversationView: View {
     ]
 
     var body: some View {
-        NavigationStack {
+        let fil = modele.filCourant
+        // Index calculés une fois par rendu (et non une recherche par message) : le fil reste fluide.
+        let questions = Dictionary(fil.filter { $0.role == .patron }.map { (MessageConversation.idReponse($0.id), $0) },
+                                   uniquingKeysWith: { premier, _ in premier })
+        let derniere = Self.derniereReponse(fil, identifiant: modele.identifiant)
+        VStack(spacing: 0) {
+            barreHaute
             ScrollViewReader { defilement in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: Espace.l) {
-                        if modele.messages.isEmpty {
+                    LazyVStack(alignment: .leading, spacing: 22) {
+                        if fil.isEmpty {
                             accueil
                         } else {
-                            let debuts = debutsDeFil
-                            ForEach(modele.messages) { message in
-                                if debuts.contains(message.id) {
-                                    SeparateurConversation(date: message.le)
-                                }
-                                MessageView(message: message, question: question(de: message), relancer: {
-                                    Task { await modele.relancer(String(message.id.dropFirst(2))) }
-                                }, suite: message.id == derniereReponse ? { suite in
-                                    // Envoyée telle quelle, sans toucher au brouillon du champ.
-                                    Task { await modele.envoyer(suite, nature: .question) }
-                                } : nil)
-                                .id(message.id)
+                            ForEach(fil) { message in
+                                MessageView(message: message, question: questions[message.id],
+                                            activite: activite(pour: message),
+                                            relancer: { Task { await modele.relancer(String(message.id.dropFirst(2))) } },
+                                            suite: message.id == derniere ? { suite in
+                                                // Envoyée telle quelle, sans toucher au brouillon du champ.
+                                                Task { await modele.envoyer(suite, nature: .question) }
+                                            } : nil)
+                                    .id(message.id)
                             }
                         }
                         Color.clear.frame(height: 1).id("fin")
                     }
                     .largeurLisible()
-                    .padding(.horizontal, Espace.bord)
-                    .padding(.top, Espace.s)
+                    .padding(.horizontal, 18)
+                    .padding(.top, Espace.m)
                     .padding(.bottom, Espace.m)
                 }
+                .scrollIndicators(.hidden)
                 .scrollDismissesKeyboard(.interactively)
                 .defaultScrollAnchor(.bottom)
-                .onChange(of: modele.messages.count) {
+                .onChange(of: fil.count) {
                     withAnimation(.endry) { defilement.scrollTo("fin", anchor: .bottom) }
                 }
-                .onChange(of: modele.messages.last?.etat) {
+                .onChange(of: fil.last?.etat) {
                     withAnimation(.endry) { defilement.scrollTo("fin", anchor: .bottom) }
                 }
                 .safeAreaInset(edge: .bottom, spacing: 0) { composeur }
             }
-            .background(FondAmbiant())
-            .navigationTitle("Conversation")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) { menuFil }
-                ToolbarItem(placement: .principal) { enTete }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("OK") { fermer() }
-                        .accessibilityIdentifier("fermer-conversation")
-                }
-            }
-            .confirmationDialog("Effacer toute la conversation ?", isPresented: $confirmerEffacement, titleVisibility: .visible) {
-                Button("Effacer", role: .destructive) { modele.effacer() }
-            } message: {
-                Text("Le fil est effacé de l’iPhone. Ce que le bureau a déjà fait reste dans « Fait récemment ».")
-            }
+        }
+        .background(FondMaison(photo: nil))
+        .sheet(isPresented: $historique) {
+            HistoriqueConversations(modele: modele)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
         .task { await modele.verifierEnAttente() }
         // Petit signe au toucher quand la réponse du bureau arrive.
@@ -100,58 +95,96 @@ struct ConversationView: View {
     }
 
     /// Dernière réponse reçue du fil en cours : elle porte les relances rapides.
-    private var derniereReponse: String? {
-        guard let derniere = modele.messages.last, derniere.role == .assistant, derniere.etat == .recu,
-              derniere.conversation == modele.identifiant else { return nil }
+    static func derniereReponse(_ fil: [MessageConversation], identifiant: String) -> String? {
+        guard let derniere = fil.last, derniere.role == .assistant, derniere.etat == .recu,
+              derniere.conversation == identifiant else { return nil }
         return derniere.id
     }
 
-    /// Messages qui ouvrent un nouveau fil (séparateur au-dessus).
-    private var debutsDeFil: Set<String> {
-        var debuts: Set<String> = []
-        var precedent: String?
-        for m in modele.messages {
-            if let precedent, precedent != m.conversation { debuts.insert(m.id) }
-            precedent = m.conversation
-        }
-        return debuts
-    }
-
-    private func question(de message: MessageConversation) -> MessageConversation? {
-        guard message.role != .patron else { return nil }
-        return modele.messages.first { MessageConversation.idReponse($0.id) == message.id }
+    /// Ce que fait le bureau pendant qu'une réponse est attendue (agent concerné, ou celui qui travaille).
+    private func activite(pour message: MessageConversation) -> String? {
+        guard message.role == .assistant, message.etat == .attente, let agents = app.agents, agents.enDirect else { return nil }
+        let occupes = agents.agents.filter { $0.etat == .occupe && $0.tache != nil }
+        let agent = occupes.first { $0.nom == message.agent } ?? occupes.first
+        guard let agent, let tache = agent.tache else { return nil }
+        return "\(agent.nom) · \(tache.prefix(1).lowercased())\(tache.dropFirst())"
     }
 
     // MARK: En-tête
 
-    private var enTete: some View {
-        VStack(spacing: 1) {
-            Text("Conversation").styleTexte(16, graisse: .semibold).foregroundStyle(Color.encre)
-            Menu {
-                Button {
-                    modele.choisirAgent(id: nil, nom: nil)
-                } label: {
-                    Label("L’assistant choisit le domaine", systemImage: modele.agentId == nil ? "checkmark" : "sparkles")
-                }
-                ForEach(app.agents?.agents ?? []) { agent in
+    private var barreHaute: some View {
+        ZStack {
+            VStack(spacing: 3) {
+                Text("Le bureau")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Color.encre)
+                Menu {
                     Button {
-                        modele.choisirAgent(id: agent.id, nom: agent.nom)
+                        modele.choisirAgent(id: nil, nom: nil)
                     } label: {
-                        Label(agent.nom, systemImage: modele.agentId == agent.id ? "checkmark" : (agent.connu?.icone ?? "person.crop.circle"))
+                        Label("L’assistant choisit le domaine", systemImage: modele.agentId == nil ? "checkmark" : "sparkles")
                     }
+                    ForEach(app.agents?.agents ?? []) { agent in
+                        Button {
+                            modele.choisirAgent(id: agent.id, nom: agent.nom)
+                        } label: {
+                            Label(agent.nom, systemImage: modele.agentId == agent.id ? "checkmark" : (agent.connu?.icone ?? "person.crop.circle"))
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        PointVeille(couleur: couleurEtat, actif: enTravail)
+                        Text(statut)
+                            .font(.system(size: 12.5, weight: .medium))
+                            .lineLimit(1)
+                        Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold))
+                    }
+                    .foregroundStyle(Color.encreDouce)
+                    .frame(maxWidth: 230)
                 }
-            } label: {
-                HStack(spacing: 4) {
-                    Circle().fill(couleurEtat).frame(width: 6, height: 6)
-                    Text(modele.agentNom.map { "Assistant · \($0)" } ?? (app.agents?.etat?.libelleCourt ?? "Assistant du bureau"))
-                        .styleTexte(12, relativeTo: .caption, graisse: .medium)
-                        .lineLimit(1)
-                    Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold))
-                }
-                .foregroundStyle(Color.encreDouce)
+                .accessibilityIdentifier("choix-agent")
             }
-            .accessibilityIdentifier("choix-agent")
+            HStack(spacing: 8) {
+                BoutonRondVerre(libelle: "Fermer la conversation", identifiant: "fermer-conversation") {
+                    fermer()
+                } contenu: {
+                    Image(systemName: "chevron.down").font(.system(size: 15, weight: .medium))
+                }
+                Spacer()
+                BoutonRondVerre(libelle: "Conversations précédentes", identifiant: "fils-precedents") {
+                    historique = true
+                } contenu: {
+                    Image(systemName: "clock.arrow.circlepath").font(.system(size: 15, weight: .medium))
+                }
+                .opacity(modele.filsPrecedents.isEmpty ? 0.4 : 1)
+                .disabled(modele.filsPrecedents.isEmpty)
+                BoutonRondVerre(libelle: "Nouvelle conversation", identifiant: "nouvelle-conversation") {
+                    clavier = false
+                    withAnimation(.endry) { modele.nouvelleConversation() }
+                } contenu: {
+                    Image(systemName: "square.and.pencil").font(.system(size: 15, weight: .medium))
+                }
+                .opacity(modele.filCourant.isEmpty ? 0.4 : 1)
+                .disabled(modele.filCourant.isEmpty)
+            }
         }
+        .padding(.horizontal, 12)
+        .padding(.top, 6)
+        .padding(.bottom, 6)
+    }
+
+    /// En direct : l'agent qui travaille et sa tâche, sinon l'état du bureau.
+    private var statut: String {
+        if let nom = modele.agentNom { return "Assistant · \(nom)" }
+        guard let agents = app.agents else { return "Assistant du bureau" }
+        if agents.enDirect, let actif = agents.agents.first(where: { $0.etat == .occupe && $0.tache != nil }), let tache = actif.tache {
+            return "\(actif.nom) · \(tache.prefix(1).lowercased())\(tache.dropFirst())"
+        }
+        return agents.etat?.libelleCourt ?? "Assistant du bureau"
+    }
+
+    private var enTravail: Bool {
+        modele.reflechit || (app.agents?.agents.contains { $0.etat == .occupe } ?? false)
     }
 
     private var couleurEtat: Color {
@@ -160,42 +193,20 @@ struct ConversationView: View {
         return Color.sauge
     }
 
-    private var menuFil: some View {
-        Menu {
-            Button {
-                modele.nouvelleConversation()
-            } label: {
-                Label("Nouvelle conversation", systemImage: "square.and.pencil")
-            }
-            Button(role: .destructive) {
-                confirmerEffacement = true
-            } label: {
-                Label("Effacer la conversation", systemImage: "trash")
-            }
-            .disabled(modele.messages.isEmpty)
-        } label: {
-            Image(systemName: "ellipsis.circle")
-        }
-        .accessibilityLabel(Text("Options de la conversation"))
-    }
-
-    // MARK: Accueil
+    // MARK: Accueil (fil vide)
 
     private var accueil: some View {
         VStack(alignment: .leading, spacing: Espace.m) {
-            Image(systemName: "bubble.left.and.text.bubble.right")
-                .font(.system(size: 30, weight: .regular))
-                .foregroundStyle(Color.bronze)
+            Text("Nouvelle conversation").etiquetteMaison()
                 .padding(.top, Espace.xl)
-            Text("Parlez au bureau").styleTitre(30, relativeTo: .title).foregroundStyle(Color.encre)
-            Text("Écrivez ou dictez : l’assistant du PC répond ici, tout de suite, comme une session ouverte. Il garde le fil de la conversation.")
-                .styleTexte(15).foregroundStyle(Color.encreDouce)
+            Text("Parlez au bureau")
+                .font(Police.serif(36, relativeTo: .largeTitle))
+                .foregroundStyle(Color.encre)
+            Text("Écrivez ou dictez : l’assistant du PC répond ici, comme une session ouverte. Tout envoi reste une décision à glisser.")
+                .styleTexte(15)
+                .foregroundStyle(Color.encreDouce)
                 .fixedSize(horizontal: false, vertical: true)
-            Label("Le bureau s’en occupe tout de suite : il répond, prépare, corrige, traite les e-mails… Vous suivez le travail ici. Tout envoi reste une décision à glisser.",
-                  systemImage: "lock.shield")
-                .styleTexte(13, relativeTo: .footnote).foregroundStyle(Color.encrePale)
-                .fixedSize(horizontal: false, vertical: true)
-            VStack(alignment: .leading, spacing: Espace.xs) {
+            VStack(alignment: .leading, spacing: 10) {
                 ForEach(Array(Self.suggestions.enumerated()), id: \.offset) { index, suggestion in
                     Button {
                         Task { await envoyer(suggestion, nature: .question) }
@@ -204,13 +215,14 @@ struct ConversationView: View {
                             Text(suggestion).styleTexte(15).foregroundStyle(Color.encre)
                                 .multilineTextAlignment(.leading)
                             Spacer(minLength: 0)
-                            Image(systemName: "arrow.up.right").font(.system(size: 12, weight: .bold)).foregroundStyle(Color.bronze)
+                            Image(systemName: "arrow.up.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.encreDouce)
                         }
-                        .padding(.horizontal, Espace.m)
-                        .padding(.vertical, Espace.s)
-                        .surfaceCarte(rayon: Espace.rayonPetit)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
+                        .tuileMaison(rayon: 20)
+                        .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(ActionPressee())
                     .accessibilityIdentifier("suggestion-conversation-\(index)")
                 }
             }
@@ -229,12 +241,12 @@ struct ConversationView: View {
             } else if case .indisponible(let raison) = dictee.etat {
                 Text(raison).styleTexte(12, relativeTo: .caption).foregroundStyle(Color.rouille)
             }
-            VStack(alignment: .leading, spacing: Espace.xs) {
-                TextField("", text: $texte, prompt: Text(dictee.ecoute ? "J’écoute…" : "Écrire au bureau…").foregroundStyle(Color.encrePale),
+            VStack(alignment: .leading, spacing: 10) {
+                TextField("", text: $texte, prompt: Text(dictee.ecoute ? "J’écoute…" : "Écrire au bureau…").foregroundStyle(Color.encreDouce),
                           axis: .vertical)
-                    .styleTexte(16)
+                    .styleTexte(17)
                     .foregroundStyle(Color.encre)
-                    .tint(Color.bronze)
+                    .tint(Color.signal)
                     .lineLimit(1...6)
                     .focused($clavier)
                     .accessibilityIdentifier("champ-conversation")
@@ -245,17 +257,17 @@ struct ConversationView: View {
                     boutonEnvoyer
                 }
             }
-            .padding(.horizontal, Espace.m)
-            .padding(.top, Espace.s)
-            .padding(.bottom, Espace.xs)
-            .background(Color.surface, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(clavier || dictee.ecoute ? Color.bronze.opacity(0.5) : Color.filet, lineWidth: 1))
-            .shadow(color: Color.ombre, radius: 16, y: 6)
+            .padding(.leading, 16)
+            .padding(.trailing, 10)
+            .padding(.top, 14)
+            .padding(.bottom, 10)
+            .verreMaison(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .strokeBorder(Color.signal.opacity(clavier || dictee.ecoute ? 0.45 : 0), lineWidth: 1))
             .animation(.endryVif, value: clavier)
         }
         .largeurLisible()
-        .padding(.horizontal, Espace.bord)
+        .padding(.horizontal, 12)
         .padding(.top, Espace.xs)
         .padding(.bottom, Espace.xs)
         .background(alignment: .bottom) {
@@ -275,12 +287,13 @@ struct ConversationView: View {
                 Image(systemName: nature == .question ? "questionmark.bubble" : "hammer")
                     .font(.system(size: 12, weight: .semibold))
                 Text(nature == .question ? "Question" : "Demande")
-                    .styleTexte(13, relativeTo: .footnote, graisse: .semibold)
+                    .styleTexte(13, relativeTo: .footnote, graisse: .medium)
             }
-            .foregroundStyle(nature == .question ? Color.encreDouce : Color.bronze)
-            .padding(.horizontal, 10)
-            .frame(height: 30)
-            .background(nature == .question ? Color.surfaceCreuse : Color.or.opacity(0.25), in: Capsule())
+            .foregroundStyle(nature == .question ? Color.encreDouce : Color.encre)
+            .padding(.horizontal, 12)
+            .frame(height: 32)
+            .background(nature == .question ? Color.clear : Color.lentille, in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.filet, lineWidth: Espace.filet))
             .contentTransition(.opacity)
         }
         .buttonStyle(.plain)
@@ -302,15 +315,15 @@ struct ConversationView: View {
         } label: {
             ZStack {
                 Circle()
-                    .fill(Color.or.opacity(dictee.ecoute ? 0.35 : 0))
+                    .fill(Color.signal.opacity(dictee.ecoute ? 0.25 : 0))
                     .scaleEffect(1 + CGFloat(dictee.niveau) * 0.5)
                     .animation(.endryVif, value: dictee.niveau)
                 Image(systemName: dictee.ecoute ? "stop.fill" : "mic")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(dictee.ecoute ? Color.bronze : Color.encreDouce)
+                    .font(.system(size: 17, weight: .regular))
+                    .foregroundStyle(dictee.ecoute ? Color.signal : Color.encreDouce)
                     .contentTransition(.symbolEffect(.replace))
             }
-            .frame(width: 36, height: 36)
+            .frame(width: 40, height: 40)
         }
         .buttonStyle(.plain)
         .sensoryFeedback(.impact(weight: .light), trigger: dictee.ecoute)
@@ -324,10 +337,10 @@ struct ConversationView: View {
             Task { await envoyer(envoi, nature: nature) }
         } label: {
             Image(systemName: "arrow.up")
-                .font(.system(size: 15, weight: .bold))
-                .foregroundStyle(Color.espresso)
-                .frame(width: 34, height: 34)
-                .background(.degradeOr, in: Circle())
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Color.boutonTexte)
+                .frame(width: 38, height: 38)
+                .background(Color.bouton, in: Circle())
         }
         .buttonStyle(.plain)
         .disabled(vide)
@@ -354,6 +367,70 @@ struct ConversationView: View {
     }
 }
 
+/// Conversations précédentes : rouvrir un fil (la suite repart dedans), ou tout effacer.
+private struct HistoriqueConversations: View {
+    @Environment(\.dismiss) private var fermer
+    var modele: ModeleConversation
+    @State private var confirmerEffacement = false
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 10) {
+                    ForEach(modele.filsPrecedents) { fil in
+                        Button {
+                            modele.reprendre(fil.id)
+                            fermer()
+                        } label: {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(fil.titre)
+                                    .styleTexte(16, relativeTo: .body)
+                                    .foregroundStyle(Color.encre)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.leading)
+                                Text("\(DateEndry.ilYa(fil.fin)) · \(fil.nombre) message\(fil.nombre > 1 ? "s" : "")")
+                                    .font(Police.mono(11.5))
+                                    .foregroundStyle(Color.encreDouce)
+                            }
+                            .padding(16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .tuileMaison(rayon: 20)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(ActionPressee())
+                        .accessibilityIdentifier("fil-\(fil.id)")
+                    }
+                    Button(role: .destructive) {
+                        confirmerEffacement = true
+                    } label: {
+                        Label("Effacer tout l’historique", systemImage: "trash")
+                            .styleTexte(15, relativeTo: .subheadline, graisse: .medium)
+                            .foregroundStyle(Color.rouille)
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                    }
+                    .padding(.top, Espace.m)
+                }
+                .padding(.horizontal, Espace.bord)
+                .padding(.vertical, Espace.m)
+            }
+            .background(FondMaison(photo: nil))
+            .navigationTitle("Conversations")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("OK") { fermer() } }
+            }
+            .confirmationDialog("Effacer toutes les conversations ?", isPresented: $confirmerEffacement, titleVisibility: .visible) {
+                Button("Effacer", role: .destructive) {
+                    modele.effacer()
+                    fermer()
+                }
+            } message: {
+                Text("Les fils sont effacés de l’iPhone. Ce que le bureau a déjà fait reste dans « Fait récemment ».")
+            }
+        }
+    }
+}
+
 // MARK: - Messages
 
 /// Un message du fil : le patron à droite, l'assistant en pleine largeur, comme une conversation Claude.
@@ -363,6 +440,8 @@ private struct MessageView: View {
     var message: MessageConversation
     /// Pour une réponse ou une note : le message du patron auquel elle répond.
     var question: MessageConversation?
+    /// En direct, pendant l'attente : ce que fait le bureau (« Secrétariat · cherche dans les e-mails »).
+    var activite: String? = nil
     var relancer: () -> Void
     /// Relances rapides (dernière réponse seulement).
     var suite: ((String) -> Void)? = nil
@@ -385,16 +464,17 @@ private struct MessageView: View {
                     .styleTexte(16)
                     .foregroundStyle(Color.encre)
                     .textSelection(.enabled)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(Color.surfaceCreuse, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 11)
+                    .background(Color.tuileHaut, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Color.filet, lineWidth: Espace.filet))
                 HStack(spacing: 4) {
                     if message.nature == .demande { Image(systemName: "hammer") }
                     if message.source != .ecrit { Image(systemName: message.source == .voix ? "waveform" : "mic") }
                     Text(legende)
                 }
-                .styleTexte(11, relativeTo: .caption2)
-                .foregroundStyle(Color.encrePale)
+                .styleTexte(11.5, relativeTo: .caption2)
+                .foregroundStyle(Color.encreDouce)
             }
         }
         .accessibilityElement(children: .combine)
@@ -414,17 +494,18 @@ private struct MessageView: View {
             HStack(spacing: 6) {
                 Image(systemName: message.agent.flatMap { AgentBureau(nom: $0)?.icone } ?? "sparkles")
                     .font(.system(size: 11, weight: .semibold))
-                Text(message.agent.map { "Assistant · \($0)" } ?? "Assistant du bureau")
-                    .styleTexte(12, relativeTo: .caption, graisse: .semibold)
+                Text(message.agent ?? "Assistant du bureau")
+                    .etiquetteMaison(11)
                 if message.etat == .recu {
-                    Text("· " + DateEndry.heure(message.le)).styleTexte(12, relativeTo: .caption)
-                        .foregroundStyle(Color.encrePale)
+                    Text(DateEndry.heure(message.le))
+                        .font(Police.mono(11))
+                        .foregroundStyle(Color.encreDouce)
                 }
             }
-            .foregroundStyle(Color.bronze)
+            .foregroundStyle(Color.etiquette)
             switch message.etat {
             case .attente:
-                Reflexion(depuis: question?.le ?? message.le, message: message.message)
+                Reflexion(depuis: question?.le ?? message.le, message: message.message, activite: activite)
             case .differe:
                 Label(message.message ?? BureauClaude.reponseAVenir, systemImage: "clock")
                     .styleTexte(14).foregroundStyle(Color.encreDouce)
@@ -506,12 +587,12 @@ private struct MessageView: View {
                     ForEach(Self.relances, id: \.self) { relance in
                         Button { suite(relance) } label: {
                             Text(relance)
-                                .styleTexte(13, relativeTo: .footnote, graisse: .medium)
-                                .foregroundStyle(Color.bronze)
-                                .padding(.horizontal, 12)
-                                .frame(height: 32)
-                                .background(Color.or.opacity(0.14), in: Capsule())
-                                .overlay(Capsule().stroke(Color.bronze.opacity(0.25), lineWidth: Espace.filet))
+                                .styleTexte(13.5, relativeTo: .footnote, graisse: .medium)
+                                .foregroundStyle(Color.encre)
+                                .padding(.horizontal, 14)
+                                .frame(height: 34)
+                                .background(Color.lentille, in: Capsule())
+                                .overlay(Capsule().strokeBorder(Color.filet, lineWidth: Espace.filet))
                         }
                         .buttonStyle(.plain)
                         .hoverEffect(.highlight)
@@ -568,6 +649,8 @@ private struct MessageView: View {
 private struct Reflexion: View {
     var depuis: Date
     var message: String?
+    /// Ce que fait le bureau en ce moment, en direct.
+    var activite: String? = nil
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
     var body: some View {
@@ -593,17 +676,20 @@ private struct Reflexion: View {
     }
 
     private func libelle(_ secondes: Int) -> some View {
-        Text(message ?? (secondes < 4 ? "L’assistant réfléchit…" : "L’assistant réfléchit… \(secondes) s"))
+        let base = message ?? activite ?? "L’assistant réfléchit…"
+        return Text(secondes < 4 || message != nil ? base : "\(base) · \(secondes) s")
             .styleTexte(14)
             .foregroundStyle(Color.encreDouce)
             .monospacedDigit()
+            .lineLimit(2)
+            .contentTransition(.opacity)
     }
 
     private func points(_ actif: Int) -> some View {
         HStack(spacing: 4) {
             ForEach(0..<3, id: \.self) { i in
                 Circle()
-                    .fill(Color.bronze.opacity(i == actif ? 0.9 : 0.3))
+                    .fill(Color.signal.opacity(i == actif ? 0.9 : 0.3))
                     .frame(width: 6, height: 6)
                     .scaleEffect(i == actif ? 1.15 : 1)
             }
@@ -637,7 +723,7 @@ struct TexteRiche: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Espace.xs) {
-            ForEach(Array(BlocTexte.decouper(texte).enumerated()), id: \.offset) { _, bloc in
+            ForEach(Array(CacheTexteRiche.blocs(texte).enumerated()), id: \.offset) { _, bloc in
                 switch bloc {
                 case .titre(let t):
                     Text(Self.enLigne(t)).styleTexte(taille + 1, graisse: .semibold).foregroundStyle(Color.encre)
@@ -672,6 +758,30 @@ struct TexteRiche: View {
     }
 
     static func enLigne(_ t: String) -> AttributedString {
-        (try? AttributedString(markdown: t, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(t)
+        CacheTexteRiche.enLigne(t)
+    }
+}
+
+/// Mise en forme des réponses calculée une seule fois par texte : le fil ne relit plus le Markdown à chaque
+/// rafraîchissement (cause des saccades quand le fil s'allongeait).
+@MainActor
+enum CacheTexteRiche {
+    private static var blocsParTexte: [String: [BlocTexte]] = [:]
+    private static var lignes: [String: AttributedString] = [:]
+
+    static func blocs(_ texte: String) -> [BlocTexte] {
+        if let deja = blocsParTexte[texte] { return deja }
+        if blocsParTexte.count > 300 { blocsParTexte.removeAll() }
+        let blocs = BlocTexte.decouper(texte)
+        blocsParTexte[texte] = blocs
+        return blocs
+    }
+
+    static func enLigne(_ t: String) -> AttributedString {
+        if let deja = lignes[t] { return deja }
+        if lignes.count > 1_500 { lignes.removeAll() }
+        let ligne = (try? AttributedString(markdown: t, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(t)
+        lignes[t] = ligne
+        return ligne
     }
 }

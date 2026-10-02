@@ -8,6 +8,7 @@ struct OrbeSiri: View {
     var diametre: CGFloat = 52
     var actif = false
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
+    @Environment(\.animationsEnPause) private var enPause
 
     private static let creme = Color(hex: 0xF9DBA3)
     private static let bronze = Color(hex: 0xC98F3C)
@@ -15,7 +16,7 @@ struct OrbeSiri: View {
     private static let glacier = Color(hex: 0x9EC9D8)
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: actif ? 1 / 60 : 1 / 30, paused: reduireAnimations)) { contexte in
+        TimelineView(.animation(minimumInterval: actif ? 1 / 60 : 1 / 30, paused: reduireAnimations || enPause)) { contexte in
             orbe(t: reduireAnimations ? 1.2 : contexte.date.timeIntervalSinceReferenceDate)
         }
         .frame(width: diametre, height: diametre)

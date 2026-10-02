@@ -156,6 +156,44 @@ public final class ModeleConversation {
         sauvegarder()
     }
 
+    // MARK: Fils
+
+    /// Un fil de conversation passé : sa première question, quand il a commencé, combien de messages.
+    public struct Fil: Identifiable, Hashable, Sendable {
+        public let id: String
+        public let debut: Date
+        public let fin: Date
+        public let titre: String
+        public let nombre: Int
+    }
+
+    /// Le fil en cours, seul affiché à l'écran : les fils précédents ne s'accumulent plus dessous.
+    public var filCourant: [MessageConversation] { messages.filter { $0.conversation == identifiant } }
+
+    /// Fils précédents, du plus récent au plus ancien.
+    public var filsPrecedents: [Fil] {
+        var ordre: [String] = []
+        var groupes: [String: [MessageConversation]] = [:]
+        for m in messages where m.conversation != identifiant {
+            if groupes[m.conversation] == nil { ordre.append(m.conversation) }
+            groupes[m.conversation, default: []].append(m)
+        }
+        return ordre.compactMap { id -> Fil? in
+            guard let fil = groupes[id], let premier = fil.first, let dernier = fil.last else { return nil }
+            let titre = fil.first { $0.role == .patron }?.texte ?? premier.texte
+            return Fil(id: id, debut: premier.le, fin: dernier.le, titre: titre, nombre: fil.count)
+        }
+        .sorted { $0.fin > $1.fin }
+    }
+
+    /// Rouvre un fil précédent : la suite de la conversation repart dans ce fil.
+    public func reprendre(_ id: String) {
+        guard messages.contains(where: { $0.conversation == id }) else { return }
+        identifiant = id
+        derniereActivite = Date()
+        sauvegarder()
+    }
+
     public func choisirAgent(id: String?, nom: String?) {
         agentId = id
         agentNom = nom

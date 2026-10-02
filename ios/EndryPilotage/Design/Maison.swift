@@ -130,6 +130,11 @@ struct TitreAdaptatif: View {
     }
 }
 
+extension EnvironmentValues {
+    /// Un écran plein (conversation, assistant vocal) recouvre l'app : les animations de fond s'arrêtent.
+    @Entry var animationsEnPause = false
+}
+
 /// Point « en veille » qui respire (statut du bureau). Horloge locale au point : aucune animation
 /// répétée ne s'échappe vers le reste de l'écran (cause du scintillement de la capsule en 1.0 (34)).
 struct PointVeille: View {
@@ -137,9 +142,10 @@ struct PointVeille: View {
     var actif = true
     var diametre: CGFloat = 6
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
+    @Environment(\.animationsEnPause) private var enPause
 
     var body: some View {
-        if actif, !reduireAnimations, !Configuration.testsUI {
+        if actif, !reduireAnimations, !enPause, !Configuration.testsUI {
             TimelineView(.animation(minimumInterval: 1 / 20)) { contexte in
                 let t = contexte.date.timeIntervalSinceReferenceDate
                 Circle().fill(couleur)

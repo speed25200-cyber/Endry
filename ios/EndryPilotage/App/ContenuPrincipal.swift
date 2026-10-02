@@ -42,7 +42,12 @@ struct ContenuPrincipal: View {
         @Bindable var documents = app.documents
         ZStack(alignment: .bottom) {
             ZStack {
-                ecran(.aujourdhui) { if let m = app.decisions { DecisionsView(modele: m).id(ObjectIdentifier(m)) } }
+                ecran(.aujourdhui) {
+                    if let m = app.decisions {
+                        DecisionsView(modele: m).id(ObjectIdentifier(m))
+                            .environment(\.animationsEnPause, app.conversationPresentee || app.assistantPresente)
+                    }
+                }
                 ecran(.chantiers) { if let m = app.chantiers { EspaceChantiers(modele: m).id(ObjectIdentifier(m)) } }
                 ecran(.saisie) { if let m = app.saisie { SaisieView(modele: m).id(ObjectIdentifier(m)) } }
                 ecran(.finances) { if let m = app.argent { ArgentView(modele: m).id(ObjectIdentifier(m)) } }
@@ -52,6 +57,7 @@ struct ContenuPrincipal: View {
             BarreOnglets(selection: $app.onglet, badgeDecisions: app.decisions?.nombreDecisions ?? 0) {
                 app.ouvrirAssistant()
             }
+                .environment(\.animationsEnPause, app.conversationPresentee || app.assistantPresente)
                 // iPad : un dock flottant centré, pas une barre étirée sur toute la largeur.
                 .frame(maxWidth: 520)
                 .padding(.bottom, 4)
@@ -85,9 +91,9 @@ struct ContenuPrincipal: View {
         .fullScreenCover(isPresented: $app.assistantPresente) {
             VueAssistantVocal()
         }
-        .sheet(isPresented: $app.conversationPresentee) {
-            // iPad : une grande feuille (format page), pas un petit formulaire.
-            if let modele = app.conversation { ConversationView(modele: modele).presentationSizing(.page) }
+        // Plein écran : l'app derrière cesse de se dessiner (la feuille gardait l'accueil animé dessous : saccades).
+        .fullScreenCover(isPresented: $app.conversationPresentee) {
+            if let modele = app.conversation { ConversationView(modele: modele) }
         }
         .sheet(isPresented: $app.recherchePresentee) {
             RechercheView()

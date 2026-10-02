@@ -36,6 +36,27 @@ final class ConversationTests: XCTestCase {
         XCTAssertNotEqual(modele.messages[1].conversation, modele.messages[2].conversation)
     }
 
+    /// L'écran n'affiche que le fil en cours ; les fils précédents se listent et se rouvrent.
+    func testFilCourantFilsPrecedentsEtReprise() {
+        let modele = ModeleConversation(bureau: nil)
+        let debut = Date(timeIntervalSince1970: 1_800_000_000)
+        modele.consignerQuestion("Premier fil", source: .ecrit, le: debut)
+        let premier = modele.identifiant
+        modele.nouvelleConversation()
+        modele.consignerQuestion("Second fil", source: .ecrit, le: debut.addingTimeInterval(60))
+        XCTAssertEqual(modele.filCourant.map(\.texte), ["Second fil"])
+        XCTAssertEqual(modele.filsPrecedents.map(\.titre), ["Premier fil"])
+        XCTAssertEqual(modele.filsPrecedents.first?.id, premier)
+
+        modele.reprendre(premier)
+        XCTAssertEqual(modele.identifiant, premier)
+        XCTAssertEqual(modele.filCourant.map(\.texte), ["Premier fil"])
+        XCTAssertEqual(modele.filsPrecedents.map(\.titre), ["Second fil"])
+        // La suite de la conversation repart dans le fil rouvert.
+        modele.consignerQuestion("Suite du premier", source: .ecrit)
+        XCTAssertEqual(modele.filCourant.count, 2)
+    }
+
     func testReponseVocaleConsigneeEtDifferee() {
         let modele = ModeleConversation(bureau: nil)
         let id = modele.consignerQuestion("Qui me doit de l’argent ?", source: .voix)

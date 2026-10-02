@@ -258,7 +258,7 @@ struct SaisieView: View {
 
     private func horodatage() -> String { Self.formatHorodatage.string(from: Date()) }
 
-    private static let formatHorodatage: DateFormatter = {
+    @MainActor private static let formatHorodatage: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "yyyyMMdd-HHmmss"

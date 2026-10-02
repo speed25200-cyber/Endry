@@ -325,7 +325,7 @@ struct PlanningView: View {
     private func iso(_ date: Date) -> String { Self.formatIso.string(from: date) }
 
     /// Créé une fois : un formateur neuf à chaque appel coûtait plus que tout le reste du calcul.
-    private static let formatIso: DateFormatter = {
+    @MainActor private static let formatIso: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.timeZone = DateEndry.fuseau

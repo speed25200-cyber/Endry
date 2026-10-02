@@ -428,7 +428,7 @@ struct InvitationOuvrierView: View {
     }
 
     /// QR code du lien, calculé une fois par lien (un contexte Core Image neuf à chaque rendu coûtait cher).
-    static func qr(_ texte: String) -> UIImage? {
+    @MainActor static func qr(_ texte: String) -> UIImage? {
         if let deja = memoireQR[texte] { return deja }
         let filtre = CIFilter.qrCodeGenerator()
         filtre.message = Data(texte.utf8)
@@ -440,6 +440,6 @@ struct InvitationOuvrierView: View {
         return qr
     }
 
-    private static var memoireQR: [String: UIImage] = [:]
-    private static let contexteQR = CIContext()
+    @MainActor private static var memoireQR: [String: UIImage] = [:]
+    @MainActor private static let contexteQR = CIContext()
 }

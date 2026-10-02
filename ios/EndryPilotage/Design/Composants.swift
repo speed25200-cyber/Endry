@@ -329,12 +329,12 @@ struct EtatVide: View {
     }
 }
 
-/// Squelette de chargement avec un reflet qui glisse.
+/// Squelette de chargement avec un reflet qui glisse. Horloge locale (TimelineView) : aucune animation
+/// répétée ne se propage au reste de l'écran.
 struct Squelette: View {
     var hauteur: CGFloat = 16
     var largeur: CGFloat? = nil
     var rayon: CGFloat = 8
-    @State private var phase: CGFloat = -1
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
     var body: some View {
@@ -342,18 +342,17 @@ struct Squelette: View {
             .fill(Color.surfaceCreuse)
             .frame(width: largeur, height: hauteur)
             .overlay {
-                if !reduireAnimations {
-                    GeometryReader { geo in
-                        LinearGradient(colors: [.clear, Color.or.opacity(0.14), .clear], startPoint: .leading, endPoint: .trailing)
-                            .frame(width: geo.size.width * 0.6)
-                            .offset(x: phase * geo.size.width)
+                if !reduireAnimations, !Configuration.testsUI {
+                    TimelineView(.animation(minimumInterval: 1 / 30)) { contexte in
+                        let t = contexte.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.6) / 1.6
+                        GeometryReader { geo in
+                            LinearGradient(colors: [.clear, Color.or.opacity(0.14), .clear], startPoint: .leading, endPoint: .trailing)
+                                .frame(width: geo.size.width * 0.6)
+                                .offset(x: (-1 + 2.4 * t) * geo.size.width)
+                        }
                     }
                     .clipShape(RoundedRectangle(cornerRadius: rayon, style: .continuous))
                 }
-            }
-            .onAppear {
-                guard !reduireAnimations else { return }
-                withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: false)) { phase = 1.4 }
             }
             .accessibilityHidden(true)
     }

@@ -15,7 +15,7 @@ struct OrbeSiri: View {
     private static let glacier = Color(hex: 0x9EC9D8)
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 60, paused: reduireAnimations)) { contexte in
+        TimelineView(.animation(minimumInterval: actif ? 1 / 60 : 1 / 30, paused: reduireAnimations)) { contexte in
             orbe(t: reduireAnimations ? 1.2 : contexte.date.timeIntervalSinceReferenceDate)
         }
         .frame(width: diametre, height: diametre)

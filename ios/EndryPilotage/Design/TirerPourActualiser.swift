@@ -51,16 +51,25 @@ struct TirerPourActualiser: ViewModifier {
 struct IndicateurActualisation: View {
     var progression: CGFloat
     var enCours: Bool
-    @State private var rotation = 0.0
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
     var body: some View {
         ZStack {
             Circle().stroke(Color.or.opacity(0.18), lineWidth: 2)
-            Circle()
-                .trim(from: 0, to: enCours ? 0.28 : progression)
-                .stroke(.degradeOr, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                .rotationEffect(.degrees(-90 + rotation))
+            if enCours, !reduireAnimations {
+                TimelineView(.animation(minimumInterval: 1 / 60)) { contexte in
+                    let tour = contexte.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 0.9) / 0.9
+                    Circle()
+                        .trim(from: 0, to: 0.28)
+                        .stroke(.degradeOr, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                        .rotationEffect(.degrees(-90 + 360 * tour))
+                }
+            } else {
+                Circle()
+                    .trim(from: 0, to: enCours ? 0.28 : progression)
+                    .stroke(.degradeOr, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+            }
             Text("E")
                 .font(Police.titre(15, relativeTo: .caption))
                 .foregroundStyle(Color.bronze)
@@ -69,13 +78,6 @@ struct IndicateurActualisation: View {
         .frame(width: 34, height: 34)
         .background(Color.surface, in: Circle())
         .shadow(color: Color.espresso.opacity(0.12), radius: 8, y: 3)
-        .onChange(of: enCours) { _, actif in
-            if actif, !reduireAnimations {
-                withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: false)) { rotation = 360 }
-            } else {
-                withAnimation(.default) { rotation = 0 }
-            }
-        }
         .accessibilityLabel(Text(enCours ? "Actualisation en cours" : "Tirer pour actualiser"))
     }
 }

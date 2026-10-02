@@ -1,44 +1,36 @@
 import EndryKit
 import SwiftUI
 
-/// Accueil Maison Endry : capsule de verre « en direct » sous la barre du haut — ce que fait le bureau maintenant.
-/// Toucher : Le bureau (onglet Entreprise).
+/// Accueil Maison Endry : capsule de verre « en direct » sous l'en-tête — ce que fait le bureau maintenant
+/// (« Secrétariat rédige la réponse à Mme Rey · 3 agents »). Toucher : Le bureau.
 struct StatutBureau: View {
     var modele: ModeleAgents
     var ouvrir: () -> Void
-    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
-    @State private var pulse = false
 
     var body: some View {
         Button(action: ouvrir) {
             HStack(spacing: Espace.xs) {
-                Circle()
-                    .fill(modele.enDirect ? Color.sauge : Color.encrePale)
-                    .frame(width: 7, height: 7)
-                    .opacity(pulse && modele.enDirect ? 0.35 : 1)
-                HStack(spacing: 0) {
-                    Text(titre).fontWeight(.semibold).foregroundStyle(Color.encre)
-                    Text(detail).foregroundStyle(Color.encreDouce)
-                }
-                .styleTexte(12.5, relativeTo: .footnote)
-                .lineLimit(1)
+                PointVeille(couleur: .sauge, actif: modele.enDirect)
+                Text("\(Text(titre).foregroundStyle(Color.encre).fontWeight(.medium))\(Text(detail).foregroundStyle(Color.encreDouce))")
+                    .styleTexte(12.5, relativeTo: .footnote)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 Spacer(minLength: Espace.xs)
                 Text(compte)
-                    .font(.system(size: 10.5, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Color.encrePale)
+                    .font(Police.mono(10.5))
+                    .foregroundStyle(Color.encreDouce)
+                    .lineLimit(1)
+                    .fixedSize()
             }
             .padding(.horizontal, Espace.s)
-            .frame(height: 36)
-            .verre(Capsule())
-            .overlay(Capsule().strokeBorder(Color.bordureOr, lineWidth: Espace.filet))
+            .frame(maxWidth: .infinity, minHeight: 34)
+            .verreMaison(Capsule())
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
         .accessibilityHint(Text("Ouvre Le bureau"))
         .accessibilityIdentifier("statut-bureau")
-        .onAppear {
-            guard !reduireAnimations, !Configuration.testsUI else { return }
-            withAnimation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true)) { pulse = true }
-        }
     }
 
     private var actif: AgentPC? {
@@ -51,12 +43,13 @@ struct StatutBureau: View {
     }
 
     private var detail: String {
-        if let actif, modele.enDirect, let tache = actif.tache { return " · " + tache.prefix(1).lowercased() + String(tache.dropFirst()) }
-        return ""
+        guard let actif, modele.enDirect, let tache = actif.tache, let premiere = tache.first else { return "" }
+        return " " + premiere.lowercased() + String(tache.dropFirst())
     }
 
     private var compte: String {
         let n = modele.agents.filter { $0.etat == .occupe }.count
-        return n > 0 ? "\(n) actif\(n > 1 ? "s" : "")" : "\(modele.agents.count) agents"
+        if n > 0 { return n == 1 ? "1 agent" : "\(n) agents" }
+        return "\(modele.agents.count) agents"
     }
 }

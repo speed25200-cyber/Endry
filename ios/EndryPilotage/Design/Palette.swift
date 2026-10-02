@@ -11,16 +11,18 @@ extension Color {
     /// Fond : brun du logo, ou papier du site.
     static let fond = Color(clair: 0xF6F5F2, sombre: 0x17110C)
     /// Surfaces posées sur le fond (panneaux, tuiles).
-    static let surface = Color(clair: 0xFFFFFF, sombre: 0x211A13)
+    static let surface = Color(clair: 0xFDFCFA, sombre: 0x211A13)
     /// Surface creusée (champs, pistes, pastilles).
     static let surfaceCreuse = Color(clair: 0xECE5D8, sombre: 0x2E241A)
 
     // MARK: Encres (contraste AA sur fond et surface)
 
-    static let encre = Color(clair: 0x241E17, sombre: 0xF7F2E9)
-    static let encreDouce = Color(clair: 0x5F5850, sombre: 0xC1B7A7)
+    static let encre = Color(clair: 0x211A13, sombre: 0xF6F0E6)
+    static let encreDouce = Color(clair: 0x74695A, sombre: 0xB2A38B)
     static let encrePale = Color(clair: 0x6F6A63, sombre: 0x9C9282)
-    static let filet = Color(clair: 0xDDD9D2, sombre: 0x3A2E21)
+    static let filet = Color(clair: 0x211A13, sombre: 0xF9DBA3, opaciteClair: 0.1, opaciteSombre: 0.12)
+    /// Filet appuyé : frises, pistes de glissement.
+    static let filetFort = Color(clair: 0x211A13, sombre: 0xF9DBA3, opaciteClair: 0.28, opaciteSombre: 0.3)
 
     // MARK: Or de la maison
 
@@ -33,7 +35,27 @@ extension Color {
     static let bronze = Color(clair: 0x865D20, sombre: 0xF9DBA3)
     static let bronzeMoyen = Color(hex: 0x9F722A)
     /// Filet fin des surfaces.
-    static let bordureOr = Color(clair: 0xDDD9D2, sombre: 0xF9DBA3, opaciteSombre: 0.14)
+    static let bordureOr = Color(clair: 0x211A13, sombre: 0xF9DBA3, opaciteClair: 0.1, opaciteSombre: 0.12)
+
+    // MARK: Maison Endry (maquette E)
+
+    /// Étiquettes Cinzel (« À DÉCIDER », « FINANCES »).
+    static let etiquette = Color(clair: 0x8A6223, sombre: 0xD2A764)
+    /// Signal : trait du geste, repère « maintenant », barres d'avancement.
+    static let signal = Color(clair: 0x9F722A, sombre: 0xF9DBA3)
+    static let signalHalo = Color(clair: 0x9F722A, sombre: 0xF9DBA3, opaciteClair: 0.14, opaciteSombre: 0.16)
+    /// Bouton principal : crème dorée sur brun (sombre), brun sur papier (clair).
+    static let bouton = Color(clair: 0x211A13, sombre: 0xF9DBA3)
+    static let boutonTexte = Color(clair: 0xF9DBA3, sombre: 0x211A13)
+    /// Verre et tuiles : crème dorée à peine posée (sombre), blanc laiteux (clair).
+    static let verreTeinte = Color(clair: 0xFFFFFF, sombre: 0xF9DBA3, opaciteClair: 0.6, opaciteSombre: 0.06)
+    static let tuileTeinte = Color(clair: 0xFFFFFF, sombre: 0xF9DBA3, opaciteClair: 0.72, opaciteSombre: 0.045)
+    /// Pastille de genre (« Offre », « E-mail »).
+    static let puce = Color(clair: 0xF9DBA3, sombre: 0xF9DBA3, opaciteClair: 0.55, opaciteSombre: 0.12)
+    /// Loupe de la barre d'onglets.
+    static let lentille = Color(clair: 0x211A13, sombre: 0xF9DBA3, opaciteClair: 0.06, opaciteSombre: 0.1)
+    /// Reflet du bord haut des tuiles et du verre.
+    static let refletBord = Color(clair: 0xFFFFFF, sombre: 0xFFECC8, opaciteClair: 1, opaciteSombre: 0.22)
 
     // MARK: Papier (cartes de décision, fiches) : identique dans les deux thèmes
 
@@ -50,12 +72,12 @@ extension Color {
 
     // MARK: États
 
-    static let sauge = Color(clair: 0x4F6B4A, sombre: 0x9DBB97)
+    static let sauge = Color(clair: 0x3D7046, sombre: 0x9CCB98)
     static let ambre = Color(clair: 0x8A5A12, sombre: 0xE2B25C)
-    static let rouille = Color(clair: 0x8A4B3A, sombre: 0xE0907E)
+    static let rouille = Color(clair: 0xA9462B, sombre: 0xE59474)
     static let vertControle = sauge
 
-    static let ombre = Color(clair: 0x3A2819, sombre: 0x000000, opaciteClair: 0.08, opaciteSombre: 0.45)
+    static let ombre = Color(clair: 0x211A13, sombre: 0x000000, opaciteClair: 0.1, opaciteSombre: 0.5)
     static let reflet = Color(clair: 0xFFFFFF, sombre: 0xFFECC8, opaciteClair: 0.6, opaciteSombre: 0.05)
 
     init(hex: UInt32, opacite: Double = 1) {

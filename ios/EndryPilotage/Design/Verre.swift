@@ -28,41 +28,42 @@ enum Onglet: String, CaseIterable, Identifiable, Hashable {
 
     var titre: String {
         switch self {
-        case .aujourdhui: "Aujourd’hui"
+        case .aujourdhui: "Accueil"
         case .chantiers: "Chantiers"
         case .saisie: "Dicter"
         case .finances: "Finances"
-        case .entreprise: "Entreprise"
+        case .entreprise: "Bureau"
         }
     }
 
     var icone: String {
         switch self {
-        case .aujourdhui: "house"
+        case .aujourdhui: "square.grid.2x2"
         case .chantiers: "calendar"
         case .saisie: "mic"
         case .finances: "chart.line.uptrend.xyaxis"
-        case .entreprise: "person"
+        case .entreprise: "circle.circle"
         }
     }
 
     var iconeActive: String {
         switch self {
-        case .aujourdhui: "house.fill"
+        case .aujourdhui: "square.grid.2x2.fill"
         case .chantiers: "calendar"
         case .saisie: "mic.fill"
         case .finances: "chart.line.uptrend.xyaxis"
-        case .entreprise: "person.fill"
+        case .entreprise: "circle.circle.fill"
         }
     }
 }
 
-/// Dock Maison Endry : capsule de verre, loupe liquide qui glisse d'un onglet à l'autre, orbe au centre
-/// (toucher : dictée ; toucher long : assistant vocal).
+/// Barre Maison Endry : capsule de verre (64 pt), loupe qui glisse d'un onglet à l'autre, orbe au centre.
+/// L'orbe est posé au-dessus du verre, jamais dedans : le verre ne se recalcule pas à chaque image de l'orbe.
+/// Orbe : toucher = parler à Endry (relais vers le bureau) ; toucher long = dicter une saisie terrain.
 struct BarreOnglets: View {
     @Binding var selection: Onglet
     var badgeDecisions: Int
-    /// Toucher long du micro : assistant vocal plein écran.
+    /// Toucher de l'orbe : assistant vocal plein écran.
     var ouvrirAssistant: () -> Void = {}
     @Namespace private var loupe
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
@@ -71,22 +72,19 @@ struct BarreOnglets: View {
         HStack(spacing: 0) {
             bouton(.aujourdhui)
             bouton(.chantiers)
-            BoutonMicroCentral(actif: selection == .saisie, appuiLong: ouvrirAssistant) {
-                withAnimation(.endry) { selection = .saisie }
-            }
-            .frame(maxWidth: .infinity)
+            Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityHidden(true)
             bouton(.finances)
             bouton(.entreprise)
         }
         .padding(.horizontal, 6)
-        .frame(height: 68)
-        .background {
-            Capsule()
-                .fill(Color.fond.opacity(0.42))
-                .shadow(color: Color.ombre, radius: 24, y: 12)
+        .frame(height: 64)
+        .background { FondBarre() }
+        .overlay {
+            BoutonOrbe(actif: selection == .saisie, ouvrirAssistant: ouvrirAssistant) {
+                withAnimation(.endry(reduire: reduireAnimations)) { selection = .saisie }
+            }
         }
-        .verre(Capsule())
-        .overlay(Capsule().strokeBorder(Color.bordureOr, lineWidth: Espace.filet))
         .padding(.horizontal, Espace.m)
         .sensoryFeedback(.selection, trigger: selection)
     }
@@ -94,43 +92,37 @@ struct BarreOnglets: View {
     private func bouton(_ onglet: Onglet) -> some View {
         let actif = selection == onglet
         return Button {
-            withAnimation(reduireAnimations ? .fonduDoux : .spring(response: 0.38, dampingFraction: 0.78)) {
+            withAnimation(reduireAnimations ? .fonduDoux : .spring(response: 0.36, dampingFraction: 0.8)) {
                 selection = onglet
             }
         } label: {
-            VStack(spacing: 3) {
+            VStack(spacing: 4) {
                 Image(systemName: actif ? onglet.iconeActive : onglet.icone)
-                    .font(.system(size: 19, weight: actif ? .semibold : .regular))
-                    .symbolEffect(.bounce.down, value: actif)
-                    .overlay(alignment: .topTrailing) {
-                        if onglet == .aujourdhui, badgeDecisions > 0 {
-                            Text("\(badgeDecisions)")
-                                .font(.system(size: 10, weight: .bold))
-                                .monospacedDigit()
-                                .foregroundStyle(Color.espresso)
-                                .padding(.horizontal, 4)
-                                .frame(minWidth: 16, minHeight: 16)
-                                .background(Color.or, in: Capsule())
-                                .offset(x: 11, y: -8)
-                                .contentTransition(.numericText(value: Double(badgeDecisions)))
-                                .accessibilityHidden(true)
-                        }
-                    }
+                    .font(.system(size: 18, weight: .light))
+                    .frame(height: 20)
                 Text(onglet.titre)
-                    .font(.system(size: 9.5, weight: actif ? .semibold : .medium))
+                    .font(.system(size: 9.5, weight: actif ? .medium : .regular))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
-            .foregroundStyle(actif ? Color.bronze : Color.encrePale)
-            .frame(maxWidth: .infinity, minHeight: 56)
+            .foregroundStyle(actif ? Color.encre : Color.encreDouce)
+            .frame(maxWidth: .infinity, minHeight: 52)
             .background {
-                // Loupe liquide : une seule forme qui glisse d'onglet en onglet.
+                // Loupe : une seule forme qui glisse d'onglet en onglet.
                 if actif {
-                    Capsule()
-                        .fill(Color.encre.opacity(0.07))
-                        .overlay(Capsule().strokeBorder(Color.bordureOr, lineWidth: Espace.filet))
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .fill(Color.lentille)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                                .strokeBorder(Color.filet, lineWidth: Espace.filet)
+                        }
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                                .strokeBorder(LinearGradient(colors: [Color.refletBord, .clear], startPoint: .topLeading, endPoint: .center),
+                                              lineWidth: 1)
+                                .opacity(0.5)
+                        }
                         .matchedGeometryEffect(id: "loupe", in: loupe)
-                        .padding(.horizontal, 2)
                 }
             }
             .contentShape(Rectangle())
@@ -143,31 +135,46 @@ struct BarreOnglets: View {
     }
 }
 
-/// Bouton central : l'orbe d'Endry, qui s'anime davantage quand il est actif.
-/// Toucher court : dictée (saisie terrain). Toucher long : assistant vocal plein écran.
-struct BoutonMicroCentral: View {
+/// Fond de la barre : verre (Liquid Glass sur iOS 26), teinte crème, filet et ombre portée.
+private struct FondBarre: View {
+    var body: some View {
+        Capsule()
+            .fill(Color.verreTeinte)
+            .background { Color.clear.verre(Capsule()) }
+            .overlay { Capsule().strokeBorder(Color.filet, lineWidth: Espace.filet) }
+            .overlay {
+                Capsule()
+                    .strokeBorder(LinearGradient(colors: [Color.refletBord, .clear], startPoint: .topLeading, endPoint: .center),
+                                  lineWidth: 1)
+                    .opacity(0.5)
+            }
+            .shadow(color: Color.ombre, radius: 20, y: 14)
+    }
+}
+
+/// L'orbe d'Endry au centre de la barre. Toucher : parler à Endry. Toucher long : dicter une saisie terrain.
+struct BoutonOrbe: View {
     var actif: Bool
-    var appuiLong: () -> Void = {}
-    var action: () -> Void
+    var ouvrirAssistant: () -> Void
+    var dicter: () -> Void
     @State private var presse = false
     @State private var appuiLongDeclenche = false
-    @State private var assistantOuvert = 0
-    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
+    @State private var dictee = 0
 
     var body: some View {
         Button {
-            // Après un toucher long (assistant ouvert), le relâchement n'ouvre pas la dictée.
+            // Après un toucher long (dictée ouverte), le relâchement n'ouvre pas l'assistant.
             if appuiLongDeclenche {
                 appuiLongDeclenche = false
                 return
             }
-            action()
+            ouvrirAssistant()
         } label: {
-            // Orbe Maison Endry : volutes de lumière qui s'animent, plus vives pendant l'appui ou la dictée.
-            OrbeSiri(diametre: 54, actif: actif || presse)
-                .shadow(color: Color.ombre, radius: 10, y: 6)
-                .frame(width: 62, height: 62)
-                .scaleEffect(presse ? 1.08 : 1)
+            OrbeSiri(diametre: 52, actif: actif || presse)
+                .shadow(color: Color.ombre, radius: 12, y: 8)
+                .overlay(Circle().strokeBorder(Color.filet, lineWidth: Espace.filet))
+                .scaleEffect(presse ? 1.06 : 1)
+                .frame(width: 60, height: 60)
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -175,18 +182,18 @@ struct BoutonMicroCentral: View {
             LongPressGesture(minimumDuration: 0.45)
                 .onEnded { _ in
                     appuiLongDeclenche = true
-                    assistantOuvert += 1
-                    appuiLong()
+                    dictee += 1
+                    dicter()
                 }
         )
         .onLongPressGesture(minimumDuration: 0.45, perform: {}, onPressingChanged: { enCours in
             withAnimation(.endryVif) { presse = enCours }
         })
-        .sensoryFeedback(.impact(weight: .medium), trigger: assistantOuvert)
-        .accessibilityLabel(Text("Dicter une saisie terrain"))
-        .accessibilityHint(Text("Toucher long : assistant vocal."))
-        .accessibilityAction(named: Text("Parler à l’assistant")) { appuiLong() }
-        .accessibilityIdentifier("onglet-saisie")
+        .sensoryFeedback(.impact(weight: .medium), trigger: dictee)
+        .accessibilityLabel(Text("Parler à Endry"))
+        .accessibilityHint(Text("Toucher long : dicter une saisie terrain."))
+        .accessibilityAction(named: Text("Dicter une saisie terrain")) { dicter() }
+        .accessibilityIdentifier("parler-endry")
     }
 }
 

@@ -4,47 +4,72 @@ import SwiftUI
 /// Carte « Briefing » sur Aujourd'hui : un toucher pour l'écouter, un autre pour le détail.
 struct CarteBriefing: View {
     @Environment(ModeleApp.self) private var app
+    /// Début de la lecture en cours : la barre avance au rythme estimé de la voix.
+    @State private var debutLecture: Date?
 
+    /// Maison Endry : pilule « Briefing du jour » — lecture à gauche, barre de progression, durée en mono.
     var body: some View {
         let briefing = BriefingMatin.composer(app: app)
-        HStack(spacing: Espace.s) {
+        let duree = Self.dureeEstimee(briefing.texteParle)
+        HStack(spacing: 12) {
             Button {
+                debutLecture = app.lecteur.enLecture ? nil : Date()
                 app.lecteur.basculer(briefing.texteParle)
             } label: {
-                Image(systemName: app.lecteur.enLecture ? "stop.fill" : "play.fill")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(Color.espressoProfond)
-                    .frame(width: 44, height: 44)
-                    .background(.degradeOr, in: Circle())
+                Image(systemName: app.lecteur.enLecture ? "pause.fill" : "play.fill")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Color.boutonTexte)
+                    .frame(width: 40, height: 40)
+                    .background(Color.bouton, in: Circle())
                     .contentTransition(.symbolEffect(.replace))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(ActionPressee())
             .accessibilityLabel(Text(app.lecteur.enLecture ? "Arrêter le briefing" : "Écouter le briefing"))
             .accessibilityIdentifier("ecouter-briefing")
 
             Button {
                 app.briefingPresente = true
             } label: {
-                HStack {
-                    VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 5) {
                         Text("Briefing du jour")
-                            .styleTexte(14, relativeTo: .subheadline, graisse: .semibold)
+                            .styleTexte(13, relativeTo: .subheadline)
                             .foregroundStyle(Color.encre)
-                        Text(briefing.points.prefix(2).map { "\($0.titre) \($0.detail)" }.joined(separator: " · "))
-                            .styleTexte(12, relativeTo: .caption)
-                            .foregroundStyle(Color.encreDouce)
-                            .lineLimit(1)
+                        if app.lecteur.enLecture, let debutLecture {
+                            TimelineView(.periodic(from: debutLecture, by: 0.25)) { contexte in
+                                BarreFine(part: contexte.date.timeIntervalSince(debutLecture) / duree)
+                            }
+                        } else {
+                            BarreFine(part: 0)
+                        }
                     }
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.bronze)
+                    Text(Self.minutesSecondes(duree))
+                        .font(Police.mono(10.5))
+                        .foregroundStyle(Color.encreDouce)
+                        .padding(.trailing, 8)
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("carte-briefing")
         }
-        .padding(Espace.m)
-        .surfaceCarte(rayon: 22)
+        .padding(.leading, 6)
+        .padding(.trailing, 8)
+        .frame(height: 50)
+        .tuileMaison(rayon: 26)
+        .onChange(of: app.lecteur.enLecture) { _, lecture in
+            if !lecture { debutLecture = nil }
+        }
+    }
+
+    /// Environ 2,6 mots par seconde pour la voix française.
+    static func dureeEstimee(_ texte: String) -> TimeInterval {
+        max(Double(texte.split(whereSeparator: \.isWhitespace).count) / 2.6, 5)
+    }
+
+    static func minutesSecondes(_ duree: TimeInterval) -> String {
+        let s = Int(duree.rounded())
+        return "\(s / 60):" + (s % 60 < 10 ? "0" : "") + "\(s % 60)"
     }
 }
 

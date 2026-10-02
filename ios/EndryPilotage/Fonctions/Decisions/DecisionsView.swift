@@ -1,61 +1,38 @@
 import EndryKit
 import SwiftUI
 
-/// Écran « Aujourd'hui », style Galerie : photo d’ambiance en plein écran (mention « Ambiance illustrative »), logo, salutation,
-/// puis une feuille brune qui monte avec le carrousel des décisions (cartes papier), l'argent de la semaine
-/// et les chantiers. Toucher une carte ouvre sa fiche complète.
+/// Accueil « Maison Endry » (maquette E) : en-tête et statut du bureau en direct, salutation, frise de la semaine,
+/// pile « À décider » à glisser, outils de terrain, tuiles Finances et Chantiers, briefing du jour.
+/// Fond brun profond (ou papier) éclairé en haut par la photo d'ambiance fondue.
 struct DecisionsView: View {
-    @AppStorage(ModeDevantClient.cle) private var devantClient = false
     @AppStorage(Salutation.clePrenom) private var prenomPatron = ""
     @Environment(ModeleApp.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
     var modele: ModeleDecisions
 
     @State private var visible = false
-    /// Position de défilement lue seulement par la photo et la barre du haut : le reste de l'écran
-    /// n'est pas réévalué à chaque image.
-    @State private var suivi = SuiviDefilement()
     @State private var carteVisible: String?
     @State private var fiche: Carte?
     @Namespace private var zoom
 
-    private let hauteurPhoto: CGFloat = 520
-
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                Color.espresso.ignoresSafeArea()
-                PhotoAccueil(suivi: suivi, hauteur: hauteurPhoto)
-
+                FondMaison()
                 ScrollView {
-                    VStack(spacing: 0) {
-                        entete
-                            .largeurLisible(Adaptatif.ecran)
-                            .frame(height: hauteurPhoto - 150, alignment: .bottom)
-                        FeuilleMaison {
-                            feuille
-                                .largeurLisible(Adaptatif.ecran)
-                        }
-                    }
+                    contenu
+                        .largeurLisible(Adaptatif.ecran)
+                        .padding(.bottom, 130)
                 }
                 .scrollIndicators(.hidden)
                 .tirerPourActualiser { await modele.charger() }
-                .onScrollGeometryChange(for: CGFloat.self) { geometrie in
-                    // Au-delà de la photo, plus rien ne bouge : inutile de suivre.
-                    min(geometrie.contentOffset.y + geometrie.contentInsets.top, 700)
-                } action: { _, valeur in
-                    suivi.y = valeur
-                }
-            }
-            .overlay(alignment: .top) {
-                BarreHauteAccueil(suivi: suivi) { barreHaute.largeurLisible(Adaptatif.ecran) }
             }
             .toolbar(.hidden, for: .navigationBar)
         }
         .toast(Binding(get: { modele.toast }, set: { modele.toast = $0 }))
         .sensoryFeedback(.success, trigger: modele.nombreDecisions) { ancien, nouveau in nouveau < ancien }
         .sheet(item: $fiche) { carte in
-            // La carte du carrousel grandit jusqu'à devenir la fiche.
+            // La tuile grandit jusqu'à devenir la fiche.
             FicheDecision(carte: carte, modele: modele)
                 .navigationTransition(.zoom(sourceID: carte.reference, in: zoom))
         }
@@ -76,100 +53,114 @@ struct DecisionsView: View {
         return { _ = await pilotage.reprendre() }
     }
 
-    // MARK: - En-tête sur la photo
+    @ViewBuilder
+    private var contenu: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            EnTeteMaison(initiale: prenom.first.map { String($0).uppercased() })
+                .padding(.horizontal, Espace.bord)
+                .padding(.top, 4)
+                .apparitionEnCascade(index: 0, visible: visible)
 
-    /// Logo et réglages, fixes ; s'estompent quand la feuille recouvre la photo.
-    private var barreHaute: some View {
-        HStack(alignment: .center) {
-            LogoMarque(largeur: 150)
-            Spacer()
-            Button {
-                app.recherchePresentee = true
-            } label: {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Color.or)
-                    .frame(width: 44, height: 44)
-                    .background(Color.espresso.opacity(0.45), in: Circle())
-                    .overlay(Circle().stroke(Color.or.opacity(0.4), lineWidth: Espace.filet))
-            }
-            .accessibilityLabel(Text("Rechercher"))
-            .accessibilityIdentifier("bouton-recherche")
-            Button {
-                app.reglagesPresentes = true
-            } label: {
-                Image(systemName: "slider.horizontal.3")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(Color.or)
-                    .frame(width: 44, height: 44)
-                    .background(Color.espresso.opacity(0.45), in: Circle())
-                    .overlay(Circle().stroke(Color.or.opacity(0.4), lineWidth: Espace.filet))
-            }
-            .accessibilityLabel(Text(app.session.estDemo ? "Réglages, mode démo" : "Réglages"))
-            .accessibilityIdentifier("bouton-reglages")
-        }
-        .padding(.horizontal, Espace.bord + 4)
-        .padding(.top, Espace.xs)
-    }
-
-    private var entete: some View {
-        VStack(alignment: .leading, spacing: Espace.xs) {
-            HStack(alignment: .firstTextBaseline) {
-                Text((modele.accueil?.date ?? DateEndry.longue(Date())).capitalizedPremiere)
-                    .font(Police.etiquette(Echelle.micro))
-                    .textCase(.uppercase)
-                    .tracking(2.4)
-                    .foregroundStyle(Color.or)
-                Spacer(minLength: Espace.xs)
-                if PhotosMarque.estIllustrative(PhotosMarque.accueil) { MentionIllustrative() }
-            }
-            .apparitionEnCascade(index: 0, visible: visible)
-            Text(salutation.debut)
-                .styleTitre(34, relativeTo: .largeTitle, graisse: .medium)
-                .foregroundStyle(Color(hex: 0xF7F2E9))
-                .apparitionEnCascade(index: 1, visible: visible)
-            if !salutation.fin.isEmpty {
-                Text(salutation.fin)
-                    .styleTitre(34, relativeTo: .largeTitle, graisse: .italique)
-                    .foregroundStyle(Color.or)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .apparitionEnCascade(index: 2, visible: visible)
-                    .accessibilityAddTraits(.isHeader)
-            }
-            if let accueil = modele.accueil {
-                Text(ResumeDuJour.phrase(accueil: accueil, decisions: modele.nombreDecisions, devantClient: devantClient))
-                    .styleTexte(15, relativeTo: .subheadline)
-                    .foregroundStyle(Color(hex: 0xE9DFCF))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 4)
-                    .apparitionEnCascade(index: 3, visible: visible)
-                    .accessibilityIdentifier("resume-du-jour")
-            }
             if let agents = app.agents {
-                // Maison Endry : le bureau en direct, en verre sur la photo.
                 StatutBureau(modele: agents) { app.onglet = .entreprise }
-                    .padding(.top, Espace.xs)
-                    .apparitionEnCascade(index: 4, visible: visible)
+                    .padding(.horizontal, Espace.bord)
+                    .padding(.top, 12)
+                    .apparitionEnCascade(index: 1, visible: visible)
+                    .task { if !agents.charge { await agents.charger() } }
             }
-            HStack(spacing: Espace.xs) {
-                BoutonParlerEndry { app.ouvrirAssistant() }
-                if app.conversation != nil {
-                    BoutonEcrireBureau { app.ouvrirConversation() }
-                }
+
+            salutation
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .apparitionEnCascade(index: 2, visible: visible)
+
+            if modele.horsLigne {
+                BandeauHorsLigne(majLe: modele.majLe)
+                    .padding(.horizontal, Espace.bord)
+                    .padding(.top, Espace.s)
             }
-            .padding(.top, Espace.s)
-            .apparitionEnCascade(index: 4, visible: visible)
+            if modele.enPause {
+                BandeauPause(reprendre: repriseAssistant)
+                    .padding(.horizontal, Espace.bord)
+                    .padding(.top, Espace.s)
+            }
+
+            switch modele.etat {
+            case .chargement where modele.accueil == nil, .initial:
+                Squelette(hauteur: 210, rayon: 26)
+                    .padding(.horizontal, Espace.bord)
+                    .padding(.top, Espace.l)
+            case .erreur(let erreur) where modele.accueil == nil:
+                VueErreur(erreur: erreur) { Task { await modele.charger() } }
+                    .padding(.top, Espace.l)
+            default:
+                sections
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, Espace.bord + 4)
-        .padding(.bottom, Espace.l)
-        .environment(\.colorScheme, .dark)
     }
 
-    /// Le PC envoie seulement « Bonjour » ou « Bonsoir » ; le prénom (facultatif, Réglages) vient de l'iPhone.
-    /// « Bonjour, » puis le prénom en italique doré ; sans prénom : « Bonjour. »
-    private var salutation: (debut: String, fin: String) {
-        Salutation.lignes(salut: modele.accueil?.salut, prenom: prenom)
+    @ViewBuilder
+    private var sections: some View {
+        if let accueil = modele.accueil {
+            FriseSemaineView(semaine: accueil.chantiers7Jours) { ouvrirPlanning() }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .apparitionEnCascade(index: 3, visible: visible)
+        }
+
+        TuileDecisions(modele: modele, visible: $carteVisible, zoom: zoom) { fiche = $0 }
+            .padding(.top, 16)
+            .apparitionEnCascade(index: 4, visible: visible)
+
+        if !app.session.estOuvrier {
+            ActionsTerrain()
+                .padding(.horizontal, Espace.bord)
+                .padding(.top, 14)
+                .apparitionEnCascade(index: 5, visible: visible)
+        }
+
+        if let accueil = modele.accueil {
+            HStack(alignment: .top, spacing: 10) {
+                TuileFinances(accueil: accueil) { app.onglet = .finances }
+                TuileChantiers(semaine: accueil.chantiers7Jours) { ouvrirPlanning() }
+            }
+            .padding(.horizontal, Espace.bord)
+            .padding(.top, 14)
+            .apparitionEnCascade(index: 6, visible: visible)
+        }
+
+        CarteBriefing()
+            .padding(.horizontal, Espace.bord)
+            .padding(.top, 10)
+            .apparitionEnCascade(index: 7, visible: visible)
+
+        if let suiviActions = app.suiviActions {
+            SectionFaitRecemment(modele: suiviActions)
+                .padding(.horizontal, Espace.bord)
+                .padding(.top, Espace.l)
+                .transitionDefilement()
+        }
+    }
+
+    private func ouvrirPlanning() {
+        app.vueChantiers = .planning
+        app.onglet = .chantiers
+    }
+
+    /// Date en Cinzel, puis « Bonjour, » et le prénom en italique crème (« Bonjour. » sans prénom).
+    private var salutation: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text((modele.accueil?.date ?? DateEndry.longue(Date())).capitalizedPremiere)
+                .etiquetteMaison(10.5)
+            let lignes = Salutation.lignes(salut: modele.accueil?.salut, prenom: prenom)
+            Text("\(Text(lignes.debut))\(Text(lignes.fin.isEmpty ? "" : " "))\(Text(lignes.fin.isEmpty ? "" : lignes.fin + ".").font(Police.serif(42, relativeTo: .largeTitle, italique: true)).foregroundStyle(Color.bronze))")
+                .font(Police.serif(42, relativeTo: .largeTitle))
+                .tracking(-0.5)
+                .foregroundStyle(Color.encre)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+                .accessibilityAddTraits(.isHeader)
+        }
     }
 
     /// Prénom saisi dans Réglages ; en démo, un prénom fictif.
@@ -177,175 +168,6 @@ struct DecisionsView: View {
         let saisi = prenomPatron.trimmingCharacters(in: .whitespacesAndNewlines)
         if saisi.isEmpty, app.session.estDemo { return Salutation.prenomDemo }
         return saisi
-    }
-
-    // MARK: - Feuille
-
-    @ViewBuilder
-    private var feuille: some View {
-        VStack(alignment: .leading, spacing: Espace.l) {
-            if modele.horsLigne {
-                BandeauHorsLigne(majLe: modele.majLe)
-                    .padding(.horizontal, Espace.bord)
-            }
-            if modele.enPause {
-                BandeauPause(reprendre: repriseAssistant)
-                    .padding(.horizontal, Espace.bord)
-            }
-            switch modele.etat {
-            case .chargement where modele.accueil == nil, .initial:
-                Squelette(hauteur: 250, rayon: Espace.rayon).padding(.horizontal, Espace.bord)
-            case .erreur(let erreur) where modele.accueil == nil:
-                VueErreur(erreur: erreur) { Task { await modele.charger() } }
-            default:
-                decisions
-                if !app.session.estOuvrier {
-                    ActionsTerrain()
-                        .padding(.horizontal, Espace.bord)
-                        .transitionDefilement()
-                }
-                if let accueil = modele.accueil, !accueil.chantiers7Jours.isEmpty {
-                    FriseSemaineView(semaine: accueil.chantiers7Jours) {
-                        app.vueChantiers = .planning
-                        app.onglet = .chantiers
-                    }
-                    .padding(.horizontal, Espace.bord)
-                    .transitionDefilement()
-                }
-                // iPad : ce qui a été fait et le briefing à gauche ; le bureau, l'argent et la semaine à droite.
-                Colonnes(ecart: 0) {
-                    if let suiviActions = app.suiviActions {
-                        SectionFaitRecemment(modele: suiviActions)
-                            .padding(.horizontal, Espace.bord)
-                            .transitionDefilement()
-                    }
-                    CarteBriefing()
-                        .padding(.horizontal, Espace.bord)
-                        .transitionDefilement()
-                } droite: {
-                    if let agents = app.agents {
-                        BandeauBureau(modele: agents) { app.onglet = .entreprise }
-                            .padding(.horizontal, Espace.bord)
-                            .transitionDefilement()
-                            .task { if !agents.charge { await agents.charger() } }
-                    }
-                    if let accueil = modele.accueil {
-                        ResumeArgent(accueil: accueil) { app.onglet = .finances }
-                            .padding(.horizontal, Espace.bord)
-                            .transitionDefilement()
-                        if !accueil.chantiers7Jours.isEmpty {
-                            ChantiersSemaine(semaine: accueil.chantiers7Jours) {
-                                app.vueChantiers = .planning
-                                app.onglet = .chantiers
-                            }
-                            .transitionDefilement()
-                        }
-                    }
-                }
-            }
-        }
-        .padding(.top, Espace.l)
-        .padding(.bottom, 130)
-    }
-
-    private var indexVisible: Int {
-        modele.cartes.firstIndex { $0.reference == carteVisible } ?? 0
-    }
-
-    @ViewBuilder
-    private var decisions: some View {
-        VStack(alignment: .leading, spacing: Espace.s) {
-            HStack(alignment: .center) {
-                Text("À décider · \(modele.nombreDecisions)")
-                    .font(Police.etiquette(12, relativeTo: .caption))
-                    .textCase(.uppercase)
-                    .tracking(2.4)
-                    .foregroundStyle(Color.bronze)
-                    .contentTransition(.numericText(value: Double(modele.nombreDecisions)))
-                    .accessibilityAddTraits(.isHeader)
-                    .accessibilityIdentifier("titre-a-decider")
-                Spacer()
-                if !modele.decisionsAutorisees {
-                    Pastille(texte: "Lecture seule", couleur: .ambre, icone: "lock.fill")
-                } else if modele.cartes.count > 1 {
-                    PointsPagination(nombre: modele.cartes.count, actif: indexVisible)
-                }
-            }
-            .padding(.horizontal, Espace.bord + 4)
-
-            if modele.cartes.isEmpty {
-                EtatVide(titre: "Rien à décider. Tout roule.",
-                         message: "L’assistant vous préviendra dès qu’une proposition attendra votre accord.")
-                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
-            } else {
-                ScrollView(.horizontal) {
-                    LazyHStack(spacing: Espace.s) {
-                        ForEach(modele.cartes) { carte in
-                            CarteApercuDecision(
-                                carte: carte,
-                                actionsPossibles: modele.actionsPossibles,
-                                enCours: modele.enCours.contains(carte.reference),
-                                ouvrir: { fiche = carte },
-                                agir: { action, geste in await modele.agir(action, sur: carte, geste: geste) }
-                            )
-                            .containerRelativeFrame(.horizontal) { largeur, _ in min(largeur * 0.82, 440) }
-                            .matchedTransitionSource(id: carte.reference, in: zoom)
-                            .scrollTransition(.interactive, axis: .horizontal) { contenu, phase in
-                                contenu
-                                    .scaleEffect(phase.isIdentity ? 1 : 0.94)
-                                    .opacity(phase.isIdentity ? 1 : 0.7)
-                            }
-                            .id(carte.reference)
-                            .transition(.opacity.combined(with: .scale(scale: 0.9)))
-                        }
-                    }
-                    .scrollTargetLayout()
-                    .padding(.vertical, Espace.s)
-                }
-                .scrollIndicators(.hidden)
-                .scrollClipDisabled()
-                .contentMargins(.horizontal, Espace.bord + 4, for: .scrollContent)
-                .scrollTargetBehavior(.viewAligned)
-                .scrollPosition(id: $carteVisible)
-                .animation(.endry(reduire: reduireAnimations), value: modele.cartes.map(\.reference))
-                .accessibilityIdentifier("carrousel-decisions")
-            }
-        }
-    }
-}
-
-/// Position de défilement de l'accueil, observée par les seules vues qui en dépendent.
-@MainActor
-@Observable
-final class SuiviDefilement {
-    var y: CGFloat = 0
-}
-
-/// Photo de l'accueil : s'étire quand on tire, glisse en parallaxe quand on défile.
-private struct PhotoAccueil: View {
-    var suivi: SuiviDefilement
-    var hauteur: CGFloat
-
-    var body: some View {
-        let y = suivi.y
-        PhotoVivante(nom: PhotosMarque.accueil, ancre: UnitPoint(x: 0.4, y: 0.5), mention: false)
-            .frame(height: hauteur + max(0, -y))
-            .overlay(VoilePhoto(haut: 0.7, bas: 0.95))
-            .offset(y: y > 0 ? -y * 0.35 : 0)
-            .ignoresSafeArea(edges: .top)
-    }
-}
-
-/// Logo et réglages : s'estompent quand la feuille recouvre la photo.
-private struct BarreHauteAccueil<Contenu: View>: View {
-    var suivi: SuiviDefilement
-    @ViewBuilder var contenu: Contenu
-
-    var body: some View {
-        let opacite = max(0, 1 - suivi.y / 220)
-        contenu
-            .opacity(opacite)
-            .allowsHitTesting(opacite > 0.1)
     }
 }
 

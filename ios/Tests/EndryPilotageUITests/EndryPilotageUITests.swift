@@ -94,6 +94,16 @@ final class EndryPilotageUITests: XCTestCase {
         return ecran.insetBy(dx: -1, dy: -1).contains(element.frame)
     }
 
+    /// Saisie terrain (Maison Endry) : depuis l'accueil, la pastille « Photo » des outils de terrain.
+    @MainActor
+    private func ouvrirSaisie(_ app: XCUIApplication) {
+        let accueil = app.buttons["onglet-aujourdhui"]
+        if accueil.waitForExistence(timeout: 5) { accueil.tap() }
+        let photo = atteindre(app.buttons["action-photo"], dans: app)
+        XCTAssertTrue(photo.waitForExistence(timeout: 5), "La pastille « Photo » (saisie terrain) est absente.")
+        toucher(photo)
+    }
+
     /// Ouvre la fiche complète d'une décision (toucher la carte du carrousel).
     @MainActor
     private func ouvrirFiche(_ reference: String, dans app: XCUIApplication) {
@@ -269,9 +279,7 @@ final class EndryPilotageUITests: XCTestCase {
     @MainActor
     func testSaisieTerrain() {
         let app = lancer()
-        let onglet = app.buttons["onglet-saisie"]
-        XCTAssertTrue(onglet.waitForExistence(timeout: 5))
-        onglet.tap()
+        ouvrirSaisie(app)
         let texte = app.textViews["texte-saisie"]
         XCTAssertTrue(texte.waitForExistence(timeout: 3))
         toucher(texte)
@@ -413,7 +421,10 @@ final class EndryPilotageUITests: XCTestCase {
             app.swipeUp(velocity: .slow)
             sleep(1)
             capturer(app, "1b-aujourdhui-suite\(suffixe)")
-            for (onglet, nom) in [("onglet-chantiers", "2-chantiers"), ("onglet-saisie", "3-saisie"), ("onglet-finances", "4-finances"), ("onglet-entreprise", "5-entreprise")] {
+            ouvrirSaisie(app)
+            sleep(1)
+            capturer(app, "3-saisie\(suffixe)")
+            for (onglet, nom) in [("onglet-chantiers", "2-chantiers"), ("onglet-finances", "4-finances"), ("onglet-entreprise", "5-entreprise")] {
                 app.buttons[onglet].tap()
                 sleep(1)
                 capturer(app, "\(nom)\(suffixe)")
@@ -428,6 +439,27 @@ final class EndryPilotageUITests: XCTestCase {
                     capturer(app, "2b-planning\(suffixe)")
                     app.buttons["segment-pipeline"].tap()
                 }
+            }
+            // Maquette E : fiche d'une décision et relais vocal, relus à chaque lot.
+            app.buttons["onglet-aujourdhui"].tap()
+            sleep(1)
+            let apercu = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "apercu-")).firstMatch
+            if apercu.waitForExistence(timeout: 3) {
+                toucher(apercu)
+                sleep(2)
+                capturer(app, "6-decision\(suffixe)")
+                let fermer = app.buttons["fermer-fiche"]
+                if fermer.exists { fermer.tap() }
+                sleep(1)
+            }
+            let orbe = app.buttons["parler-endry"]
+            if orbe.waitForExistence(timeout: 3) {
+                toucher(orbe)
+                sleep(3)
+                capturer(app, "7-voix\(suffixe)")
+                let fermer = app.buttons["fermer-assistant"]
+                if fermer.waitForExistence(timeout: 3) { fermer.tap() }
+                sleep(1)
             }
             // iPad : les mêmes espaces à l'horizontale (deux colonnes, grille de chantiers).
             if appareil == "-ipad" {
@@ -451,7 +483,7 @@ final class EndryPilotageUITests: XCTestCase {
     @MainActor
     func testBonDeRegieSigne() {
         let app = lancer()
-        app.buttons["onglet-saisie"].tap()
+        ouvrirSaisie(app)
         let outil = app.buttons["outil-regie"]
         XCTAssertTrue(outil.waitForExistence(timeout: 5))
         outil.tap()
@@ -504,7 +536,7 @@ final class EndryPilotageUITests: XCTestCase {
     @MainActor
     func testBonDeLivraison() {
         let app = lancer()
-        app.buttons["onglet-saisie"].tap()
+        ouvrirSaisie(app)
         let outil = app.buttons["outil-bonLivraison"]
         XCTAssertTrue(outil.waitForExistence(timeout: 5))
         outil.tap()
@@ -522,7 +554,7 @@ final class EndryPilotageUITests: XCTestCase {
     @MainActor
     func testReleveManuel() {
         let app = lancer()
-        app.buttons["onglet-saisie"].tap()
+        ouvrirSaisie(app)
         let outil = app.buttons["outil-releve"]
         XCTAssertTrue(outil.waitForExistence(timeout: 5))
         outil.tap()

@@ -4,7 +4,7 @@ import SwiftUI
 /// (règle de la direction, 28.09.2026), qu'elle envoie quelque chose à un tiers ou non.
 ///
 /// Le pouce rencontre une résistance physique (plus on approche du bout, plus il faut tirer),
-/// la piste se remplit d'or au fil du geste et le retour haptique monte en crescendo jusqu'au seuil.
+/// un trait de signal suit le geste et le retour haptique monte en crescendo jusqu'au seuil.
 struct GlisserPourEnvoyer: View {
     var libelle = "Glisser pour envoyer"
     /// Faux : validation sans envoi à un tiers (« Validation… », « Validé »).
@@ -12,7 +12,7 @@ struct GlisserPourEnvoyer: View {
     var identifiant = "glisser-pour-envoyer"
     var enCours = false
     var actif = true
-    /// Posé sur une carte papier crème : piste claire, curseur brun, texte brun.
+    /// Conservé pour compatibilité : le rendu suit désormais le thème (Maison Endry).
     var surPapier = false
     var action: () -> Void
 
@@ -22,8 +22,8 @@ struct GlisserPourEnvoyer: View {
     @State private var relache = 0
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
 
-    private let diametre: CGFloat = 52
-    private let marge: CGFloat = 4
+    private let diametre: CGFloat = 44
+    private let marge: CGFloat = 2
     /// Nombre de crans haptiques avant le seuil.
     private static let crans = 5
     private static let seuil: CGFloat = 0.94
@@ -36,59 +36,48 @@ struct GlisserPourEnvoyer: View {
         return course * min((1 - exp(-k * x)) / (1 - exp(-k)), 1)
     }
 
+    /// Maison Endry : un filet, un trait de signal qui suit le pouce, le libellé discret à droite,
+    /// le bouton rond à gauche (crème dorée en sombre, brun en clair).
     var body: some View {
         GeometryReader { geo in
             let course = max(geo.size.width - diametre - marge * 2, 1)
             let progression = min(max(decalage / course, 0), 1)
 
             ZStack(alignment: .leading) {
-                // Maison Endry : piste de verre et filet ; un trait de signal suit le pouce.
-                Capsule()
-                    .fill(surPapier ? Color.encrePapier.opacity(0.05) : Color.or.opacity(0.06))
-                    .overlay(Capsule().strokeBorder(surPapier ? Color.encrePapier.opacity(0.12) : Color.or.opacity(0.22),
-                                                    lineWidth: Espace.filet))
                 Rectangle()
-                    .fill((surPapier ? Color.encrePapier : Color.or).opacity(0.2))
+                    .fill(Color.filetFort)
                     .frame(height: Espace.filet)
-                    .padding(.horizontal, marge + diametre / 2)
+                    .padding(.horizontal, diametre / 2)
                 Capsule()
-                    .fill(surPapier ? Color.orOmbre : Color.or)
+                    .fill(Color.signal)
                     .frame(width: max(decalage, 0), height: 2)
                     .padding(.leading, marge + diametre / 2)
-                Capsule()
-                    .fill((surPapier ? Color.orOmbre : Color.or).opacity(0.16 * progression))
-                    .frame(width: decalage + diametre + marge * 2)
 
-                HStack(spacing: Espace.xs) {
-                    Text(enCours ? (envoi ? "Envoi…" : "Validation…") : valide ? (envoi ? "Envoyé" : "Validé") : libelle)
-                        .styleTexte(15, relativeTo: .body, graisse: .semibold)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    if !enCours, !valide {
-                        Image(systemName: "chevron.right.2")
-                            .font(.system(size: 13, weight: .bold))
-                            .symbolEffect(.variableColor.iterative, options: .repeating, isActive: !reduireAnimations)
-                    }
-                }
-                .foregroundStyle((surPapier ? Color.encrePapier : Color.orClair).opacity(0.92 - progression * 0.8))
-                .frame(maxWidth: .infinity)
-                .padding(.leading, diametre * 0.6)
+                Text(enCours ? (envoi ? "Envoi…" : "Validation…") : valide ? (envoi ? "Envoyé" : "Validé") : libelle)
+                    .font(Police.mono(11, relativeTo: .footnote))
+                    .foregroundStyle(Color.encreDouce)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .padding(.leading, diametre + Espace.s)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .opacity(1 - progression * 0.85)
 
                 Circle()
-                    .fill(surPapier ? Color.espresso : Color.or)
+                    .fill(Color.bouton)
                     .frame(width: diametre, height: diametre)
                     .overlay {
                         if enCours {
-                            ProgressView().tint(surPapier ? Color.or : Color.espresso)
+                            ProgressView().tint(Color.boutonTexte)
                         } else {
-                            Image(systemName: valide ? "checkmark" : "arrow.right")
-                                .font(.system(size: 18, weight: .semibold))
-                                .foregroundStyle(surPapier ? Color.or : Color.espresso)
+                            Image(systemName: valide ? "checkmark" : (envoi ? "paperplane" : "arrow.right"))
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(Color.boutonTexte)
                                 .contentTransition(.symbolEffect(.replace))
                         }
                     }
+                    .overlay(Circle().strokeBorder(Color.white.opacity(0.25), lineWidth: Espace.filet))
+                    .shadow(color: Color.ombre, radius: 9, y: 6)
                     .scaleEffect(1 + 0.06 * progression)
-                    .shadow(color: Color.black.opacity(0.3), radius: 6, y: 3)
                     .offset(x: marge + decalage)
                     .gesture(
                         DragGesture(minimumDistance: 2)

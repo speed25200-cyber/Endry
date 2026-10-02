@@ -75,8 +75,11 @@ struct RegieView: View {
                 Task { await remplir(depuis: texteDicte) }
             }
         }
-        .onChange(of: bon) { _, nouveau in
-            if resultat == nil { BrouillonRegie.enregistrer(nouveau) }
+        // Brouillon gardé après une pause de frappe (et non à chaque lettre).
+        .task(id: bon) {
+            try? await Task.sleep(for: .milliseconds(600))
+            guard !Task.isCancelled, resultat == nil else { return }
+            BrouillonRegie.enregistrer(bon)
         }
         .fullScreenCover(isPresented: $signaturePresentee) {
             SignatureClientView(bon: bon) { nom, png in
@@ -330,11 +333,19 @@ struct RegieView: View {
         }
     }
 
+    /// PDF signé rendu et écrit hors du fil principal : la feuille de signature se ferme sans à-coup.
     private func preparerPDF() {
-        let data = PDFTerrain.regie(bon, signature: signature, entreprise: app.session.entreprise)
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(bon.numero).pdf")
-        try? data.write(to: url, options: [.atomic, .completeFileProtection])
-        pdf = url
+        let bon = self.bon
+        let signature = self.signature
+        let entreprise = app.session.entreprise
+        Task {
+            let url = await Task.detached(priority: .userInitiated) { () -> URL? in
+                let data = PDFTerrain.regie(bon, signature: signature, entreprise: entreprise)
+                let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(bon.numero).pdf")
+                return (try? data.write(to: url, options: [.atomic, .completeFileProtection])) != nil ? url : nil
+            }.value
+            pdf = url
+        }
     }
 
     private func transmettre() async {

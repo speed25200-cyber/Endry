@@ -16,6 +16,10 @@ struct Releve3DView: View {
     @State private var releve: ReleveMesures?
     @State private var usdz: Data?
     @State private var plan: Data?
+    /// Plan décodé une fois (et non à chaque rendu de l'écran de résultat).
+    @State private var imagePlan: UIImage?
+    /// Plan et maquette 3D en préparation hors du fil principal : l'envoi les attend.
+    @State private var preparation: Task<Void, Never>?
     @State private var photos: [FormulaireMultipart.Fichier] = []
     @State private var capture = false
     @State private var manuel = ManuelReleve()
@@ -48,6 +52,7 @@ struct Releve3DView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .background(FondAmbiant())
+            .onChange(of: plan) { _, nouveau in imagePlan = nouveau.flatMap { UIImage(data: $0) } }
             .navigationTitle("Relevé 3D")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -143,7 +148,7 @@ struct Releve3DView: View {
         }
         .padding(.top, Espace.s)
 
-        if let plan, let image = UIImage(data: plan) {
+        if let image = imagePlan {
             Image(uiImage: image).resizable().scaledToFit()
                 .frame(maxWidth: .infinity, maxHeight: 260)
                 .padding(Espace.m)
@@ -208,15 +213,24 @@ struct Releve3DView: View {
     private func terminer(_ salle: CapturedRoom) {
         let r = PlanPiece.releve(depuis: salle, piece: piece, chantierId: chantierId, chantier: nomChantier)
         releve = r
-        plan = PlanPiece.png(murs: PlanPiece.segments(salle), releve: r)
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("releve-\(UUID().uuidString).usdz")
-        if (try? salle.export(to: url)) != nil {
-            usdz = try? Data(contentsOf: url)
-            try? FileManager.default.removeItem(at: url)
+        let murs = PlanPiece.segments(salle)
+        // Plan (PNG) et maquette 3D (USDZ) préparés hors du fil principal : le résultat s'affiche tout de suite.
+        nonisolated(unsafe) let capture = salle
+        preparation = Task {
+            async let image = Task.detached(priority: .userInitiated) { PlanPiece.png(murs: murs, releve: r) }.value
+            async let maquette = Task.detached(priority: .utility) { () -> Data? in
+                let url = FileManager.default.temporaryDirectory.appendingPathComponent("releve-\(UUID().uuidString).usdz")
+                guard (try? capture.export(to: url)) != nil else { return nil }
+                defer { try? FileManager.default.removeItem(at: url) }
+                return try? Data(contentsOf: url)
+            }.value
+            plan = await image
+            usdz = await maquette
         }
     }
 
     private func transmettre() async {
+        await preparation?.value
         guard var r = releve else { return }
         r.chantierId = chantierId
         r.chantier = nomChantier

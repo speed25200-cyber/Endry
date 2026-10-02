@@ -254,9 +254,11 @@ struct BonLivraisonView: View {
 
     private func transmettre() async {
         envoi = true
-        let fichiers = pages.enumerated().compactMap { i, page -> FormulaireMultipart.Fichier? in
-            guard let brut = page.jpegData(compressionQuality: 1), let jpeg = ImagePourPC.jpeg(brut) else { return nil }
-            return .init(champ: "pieces", nomFichier: "bon-livraison-\(i + 1).jpg", typeMIME: "image/jpeg", donnees: jpeg)
+        // Pages converties hors du fil principal (l'indicateur d'envoi reste fluide).
+        var fichiers: [FormulaireMultipart.Fichier] = []
+        for (i, page) in pages.enumerated() {
+            guard let jpeg = await ImagePourPC.jpegHorsEcran(page) else { continue }
+            fichiers.append(.init(champ: "pieces", nomFichier: "bon-livraison-\(i + 1).jpg", typeMIME: "image/jpeg", donnees: jpeg))
         }
         let r = await app.transmettre(bonComplet.envoi(pages: fichiers))
         envoi = false

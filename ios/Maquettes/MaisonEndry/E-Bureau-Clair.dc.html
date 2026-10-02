@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Bureau — Maison Endry clair</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&amp;family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&amp;family=Geist:wght@300;400;500&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:var(--encre)}a:hover{opacity:.7}
+@keyframes entre{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fondu{from{opacity:0}to{opacity:1}}
+@keyframes veille{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes rail{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.entre{animation:entre 1.1s cubic-bezier(.16,1,.3,1) both}
+.fondu{animation:fondu 1.4s cubic-bezier(.16,1,.3,1) both}
+.veille{animation:veille 2.4s ease-in-out infinite}
+.rail{transform-origin:top;animation:rail 1.8s cubic-bezier(.16,1,.3,1) both}
+.tuile{background:var(--surface);backdrop-filter:blur(30px) saturate(150%);-webkit-backdrop-filter:blur(30px) saturate(150%);box-shadow:inset 0 0 0 .5px var(--filet),inset 0 1px 0 var(--reflet),0 20px 40px -24px rgba(var(--rgb-ombre),.55)}
+.verre{background:var(--verre);backdrop-filter:blur(26px) saturate(160%);-webkit-backdrop-filter:blur(26px) saturate(160%);box-shadow:inset 0 0 0 .5px var(--filet),inset 1px 1px 0 var(--reflet),0 18px 40px -16px rgba(var(--rgb-ombre),.5)}
+.cinzel{font-family:'Cinzel',serif;font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase}
+.mono{font-family:'Geist Mono',ui-monospace,monospace;font-size:10px;letter-spacing:.03em}
+.serif{font-family:'Cormorant Garamond',serif}
+</style>
+</helmet>
+<div style="{{theme}}; width: 390px; height: 844px; position: relative; overflow: hidden; background: var(--fond); font-family: 'Geist', -apple-system, system-ui, sans-serif; color: var(--encre)">
+
+<img src="/_blob/3666d668375cea4cde6227e3d9cc176d" alt="" style="position: absolute; left: -90px; top: -150px; width: 570px; height: 540px; object-fit: cover; filter: blur(80px) saturate(1.3); opacity: var(--ambiance); pointer-events: none">
+
+<div class="fondu" style="position: absolute; left: 20px; right: 16px; top: 56px; display: flex; align-items: center; justify-content: space-between">
+<div>
+<div class="cinzel" style="color: var(--bronze-texte)">Le bureau</div>
+<div class="serif" style="font-size: 34px; line-height: 1; margin-top: 4px">{{titre}}</div>
+</div>
+<button onClick="{{basculer}}" class="verre" aria-label="{{libellePause}}" style="height: 44px; padding: 0 6px 0 14px; border: 0; border-radius: 22px; display: flex; align-items: center; gap: 10px; color: var(--encre); font-family: inherit; font-size: 12px; cursor: pointer">
+{{libellePause}}
+<span style="width: 46px; height: 28px; border-radius: 14px; background: {{interrupteurFond}}; position: relative; transition: background .3s ease"><span style="position: absolute; top: 3px; left: {{interrupteurX}}px; width: 22px; height: 22px; border-radius: 11px; background: #FFFFFF; box-shadow: 0 2px 6px rgba(0,0,0,.25); transition: left .35s cubic-bezier(.34,1.45,.5,1)"></span></span>
+</button>
+</div>
+
+<div style="position: absolute; left: 16px; right: 16px; top: 138px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{agents}}" as="a" hint-placeholder-count="4">
+<div class="tuile entre" style="border-radius: 22px; padding: 14px; height: 122px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; opacity: {{a.opacite}}; transition: opacity .4s ease; animation-delay: {{a.delai}}">
+<div style="display: flex; justify-content: space-between; align-items: center">
+<span style="font-size: 13px; font-weight: 500">{{a.nom}}</span>
+<span class="{{a.classe}}" style="width: 7px; height: 7px; border-radius: 4px; background: {{a.couleur}}"></span>
+</div>
+<div style="font-size: 12px; line-height: 1.35; color: var(--doux)">{{a.tache}}</div>
+<div class="mono" style="display: flex; justify-content: space-between; color: var(--doux)"><span>{{a.etat}}</span><span>{{a.jour}}</span></div>
+</div>
+</sc-for>
+</div>
+
+<div class="entre" style="position: absolute; left: 20px; right: 16px; top: 412px; animation-delay: .5s">
+<div style="display: flex; justify-content: space-between"><span class="cinzel" style="color: var(--bronze-texte)">Journal</span><span class="mono" style="color: var(--doux)">Aujourd’hui</span></div>
+</div>
+<div class="rail" style="position: absolute; left: 27px; top: 446px; width: .5px; height: 290px; background: var(--filet-fort); animation-delay: .5s"></div>
+<div style="position: absolute; left: 20px; right: 16px; top: 440px; display: flex; flex-direction: column; gap: 14px">
+<sc-for list="{{journal}}" as="j" hint-placeholder-count="5">
+<div class="entre" style="display: grid; grid-template-columns: 16px minmax(0, 1fr) 44px; column-gap: 12px; align-items: start; animation-delay: {{j.delai}}">
+<span style="width: 15px; height: 15px; border-radius: 8px; background: var(--fond); box-shadow: inset 0 0 0 1px {{j.couleur}}; display: flex; align-items: center; justify-content: center; margin-top: 1px"><span style="width: 5px; height: 5px; border-radius: 3px; background: {{j.couleur}}"></span></span>
+<div><div style="font-size: 13px; line-height: 1.35">{{j.titre}}</div><div style="font-size: 11px; color: var(--doux); margin-top: 2px">{{j.agent}}</div></div>
+<span class="mono" style="color: var(--doux); text-align: right">{{j.heure}}</span>
+</div>
+</sc-for>
+</div>
+
+<div class="verre fondu" style="position: absolute; left: 12px; right: 12px; bottom: 24px; height: 56px; border-radius: 28px; display: flex; align-items: center; padding: 0 6px 0 18px; gap: 8px; animation-delay: .6s">
+<label for="champEc" style="position: absolute; width: 1px; height: 1px; overflow: hidden">Demander au bureau</label>
+<input id="champEc" type="text" placeholder="Demander au bureau…" style="flex-grow: 1; background: transparent; border: 0; outline: none; color: var(--encre); font-size: 16px; font-family: inherit">
+<button aria-label="Envoyer" style="width: 44px; height: 44px; border: 0; border-radius: 22px; background: var(--bouton); color: var(--bouton-texte); display: flex; align-items: center; justify-content: center; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"></path></svg>
+</button>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"sombre":{"editor":"boolean","default":false,"section":"Thème"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { pause: false }; }
+renderVals() {
+const sombre = this.props.sombre ?? false;
+const theme = sombre
+? '--fond:#17110C;--surface:rgba(249,219,163,.045);--verre:rgba(249,219,163,.06);--encre:#F6F0E6;--doux:#B2A38B;--filet:rgba(249,219,163,.12);--filet-fort:rgba(249,219,163,.3);--reflet:rgba(255,236,200,.22);--bronze-texte:#D2A764;--signal:#F9DBA3;--vert:#9CCB98;--bouton:#F9DBA3;--bouton-texte:#211A13;--rgb-ombre:0,0,0;--ambiance:.3'
+: '--fond:#F6F5F2;--surface:rgba(255,255,255,.72);--verre:rgba(255,255,255,.6);--encre:#211A13;--doux:#74695A;--filet:rgba(33,26,19,.1);--filet-fort:rgba(33,26,19,.28);--reflet:#FFFFFF;--bronze-texte:#8A6223;--signal:#9F722A;--vert:#3D7046;--bouton:#211A13;--bouton-texte:#F9DBA3;--rgb-ombre:33,26,19;--ambiance:.18';
+const p = this.state.pause;
+const donnees = [
+['Secrétariat', 'Rédige la réponse à Mme Rey (variante WC)', 'travaille', '6 tâches'],
+['Comptabilité', 'Rapprochement des paiements de septembre', 'travaille', '4 tâches'],
+['Offres', 'Offre adoucisseur Mme Gander prête', 'attend vous', '3 tâches'],
+['Achats', 'Rien en cours', 'au repos', '2 tâches']
+];
+const agents = donnees.map(([nom, tache, etat, jour], i) => {
+const actif = !p && etat === 'travaille';
+return {
+nom, tache: p ? 'En pause' : tache, etat: p ? 'en pause' : etat, jour,
+couleur: p ? 'var(--doux)' : etat === 'travaille' ? 'var(--vert)' : etat === 'attend vous' ? 'var(--signal)' : 'var(--filet-fort)',
+classe: actif ? 'veille' : '',
+opacite: p ? 0.55 : 1,
+delai: (0.15 + i * 0.07) + 's'
+};
+});
+const journal = [
+['Offre Lambert corrigée — 7,5 h au lieu de 8,5 h', 'Secrétariat · fait', '09:24', 'var(--vert)'],
+['Question posée : heures à retirer (Q-QL8RDE)', 'Secrétariat · question', '09:16', 'var(--signal)'],
+['Confirmation de commande classée', 'Achats · fait', '08:52', 'var(--vert)'],
+['12 e-mails triés, 3 réponses préparées', 'Secrétariat · fait', '08:30', 'var(--vert)'],
+['Paiements importés depuis Bexio', 'Comptabilité · fait', '07:58', 'var(--vert)']
+].map(([titre, agent, heure, couleur], i) => ({ titre, agent, heure, couleur, delai: (0.55 + i * 0.08) + 's' }));
+return {
+theme, agents, journal,
+titre: p ? 'En pause' : '3 agents actifs',
+libellePause: p ? 'Reprendre' : 'Actif',
+interrupteurFond: p ? 'var(--filet-fort)' : 'var(--vert)',
+interrupteurX: p ? 3 : 21,
+basculer: () => this.setState({ pause: !this.state.pause })
+};
+}
+}
+</script>
+</body>
+</html>

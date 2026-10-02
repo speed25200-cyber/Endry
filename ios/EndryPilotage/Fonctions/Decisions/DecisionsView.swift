@@ -23,6 +23,7 @@ struct DecisionsView: View {
                     contenu
                         .largeurLisible(Adaptatif.ecran)
                         .padding(.bottom, 130)
+                        .verrouillerLargeur()
                 }
                 .scrollIndicators(.hidden)
                 .tirerPourActualiser { await modele.charger() }

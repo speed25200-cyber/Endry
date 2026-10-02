@@ -72,6 +72,7 @@ struct ArgentView: View {
                 .largeurLisible(Adaptatif.ecran)
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, 120)
+                .verrouillerLargeur()
                 .animation(.endry, value: vue)
             }
             .scrollIndicators(.hidden)

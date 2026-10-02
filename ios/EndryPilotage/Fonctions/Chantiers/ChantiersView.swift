@@ -51,6 +51,7 @@ struct ChantiersView: View {
                     }
                 }
                 .padding(.bottom, 120)
+                .verrouillerLargeur()
             }
             .scrollIndicators(.hidden)
             .tirerPourActualiser { await modele.actualiser() }

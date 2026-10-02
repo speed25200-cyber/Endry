@@ -60,6 +60,7 @@ struct ConversationView: View {
                     .padding(.horizontal, 18)
                     .padding(.top, Espace.m)
                     .padding(.bottom, Espace.m)
+                    .verrouillerLargeur()
                 }
                 .scrollIndicators(.hidden)
                 .scrollDismissesKeyboard(.interactively)

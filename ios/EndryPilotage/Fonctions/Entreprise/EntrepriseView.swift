@@ -150,6 +150,7 @@ struct EntrepriseView: View {
                 .largeurLisible(Adaptatif.ecran)
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, 130)
+                .verrouillerLargeur()
             }
             .scrollIndicators(.hidden)
             .tirerPourActualiser {

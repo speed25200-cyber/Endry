@@ -47,6 +47,7 @@ struct PlanningView: View {
                 .largeurLisible(Adaptatif.ecran)
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, 120)
+                .verrouillerLargeur()
                 .animation(.endry, value: decalage)
             }
             .scrollIndicators(.hidden)

@@ -120,6 +120,7 @@ struct DossierView: View {
             .largeurLisible(Adaptatif.lecture)
             .padding(.horizontal, Espace.bord)
             .padding(.bottom, 120)
+            .verrouillerLargeur()
         }
         .scrollIndicators(.hidden)
         .background(FondMaison(photo: nil))

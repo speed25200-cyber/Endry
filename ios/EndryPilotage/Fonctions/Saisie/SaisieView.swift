@@ -48,6 +48,7 @@ struct SaisieView: View {
                 .largeurLisible()
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, 130)
+                .verrouillerLargeur()
                 .animation(.endry, value: modele.etat)
             }
             .scrollDismissesKeyboard(.interactively)

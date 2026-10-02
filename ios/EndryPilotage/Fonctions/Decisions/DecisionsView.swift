@@ -145,6 +145,12 @@ struct DecisionsView: View {
                     .apparitionEnCascade(index: 3, visible: visible)
                     .accessibilityIdentifier("resume-du-jour")
             }
+            if let agents = app.agents {
+                // Maison Endry : le bureau en direct, en verre sur la photo.
+                StatutBureau(modele: agents) { app.onglet = .entreprise }
+                    .padding(.top, Espace.xs)
+                    .apparitionEnCascade(index: 4, visible: visible)
+            }
             HStack(spacing: Espace.xs) {
                 BoutonParlerEndry { app.ouvrirAssistant() }
                 if app.conversation != nil {

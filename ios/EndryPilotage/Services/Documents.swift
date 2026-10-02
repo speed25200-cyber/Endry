@@ -20,6 +20,9 @@ final class Documents {
         defer { chargement = nil }
         do {
             apercu = try await api.telechargerDocument(chemin, nom: nom)
+        } catch .serveur(let statut, _) where statut == 404 || statut == 410 {
+            // Le PC annonce le fichier mais ne le sert pas (pièce générée dans le dossier du bureau, pas d'adresse).
+            erreur = "Le bureau n’a pas encore mis « \(nom) » à disposition de l’iPhone : l’aperçu sera possible dès que le PC le servira."
         } catch {
             erreur = error.message
         }

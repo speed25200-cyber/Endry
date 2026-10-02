@@ -528,3 +528,9 @@ Demande du patron : « quand je demande un PDF dans le chat, pouvoir voir l’ap
   dans le dossier temporaire de l’app et sont effacés au lancement et à la déconnexion.
 - Le PC sert ces fichiers comme les PDF d’offres et de factures (`GET /app/doc/…`), avec le bon `Content-Type`
   et, en cas d’échec, `503 {erreur: "pdf_indisponible", message}` en JSON.
+- **Toute pièce annoncée doit être servie** (02.10.2026) : `Decision.pieces[].url` et `documents[].url` pointent vers
+  une route que le PC sert avec le jeton (`GET`). Les PDF Bexio passent déjà par `/app/doc/offre/{id}` et
+  `/app/doc/facture/{id}` ; un fichier généré dans le dossier du bureau (ex. « Planning Villa Favre (version
+  client).pdf ») doit l’être aussi, par exemple `/app/doc/fichier/{id}` (identifiant opaque, jamais un chemin du
+  disque). Constat : la décision V-9DHDTK annonce ce planning, mais son adresse répond 404 — l’iPhone ne peut pas
+  l’afficher. L’app affiche alors : « Le bureau n’a pas encore mis … à disposition de l’iPhone ».

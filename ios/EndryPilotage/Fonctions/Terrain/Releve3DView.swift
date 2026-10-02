@@ -213,19 +213,16 @@ struct Releve3DView: View {
     private func terminer(_ salle: CapturedRoom) {
         let r = PlanPiece.releve(depuis: salle, piece: piece, chantierId: chantierId, chantier: nomChantier)
         releve = r
-        let murs = PlanPiece.segments(salle)
-        // Plan (PNG) et maquette 3D (USDZ) préparés hors du fil principal : le résultat s'affiche tout de suite.
+        plan = PlanPiece.png(murs: PlanPiece.segments(salle), releve: r)
+        // Maquette 3D (USDZ) exportée hors du fil principal : le résultat s'affiche tout de suite.
         nonisolated(unsafe) let capture = salle
         preparation = Task {
-            async let image = Task.detached(priority: .userInitiated) { PlanPiece.png(murs: murs, releve: r) }.value
-            async let maquette = Task.detached(priority: .utility) { () -> Data? in
+            usdz = await Task.detached(priority: .utility) { () -> Data? in
                 let url = FileManager.default.temporaryDirectory.appendingPathComponent("releve-\(UUID().uuidString).usdz")
                 guard (try? capture.export(to: url)) != nil else { return nil }
                 defer { try? FileManager.default.removeItem(at: url) }
                 return try? Data(contentsOf: url)
             }.value
-            plan = await image
-            usdz = await maquette
         }
     }
 

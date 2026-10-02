@@ -33,14 +33,14 @@ struct OrbeSiri: View {
             Canvas { ctx, taille in
                 let c = CGPoint(x: taille.width / 2, y: taille.height / 2)
                 let r = taille.width
-                ctx.addFilter(.blur(radius: r * 0.12))
+                ctx.addFilter(.blur(radius: r * 0.085))
                 ctx.blendMode = .screen
                 // (couleur, taille relative, orbite relative, vitesse angulaire, phase)
                 let volutes: [(Color, Double, Double, Double, Double)] = [
-                    (Self.creme, 0.6, 0.14, 1.15, 0),
-                    (Self.bronze, 0.52, 0.18, -0.9, 2.1),
-                    (Self.ambre, 0.44, 0.2, 1.4, 4.2),
-                    (Self.glacier.opacity(0.75), 0.36, 0.16, -1.7, 1)
+                    (Self.creme, 0.46, 0.2, 1.15, 0),
+                    (Self.bronze, 0.5, 0.24, -0.9, 2.1),
+                    (Self.ambre, 0.4, 0.26, 1.4, 4.2),
+                    (Self.glacier, 0.34, 0.22, -1.7, 1)
                 ]
                 for (couleur, part, orbite, vit, phase) in volutes {
                     let angle = t * vit * vitesse + phase
@@ -63,8 +63,8 @@ struct OrbeSiri: View {
             Circle()
                 .fill(LinearGradient(colors: [.clear, .black.opacity(0.35)], startPoint: .center, endPoint: .bottom))
             Circle()
-                .fill(RadialGradient(colors: [.white.opacity(0.5), .white.opacity(0)],
-                                     center: UnitPoint(x: 0.34, y: 0.24), startRadius: 0, endRadius: d * 0.34))
+                .fill(RadialGradient(colors: [.white.opacity(0.28), .white.opacity(0)],
+                                     center: UnitPoint(x: 0.34, y: 0.22), startRadius: 0, endRadius: d * 0.26))
             Circle()
                 .strokeBorder(.white.opacity(0.3), lineWidth: 0.5)
         }

@@ -6,8 +6,12 @@ import UIKit
 
 extension Police {
     /// Cormorant Garamond à la taille voulue (grands chiffres, titres courts), mis à l'échelle avec Dynamic Type.
+    /// Grands titres et grands chiffres : SF Pro Display, fin pour les très grandes tailles (montants, compteurs),
+    /// régulier pour les titres, chiffres alignés et tabulaires. L'italique n'est plus utilisé (gardé pour l'API).
     static func serif(_ taille: CGFloat, relativeTo style: Font.TextStyle = .title, italique: Bool = false) -> Font {
-        cormorant(italique ? GraisseTitre.italique.nom : GraisseTitre.medium.nom, taille: taille, relativeTo: style)
+        let poids: Font.Weight = taille >= 34 ? .light : taille >= 22 ? .regular : .medium
+        return .system(size: UIFontMetrics(forTextStyle: style.uiKit).scaledValue(for: taille), weight: poids)
+            .monospacedDigit()
     }
 
     /// Cormorant avec chiffres alignés (« 01 », « 49’673 », « 0:03 ») : par défaut, la fonte dessine des chiffres
@@ -21,18 +25,20 @@ extension Police {
         return Font(UIFontMetrics(forTextStyle: style.uiKit).scaledFont(for: police))
     }
 
-    /// Chiffres et repères discrets (heures, « 4/7 », références) : SF Mono.
+    /// Repères discrets (heures, « 4/7 », « Glisser pour valider ») : SF Pro, chiffres tabulaires.
+    /// (Plus de police à chasse fixe pour les libellés : elle faisait « terminal ».)
     static func mono(_ taille: CGFloat = 11.5, relativeTo style: Font.TextStyle = .caption) -> Font {
-        .system(size: UIFontMetrics(forTextStyle: style.uiKit).scaledValue(for: taille), weight: .regular, design: .monospaced)
+        .system(size: UIFontMetrics(forTextStyle: style.uiKit).scaledValue(for: taille + 1), weight: .medium)
+            .monospacedDigit()
     }
 }
 
 extension View {
-    /// Étiquette de section Cinzel en capitales espacées (« À DÉCIDER », « FINANCES »).
+    /// Étiquette de section : petites capitales SF Pro, nettes et espacées (« À DÉCIDER », « FINANCES »).
     func etiquetteMaison(_ taille: CGFloat = 11.5, couleur: Color = .etiquette) -> some View {
-        font(Police.etiquette(taille))
+        font(.system(size: UIFontMetrics(forTextStyle: .caption1).scaledValue(for: taille), weight: .semibold))
             .textCase(.uppercase)
-            .tracking(taille * 0.18)
+            .tracking(taille * 0.1)
             .foregroundStyle(couleur)
     }
 
@@ -48,7 +54,7 @@ extension View {
         .overlay {
             forme.strokeBorder(LinearGradient(colors: [Color.refletBord, .clear], startPoint: .top, endPoint: .center),
                                lineWidth: 1)
-                .opacity(0.7)
+                .opacity(0.35)
         }
     }
 
@@ -96,9 +102,9 @@ struct TitreAdaptatif: View {
 
     private var taille: CGFloat {
         switch longueur {
-        case ...32: grand
-        case ...64: (grand * 0.78).rounded()
-        default: max((grand * 0.64).rounded(), 22)
+        case ...32: grand * 0.86
+        case ...64: (grand * 0.7).rounded()
+        default: max((grand * 0.6).rounded(), 21)
         }
     }
 
@@ -114,9 +120,9 @@ struct TitreAdaptatif: View {
             let morceaux = texte.components(separatedBy: " — ")
             let debut = morceaux.first ?? texte
             let fin = morceaux.dropFirst().joined(separator: " — ")
-            Text("\(Text(debut))\(Text(fin.isEmpty ? "" : " — "))\(Text(fin).font(Police.serif(taille, relativeTo: .title, italique: true)))")
+            Text("\(Text(debut))\(Text(fin.isEmpty ? "" : " — "))\(Text(fin).foregroundStyle(Color.encreDouce))")
                 .font(Police.serif(taille, relativeTo: .title))
-                .tracking(-0.3)
+                .tracking(-0.02 * taille)
                 .foregroundStyle(couleur)
                 .lineLimit(lignes)
                 .fixedSize(horizontal: false, vertical: true)

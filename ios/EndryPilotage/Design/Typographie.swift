@@ -34,8 +34,10 @@ enum Police {
     /// Le serif a un petit œil : on l'agrandit d'un cran pour garder la même présence que le texte.
     static let facteurSerif: CGFloat = 1.18
 
+    /// Titres : SF Pro Display (semi-gras), chiffres tabulaires.
     static func titre(_ taille: CGFloat, relativeTo style: Font.TextStyle = .title, graisse: GraisseTitre = .semibold) -> Font {
-        cormorant(graisse.nom, taille: Echelle.palier(taille) * facteurSerif, relativeTo: style)
+        .system(size: UIFontMetrics(forTextStyle: style.uiKit).scaledValue(for: Echelle.palier(taille)),
+                weight: graisse == .medium ? .medium : graisse == .italique ? .regular : .semibold)
     }
 
     static func texte(_ taille: CGFloat = 17, relativeTo style: Font.TextStyle = .body, graisse: GraisseTexte = .regular) -> Font {
@@ -89,7 +91,7 @@ extension View {
     /// Titre en Cormorant Garamond, chiffres tabulaires.
     func styleTitre(_ taille: CGFloat, relativeTo style: Font.TextStyle = .title, graisse: Police.GraisseTitre = .semibold) -> some View {
         font(Police.titre(taille, relativeTo: style, graisse: graisse))
-            .tracking(-0.005 * Echelle.palier(taille))
+            .tracking(-0.015 * Echelle.palier(taille))
             .monospacedDigit()
     }
 

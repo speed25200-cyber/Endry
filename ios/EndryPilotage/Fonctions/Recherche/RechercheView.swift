@@ -9,17 +9,33 @@ struct RechercheView: View {
     @AppStorage(ModeDevantClient.cle) private var devantClient = false
     @State private var requete = ""
     @FocusState private var focus: Bool
+    /// Résultats de la dernière recherche terminée, et la requête qu'ils concernent.
+    @State private var resultats: [ResultatRecherche] = []
+    @State private var requeteTraitee = ""
 
-    private var resultats: [ResultatRecherche] {
-        RechercheGlobale.chercher(
-            requete,
-            cartes: app.decisions?.cartes ?? [],
-            chantiers: app.chantiers?.tous ?? [],
-            argent: app.argent?.argent,
-            messages: app.conversation?.messages ?? [],
-            // Devant le client : ni fournisseurs ni achats.
-            fournisseurs: !devantClient
-        )
+    /// Recherche hors du fil principal, après une courte pause de frappe : la saisie reste fluide.
+    private func chercher() async {
+        let texte = requete
+        guard !texte.trimmingCharacters(in: .whitespaces).isEmpty else {
+            resultats = []
+            requeteTraitee = texte
+            return
+        }
+        try? await Task.sleep(for: .milliseconds(120))
+        guard !Task.isCancelled else { return }
+        let cartes = app.decisions?.cartes ?? []
+        let chantiers = app.chantiers?.tous ?? []
+        let argent = app.argent?.argent
+        let messages = app.conversation?.messages ?? []
+        // Devant le client : ni fournisseurs ni achats.
+        let fournisseurs = !devantClient
+        let trouves = await Task.detached(priority: .userInitiated) {
+            RechercheGlobale.chercher(texte, cartes: cartes, chantiers: chantiers, argent: argent,
+                                      messages: messages, fournisseurs: fournisseurs)
+        }.value
+        guard !Task.isCancelled else { return }
+        resultats = trouves
+        requeteTraitee = texte
     }
 
     var body: some View {
@@ -32,7 +48,9 @@ struct RechercheView: View {
                             .styleTexte(14).foregroundStyle(Color.encreDouce)
                     }
                 } else if resultats.isEmpty {
-                    ContentUnavailableView.search(text: requete)
+                    if requeteTraitee == requete {
+                        ContentUnavailableView.search(text: requete)
+                    }
                 } else {
                     let liste = resultats
                     ForEach(ResultatRecherche.Genre.allCases, id: \.self) { genre in
@@ -64,6 +82,7 @@ struct RechercheView: View {
             }
         }
         .onAppear { focus = true }
+        .task(id: requete) { await chercher() }
         .accessibilityIdentifier("recherche")
     }
 

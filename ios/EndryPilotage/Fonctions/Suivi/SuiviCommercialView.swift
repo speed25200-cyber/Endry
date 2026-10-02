@@ -36,6 +36,8 @@ struct CarteOffresASuivre: View {
     }
 
     var body: some View {
+        // Calculée une fois par rendu (elle était recalculée pour chaque ligne).
+        let liste = self.liste
         if !liste.isEmpty {
             VStack(alignment: .leading, spacing: Espace.s) {
                 EnTeteSection(titre: "Sans réponse", detail: "depuis \(seuil) jours et plus")

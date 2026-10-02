@@ -39,12 +39,29 @@ public struct ResultatRecherche: Identifiable, Hashable, Sendable {
 public enum RechercheGlobale {
     /// `nil` : un mot de la requête ne se trouve nulle part.
     public static func score(_ champs: [String?], requete: String, titre: String? = nil) -> Int? {
-        let mots = RepondeurLocal.normaliser(requete).split(separator: " ").map(String.init)
-        guard !mots.isEmpty else { return nil }
+        score(champs, requete: Requete(requete), titre: titre)
+    }
+
+    /// Requête normalisée une seule fois (et non pour chaque élément parcouru).
+    struct Requete {
+        let normalisee: String
+        let mots: [String]
+        /// Mots précédés d'une espace (début de mot), calculés une fois.
+        let debuts: [String]
+
+        init(_ texte: String) {
+            normalisee = RepondeurLocal.normaliser(texte)
+            mots = normalisee.split(separator: " ").map(String.init)
+            debuts = mots.map { " " + $0 }
+        }
+    }
+
+    static func score(_ champs: [String?], requete: Requete, titre: String? = nil) -> Int? {
+        guard !requete.mots.isEmpty else { return nil }
         let texte = " " + RepondeurLocal.normaliser(champs.compactMap { $0 }.joined(separator: " ")) + " "
         var total = 0
-        for mot in mots {
-            if texte.contains(" " + mot) {
+        for (mot, debut) in zip(requete.mots, requete.debuts) {
+            if texte.contains(debut) {
                 total += 3
             } else if texte.contains(mot) {
                 total += 1
@@ -52,7 +69,7 @@ public enum RechercheGlobale {
                 return nil
             }
         }
-        if let titre, RepondeurLocal.normaliser(titre).hasPrefix(RepondeurLocal.normaliser(requete)) { total += 4 }
+        if let titre, RepondeurLocal.normaliser(titre).hasPrefix(requete.normalisee) { total += 4 }
         return total
     }
 
@@ -60,6 +77,7 @@ public enum RechercheGlobale {
                                 messages: [MessageConversation] = [], fournisseurs: Bool = true,
                                 limite: Int = 40) -> [ResultatRecherche] {
         guard !requete.trimmingCharacters(in: .whitespaces).isEmpty else { return [] }
+        let requete = Requete(requete)
         var resultats: [ResultatRecherche] = []
 
         for c in cartes {

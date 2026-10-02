@@ -75,7 +75,9 @@ struct SaisieView: View {
         .fullScreenCover(isPresented: $cameraPresentee) {
             CameraPhoto { image in
                 cameraPresentee = false
-                if let image, let brut = image.jpegData(compressionQuality: 1), let data = ImagePourPC.jpeg(brut) {
+                guard let image else { return }
+                Task {
+                    guard let data = await ImagePourPC.jpegHorsEcran(image) else { return }
                     modele.ajouter(PieceSaisie(nom: "photo-\(horodatage()).jpg", typeMIME: "image/jpeg", donnees: data, origine: .photo))
                 }
             }
@@ -237,7 +239,7 @@ struct SaisieView: View {
         for element in elements {
             guard let data = try? await element.loadTransferable(type: Data.self) else { continue }
             // HEIC, PNG ou JPEG : toujours converti en JPEG 0,85, 2560 px au plus (lisible par le PC).
-            guard let donnees = ImagePourPC.jpeg(data) else { continue }
+            guard let donnees = await ImagePourPC.jpegHorsEcran(data) else { continue }
             let ext = "jpg"
             let mime = "image/jpeg"
             modele.ajouter(PieceSaisie(nom: "photo-\(horodatage())-\(modele.pieces.count + 1).\(ext)", typeMIME: mime, donnees: donnees, origine: .photo))
@@ -247,26 +249,21 @@ struct SaisieView: View {
 
     private func ajouterScan(_ pages: [UIImage]) {
         guard !pages.isEmpty else { return }
-        // Un scan de plusieurs pages devient un seul PDF.
-        let format = UIGraphicsPDFRendererFormat()
-        let limites = CGRect(x: 0, y: 0, width: 595, height: 842)
-        let pdf = UIGraphicsPDFRenderer(bounds: limites, format: format).pdfData { contexte in
-            for page in pages {
-                contexte.beginPage()
-                let echelle = min(limites.width / page.size.width, limites.height / page.size.height)
-                let taille = CGSize(width: page.size.width * echelle, height: page.size.height * echelle)
-                page.draw(in: CGRect(x: (limites.width - taille.width) / 2, y: (limites.height - taille.height) / 2, width: taille.width, height: taille.height))
-            }
+        // Un scan de plusieurs pages devient un seul PDF (rendu hors du fil principal).
+        Task {
+            let pdf = await ImagePourPC.pdfHorsEcran(pages)
+            modele.ajouter(PieceSaisie(nom: "scan-\(horodatage()).pdf", typeMIME: "application/pdf", donnees: pdf, origine: .scan))
         }
-        modele.ajouter(PieceSaisie(nom: "scan-\(horodatage()).pdf", typeMIME: "application/pdf", donnees: pdf, origine: .scan))
     }
 
-    private func horodatage() -> String {
+    private func horodatage() -> String { Self.formatHorodatage.string(from: Date()) }
+
+    private static let formatHorodatage: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "yyyyMMdd-HHmmss"
-        return f.string(from: Date())
-    }
+        return f
+    }()
 }
 
 private struct VignettePiece: View {
@@ -276,8 +273,8 @@ private struct VignettePiece: View {
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Group {
-                if piece.typeMIME.hasPrefix("image/"), let image = UIImage(data: piece.donnees) {
-                    Image(uiImage: image).resizable().scaledToFill()
+                if piece.typeMIME.hasPrefix("image/") {
+                    VignettePhoto(donnees: piece.donnees, cle: piece.id.uuidString)
                 } else {
                     ZStack {
                         Color.surfaceCreuse

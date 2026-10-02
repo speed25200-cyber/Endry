@@ -82,9 +82,15 @@ extension ModeleApp {
             .map { ChantierPropose(id: $0.id, titre: $0.titre, client: $0.client, lieu: $0.lieu) }
     }
 
+    /// Recherche directe, sans trier toute la liste (appelé à chaque rendu des formulaires de terrain).
     func chantierPropose(_ id: String?) -> ChantierPropose? {
         guard let id else { return nil }
-        return chantiersProposes.first { $0.id == id }
+        if session.estOuvrier {
+            return (equipe?.chantiers ?? []).first { $0.id == id }
+                .map { ChantierPropose(id: $0.id, titre: $0.titre, client: $0.client, lieu: $0.lieu) }
+        }
+        return chantiers?.tous.first { $0.id == id }
+            .map { ChantierPropose(id: $0.id, titre: $0.titre, client: $0.client, lieu: $0.lieu) }
     }
 
     func dossier(_ id: String?) -> Dossier? {
@@ -314,11 +320,9 @@ struct PhotosTerrain: View {
                     HStack(spacing: Espace.s) {
                         ForEach(Array(photos.enumerated()), id: \.offset) { index, photo in
                             ZStack(alignment: .topTrailing) {
-                                if let image = UIImage(data: photo.donnees) {
-                                    Image(uiImage: image).resizable().scaledToFill()
-                                        .frame(width: 76, height: 96)
-                                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                                }
+                                VignettePhoto(donnees: photo.donnees, cle: "\(photo.nomFichier)-\(photo.donnees.count)")
+                                    .frame(width: 76, height: 96)
+                                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                                 Button {
                                     withAnimation(.endry) { _ = photos.remove(at: index) }
                                 } label: {
@@ -341,7 +345,7 @@ struct PhotosTerrain: View {
         .onChange(of: selection) { _, elements in
             Task {
                 for element in elements {
-                    if let data = try? await element.loadTransferable(type: Data.self) { ajouter(data) }
+                    if let data = try? await element.loadTransferable(type: Data.self) { await ajouter(data) }
                 }
                 selection = []
             }
@@ -349,14 +353,23 @@ struct PhotosTerrain: View {
         .fullScreenCover(isPresented: $camera) {
             CameraPhoto { image in
                 camera = false
-                if let image, let brut = image.jpegData(compressionQuality: 1) { ajouter(brut) }
+                guard let image else { return }
+                Task {
+                    guard let jpeg = await ImagePourPC.jpegHorsEcran(image) else { return }
+                    placer(jpeg)
+                }
             }
             .ignoresSafeArea()
         }
     }
 
-    private func ajouter(_ brut: Data) {
-        guard let jpeg = ImagePourPC.jpeg(brut) else { return }
+    /// Conversion hors du fil principal, puis ajout.
+    private func ajouter(_ brut: Data) async {
+        guard let jpeg = await ImagePourPC.jpegHorsEcran(brut) else { return }
+        placer(jpeg)
+    }
+
+    private func placer(_ jpeg: Data) {
         let nom = "\(prefixe)-\(photos.count + 1).jpg"
         withAnimation(.endry) {
             photos.append(.init(champ: "pieces", nomFichier: nom, typeMIME: "image/jpeg", donnees: jpeg))

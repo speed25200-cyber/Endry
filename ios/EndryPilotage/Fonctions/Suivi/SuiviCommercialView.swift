@@ -197,6 +197,7 @@ struct EntretiensView: View {
             }
             .padding(.horizontal, Espace.bord)
             .padding(.bottom, 120)
+            .verrouillerLargeur()
         }
         .scrollIndicators(.hidden)
         .refreshable { await modele.charger() }
@@ -306,6 +307,7 @@ struct FeuillePreparation: View {
                     }
                 }
                 .padding(Espace.l)
+                .verrouillerLargeur()
             }
             .navigationTitle(titre)
             .navigationBarTitleDisplayMode(.inline)

@@ -65,6 +65,7 @@ struct ConnexionView: View {
                 .padding(.bottom, Espace.xxl)
                 .frame(maxWidth: 560)
                 .frame(maxWidth: .infinity)
+                .verrouillerLargeur()
             }
             .scrollDismissesKeyboard(.interactively)
         }

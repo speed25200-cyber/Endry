@@ -53,6 +53,7 @@ struct EspaceOuvrier: View {
                 .largeurLisible()
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, Espace.xxl)
+                .verrouillerLargeur()
             }
             .scrollIndicators(.hidden)
             .refreshable { await modele.charger() }
@@ -312,6 +313,7 @@ struct JourneeOuvrierView: View {
                     }
                 }
                 .padding(Espace.bord)
+                .verrouillerLargeur()
             }
             .background(FondAmbiant())
             .navigationTitle("Ma journée")
@@ -402,6 +404,7 @@ struct InvitationOuvrierView: View {
                     }
                 }
                 .padding(Espace.bord)
+                .verrouillerLargeur()
             }
             .background(FondAmbiant())
             .navigationTitle("Équipe")

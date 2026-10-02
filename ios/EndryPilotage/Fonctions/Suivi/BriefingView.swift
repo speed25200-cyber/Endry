@@ -145,6 +145,7 @@ struct BriefingView: View {
                 }
                 .largeurLisible()
                 .padding(Espace.bord)
+                .verrouillerLargeur()
             }
             .background(FondAmbiant())
             .navigationBarTitleDisplayMode(.inline)

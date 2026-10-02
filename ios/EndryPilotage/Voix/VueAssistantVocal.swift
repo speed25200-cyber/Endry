@@ -468,6 +468,7 @@ private struct ReponseLisible: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, Espace.m)
+            .verrouillerLargeur()
         }
         .scrollIndicators(.hidden)
         .scrollBounceBehavior(.basedOnSize)
@@ -924,6 +925,7 @@ struct CarteClaude: View {
                         .foregroundStyle(Color(hex: 0xFBEBD0))
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .textSelection(.enabled)
+                    .verrouillerLargeur()
                 }
                 .frame(maxHeight: 170)
                 .scrollBounceBehavior(.basedOnSize)

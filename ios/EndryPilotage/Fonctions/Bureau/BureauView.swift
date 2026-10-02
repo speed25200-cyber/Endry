@@ -326,6 +326,7 @@ struct FicheAgentView: View {
                 .largeurLisible()
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, 130)
+                .verrouillerLargeur()
             }
         }
         .scrollIndicators(.hidden)

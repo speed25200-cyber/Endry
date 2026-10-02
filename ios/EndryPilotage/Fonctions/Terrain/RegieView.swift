@@ -44,6 +44,7 @@ struct RegieView: View {
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, Espace.xxl)
                 .animation(.endry, value: resultat)
+                .verrouillerLargeur()
             }
             .scrollDismissesKeyboard(.interactively)
             .background(FondAmbiant())
@@ -432,6 +433,7 @@ struct SignatureClientView: View {
                     .accessibilityIdentifier("signer")
                 }
                 .padding(Espace.l)
+                .verrouillerLargeur()
             }
             .scrollDisabled(false)
             .background(Color.papier.ignoresSafeArea())

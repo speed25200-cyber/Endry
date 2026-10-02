@@ -51,6 +51,7 @@ struct BonLivraisonView: View {
                 .padding(.bottom, Espace.xxl)
                 .animation(.endry, value: resultat)
                 .animation(.endry, value: lecture)
+                .verrouillerLargeur()
             }
             .scrollDismissesKeyboard(.interactively)
             .background(FondAmbiant())

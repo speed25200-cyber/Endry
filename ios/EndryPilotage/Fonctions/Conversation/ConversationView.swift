@@ -413,6 +413,7 @@ private struct HistoriqueConversations: View {
                 }
                 .padding(.horizontal, Espace.bord)
                 .padding(.vertical, Espace.m)
+                .verrouillerLargeur()
             }
             .background(FondMaison(photo: nil))
             .navigationTitle("Conversations")

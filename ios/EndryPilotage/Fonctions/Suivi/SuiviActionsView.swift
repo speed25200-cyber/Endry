@@ -190,9 +190,11 @@ struct FicheSuiviContenu: View {
             if let action = modele.action(id) {
                 contenu(action)
                     .padding(Espace.bord)
+                    .verrouillerLargeur()
             } else {
                 EtatVide(titre: "Introuvable", message: "Cette action n’est plus dans le suivi (plus de 30 jours).", icone: "clock")
                     .padding(Espace.bord)
+                    .verrouillerLargeur()
             }
         }
         .background(FondAmbiant())

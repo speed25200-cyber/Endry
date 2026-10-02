@@ -44,6 +44,7 @@ struct Releve3DView: View {
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, Espace.xxl)
                 .animation(.endry, value: resultat)
+                .verrouillerLargeur()
             }
             .scrollDismissesKeyboard(.interactively)
             .background(FondAmbiant())

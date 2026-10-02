@@ -249,6 +249,7 @@ extension ConsignesSheet.Mode: Identifiable {
             }
         }
         .padding()
+        .verrouillerLargeur()
     }
     .background(Color.fond)
 }

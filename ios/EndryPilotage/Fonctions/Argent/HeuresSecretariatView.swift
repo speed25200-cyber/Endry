@@ -50,6 +50,7 @@ struct HeuresSecretariatView: View {
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, Espace.xl)
                 .largeurLisible(Adaptatif.ecran)
+                .verrouillerLargeur()
             }
             .background(FondAmbiant())
             .searchable(text: $recherche, placement: .navigationBarDrawer(displayMode: .automatic),

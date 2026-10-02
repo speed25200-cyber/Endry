@@ -43,6 +43,11 @@ struct SectionBureau: View {
                     .padding(.top, Espace.xs)
                     .accessibilityIdentifier("service-assistant")
             }
+            if modele.enDirect {
+                BandeChiffres(elements: charge)
+                    .padding(.top, Espace.m)
+                    .accessibilityIdentifier("charge-bureau")
+            }
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                 ForEach(modele.agents) { agent in
                     NavigationLink(value: agent) {
@@ -115,6 +120,18 @@ struct SectionBureau: View {
     }
 
     private var actifs: Int { modele.agents.filter { modele.etatAffiche($0) == .occupe }.count }
+
+    /// Charge du jour, tous agents confondus : fait, en attente, bloqué.
+    private var charge: [BandeChiffres.Element] {
+        let traitees = modele.agents.reduce(0) { $0 + $1.traiteesJour }
+        let file = modele.agents.reduce(0) { $0 + $1.file }
+        let bloques = modele.agents.filter { modele.etatAffiche($0) == .erreur }.count
+        return [
+            .init(valeur: "\(traitees)", libelle: traitees == 1 ? "traitée aujourd’hui" : "traitées aujourd’hui"),
+            .init(valeur: "\(file)", libelle: "en file"),
+            .init(valeur: "\(bloques)", libelle: bloques == 1 ? "bloqué" : "bloqués", ton: bloques > 0 ? .alerte : nil),
+        ]
+    }
 
     private var enTete: some View {
         HStack(alignment: .center, spacing: Espace.s) {

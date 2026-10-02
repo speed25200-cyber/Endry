@@ -241,6 +241,17 @@ struct FondMaison: View {
     var body: some View {
         // La photo est posée en calque : elle ne doit jamais élargir l'écran (520 pt > largeur d'un iPhone).
         Color.fond
+            // Trame de points du poste de pilotage, qui s'efface vers le bas (motif de 22 pt répété, sans masque).
+            .overlay(alignment: .top) {
+                Image(uiImage: GrilleTechnique.motif(sombre: schema == .dark))
+                    .resizable(resizingMode: .tile)
+                    .frame(height: 480)
+                    .overlay {
+                        LinearGradient(stops: [.init(color: Color.fond.opacity(0), location: 0.15), .init(color: Color.fond, location: 1)],
+                                       startPoint: .top, endPoint: .bottom)
+                    }
+                    .allowsHitTesting(false)
+            }
             .overlay(alignment: .topLeading) {
                 if let photo, let halo = HaloAmbiance.image(photo) {
                     Image(uiImage: halo)
@@ -255,6 +266,24 @@ struct FondMaison: View {
             .clipped()
             .ignoresSafeArea()
             .accessibilityHidden(true)
+    }
+}
+
+/// Motif de la trame : un point fin au centre d'un carré de 22 pt (dessiné une fois par apparence).
+@MainActor
+enum GrilleTechnique {
+    private static var cache: [Bool: UIImage] = [:]
+
+    static func motif(sombre: Bool) -> UIImage {
+        if let deja = cache[sombre] { return deja }
+        let cote: CGFloat = 22
+        let couleur = sombre ? UIColor(red: 1, green: 0.93, blue: 0.8, alpha: 0.085) : UIColor(red: 0.13, green: 0.1, blue: 0.07, alpha: 0.075)
+        let image = UIGraphicsImageRenderer(size: CGSize(width: cote, height: cote)).image { contexte in
+            couleur.setFill()
+            contexte.cgContext.fillEllipse(in: CGRect(x: cote / 2 - 0.7, y: cote / 2 - 0.7, width: 1.4, height: 1.4))
+        }
+        cache[sombre] = image
+        return image
     }
 }
 

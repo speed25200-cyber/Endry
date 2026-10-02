@@ -10,10 +10,15 @@ struct ArgentView: View {
     var modele: ModeleArgent
     @State private var visible = false
     @State private var heuresOuvertes: HeuresSecretariat?
-    @State private var vue: VueFinances = .encaisser
 
     enum VueFinances: Hashable {
         case encaisser, payer, offres
+    }
+
+    /// Vue choisie, gardée dans l'app : les instruments de l'accueil ouvrent directement la bonne.
+    private var vue: VueFinances { app.vueFinances }
+    private var selectionVue: Binding<VueFinances> {
+        Binding(get: { app.vueFinances }, set: { app.vueFinances = $0 })
     }
 
     var body: some View {
@@ -29,7 +34,7 @@ struct ArgentView: View {
                         OptionSegment(valeur: VueFinances.encaisser, titre: "À encaisser"),
                         OptionSegment(valeur: .payer, titre: "À payer"),
                         OptionSegment(valeur: .offres, titre: "Offres"),
-                    ], selection: $vue)
+                    ], selection: selectionVue)
                     .padding(.top, 14)
 
                     if modele.horsLigne {

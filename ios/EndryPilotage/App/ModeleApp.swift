@@ -14,6 +14,8 @@ final class ModeleApp {
     var onglet: Onglet = .aujourdhui
     /// Vue de l'espace Chantiers (Pipeline ou Planning), pilotable depuis l'accueil.
     var vueChantiers: VueChantiers = .pipeline
+    /// Vue de Finances à montrer (un instrument de l'accueil y mène directement).
+    var vueFinances: ArgentView.VueFinances = .encaisser
     /// Carte à mettre en avant (toucher d'une notification).
     var referenceCiblee: String?
     /// Présente l'écran de connexion par-dessus l'app (nouveau lien).

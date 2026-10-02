@@ -4,6 +4,7 @@ import SwiftUI
 /// Chantiers : filtres par étape, liste avec rail d'avancement, bloc « Sur les chantiers · 7 jours ».
 struct ChantiersView: View {
     @Environment(ModeleApp.self) private var app
+    @AppStorage(ModeDevantClient.cle) private var devantClient = false
     var modele: ModeleChantiers
 
     @Namespace private var espaceFiltres
@@ -33,6 +34,11 @@ struct ChantiersView: View {
                     .padding(.horizontal, Espace.bord)
                     .accessibilityElement(children: .combine)
                     .accessibilityAddTraits(.isHeader)
+
+                    if !modele.tous.isEmpty {
+                        pipeline
+                            .padding(.horizontal, Espace.bord)
+                    }
 
                     Section {
                         VStack(alignment: .leading, spacing: Espace.m) {
@@ -79,6 +85,29 @@ struct ChantiersView: View {
             if modele.etat == .initial { await modele.charger() }
             visible = true
         }
+    }
+
+    /// Supervision du carnet : dossiers par étape (toucher filtre), valeur des chantiers en cours.
+    private var pipeline: some View {
+        let comptes = EtapeChantier.allCases.map { etape in modele.tous.filter { $0.etapeIndex == etape.index }.count }
+        let enCours = modele.tous.filter { (2...4).contains($0.etapeIndex) }
+        let carnet = enCours.reduce(0) { $0 + ($1.montant ?? 0) }
+        return VStack(alignment: .leading, spacing: 14) {
+            LibelleInstrument(symbole: "chart.bar.xaxis", titre: "Carnet · \(enCours.count) en cours") {
+                if !devantClient, carnet > 0 {
+                    Text("CHF \(FormatSuisse.francs(carnet))")
+                        .font(Police.mono(12))
+                        .foregroundStyle(Color.encre)
+                }
+            }
+            EntonnoirChantiers(comptes: comptes, selection: modele.filtre) { cle in
+                withAnimation(.endry) { modele.choisir(cle) }
+            }
+        }
+        .padding(16)
+        .tuileMaison(rayon: 22)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("carnet-chantiers")
     }
 
     private var filtres: some View {

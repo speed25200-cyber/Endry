@@ -64,6 +64,11 @@ struct FriseSemaineView: View {
         return bande.fin > bande.debut ? "\(jour(bande.debut))–\(jour(bande.fin))" : jour(bande.debut)
     }
 
+    /// Numéro de semaine ISO (« sem. 40 »).
+    static func numeroSemaine(_ date: Date = Date()) -> Int {
+        Calendar(identifier: .iso8601).component(.weekOfYear, from: date)
+    }
+
     /// « Villa Morel — PAC air-eau 10 kW » → « Villa Morel ».
     static func titreCourt(_ titre: String) -> String {
         let morceaux = titre.components(separatedBy: " — ")

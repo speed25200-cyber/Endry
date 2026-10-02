@@ -1,11 +1,13 @@
 import EndryKit
 import SwiftUI
 
-/// Accueil « Maison Endry » (maquette E) : en-tête et statut du bureau en direct, salutation, frise de la semaine,
-/// pile « À décider » à glisser, outils de terrain, tuiles Finances et Chantiers, briefing du jour.
-/// Fond brun profond (ou papier) éclairé en haut par la photo d'ambiance fondue.
+/// Accueil — poste de pilotage : en-tête, salutation et résumé du jour, puis le pouls de l'entreprise
+/// (trésorerie et quatre instruments), la pile « À décider » à glisser, le bureau en direct, la semaine,
+/// les outils de terrain, le briefing et ce qui a été fait. On lit l'entreprise d'un coup d'œil, de haut en bas
+/// par ordre d'urgence ; chaque chiffre mène à son espace.
 struct DecisionsView: View {
     @AppStorage(Salutation.clePrenom) private var prenomPatron = ""
+    @AppStorage(ModeDevantClient.cle) private var devantClient = false
     @Environment(ModeleApp.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
     var modele: ModeleDecisions
@@ -15,18 +17,26 @@ struct DecisionsView: View {
     @State private var fiche: Carte?
     @Namespace private var zoom
 
+    private static let ancreDecisions = "section-decisions"
+
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
                 FondMaison()
-                ScrollView {
-                    contenu
+                ScrollViewReader { defilement in
+                    ScrollView {
+                        contenu {
+                            withAnimation(.endry(reduire: reduireAnimations)) {
+                                defilement.scrollTo(Self.ancreDecisions, anchor: .top)
+                            }
+                        }
                         .largeurLisible(Adaptatif.ecran)
                         .padding(.bottom, 130)
                         .verrouillerLargeur()
+                    }
+                    .scrollIndicators(.hidden)
+                    .tirerPourActualiser { await modele.charger() }
                 }
-                .scrollIndicators(.hidden)
-                .tirerPourActualiser { await modele.charger() }
             }
             .toolbar(.hidden, for: .navigationBar)
         }
@@ -46,6 +56,9 @@ struct DecisionsView: View {
             if modele.etat == .initial { await modele.charger() }
             visible = true
         }
+        .task(id: app.agents == nil) {
+            if let agents = app.agents, !agents.charge { await agents.charger() }
+        }
     }
 
     /// Reprise depuis le bandeau de pause (serveur v1.1 et plus).
@@ -55,25 +68,17 @@ struct DecisionsView: View {
     }
 
     @ViewBuilder
-    private var contenu: some View {
+    private func contenu(ouvrirDecisions: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             EnTeteMaison(initiale: prenom.first.map { String($0).uppercased() })
                 .padding(.horizontal, Espace.bord)
                 .padding(.top, 4)
                 .apparitionEnCascade(index: 0, visible: visible)
 
-            if let agents = app.agents {
-                StatutBureau(modele: agents) { app.onglet = .entreprise }
-                    .padding(.horizontal, Espace.bord)
-                    .padding(.top, 12)
-                    .apparitionEnCascade(index: 1, visible: visible)
-                    .task { if !agents.charge { await agents.charger() } }
-            }
-
             salutation
                 .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .apparitionEnCascade(index: 2, visible: visible)
+                .padding(.top, 22)
+                .apparitionEnCascade(index: 1, visible: visible)
 
             if modele.horsLigne {
                 BandeauHorsLigne(majLe: modele.majLe)
@@ -88,51 +93,71 @@ struct DecisionsView: View {
 
             switch modele.etat {
             case .chargement where modele.accueil == nil, .initial:
-                Squelette(hauteur: 210, rayon: 26)
+                Squelette(hauteur: 190, rayon: 24)
                     .padding(.horizontal, Espace.bord)
                     .padding(.top, Espace.l)
+                HStack(spacing: 10) {
+                    Squelette(hauteur: 128, rayon: 22)
+                    Squelette(hauteur: 128, rayon: 22)
+                }
+                .padding(.horizontal, Espace.bord)
+                .padding(.top, 10)
             case .erreur(let erreur) where modele.accueil == nil:
                 VueErreur(erreur: erreur) { Task { await modele.charger() } }
                     .padding(.top, Espace.l)
             default:
-                sections
+                sections(ouvrirDecisions: ouvrirDecisions)
             }
         }
     }
 
     @ViewBuilder
-    private var sections: some View {
+    private func sections(ouvrirDecisions: @escaping () -> Void) -> some View {
         if let accueil = modele.accueil {
-            FriseSemaineView(semaine: accueil.chantiers7Jours) { ouvrirPlanning() }
-                .padding(.horizontal, 20)
+            PoulsEntreprise(accueil: accueil, cartes: modele.cartes, chantiersEnCours: chantiersEnCours,
+                            majLe: modele.majLe, ouvrirDecisions: ouvrirDecisions)
+                .padding(.horizontal, Espace.bord)
                 .padding(.top, 26)
-                .apparitionEnCascade(index: 3, visible: visible)
+                .apparitionEnCascade(index: 2, visible: visible)
         }
 
         TuileDecisions(modele: modele, visible: $carteVisible, zoom: zoom) { fiche = $0 }
-            .padding(.top, 14)
-            .apparitionEnCascade(index: 4, visible: visible)
+            .padding(.top, 26)
+            .id(Self.ancreDecisions)
+            .apparitionEnCascade(index: 3, visible: visible)
 
-        if !app.session.estOuvrier {
-            ActionsTerrain()
+        if let agents = app.agents {
+            BureauEnDirect(modele: agents) { app.onglet = .entreprise }
                 .padding(.horizontal, Espace.bord)
-                .padding(.top, 12)
-                .apparitionEnCascade(index: 5, visible: visible)
+                .padding(.top, 26)
+                .apparitionEnCascade(index: 4, visible: visible)
         }
 
         if let accueil = modele.accueil {
-            HStack(alignment: .top, spacing: 10) {
-                TuileFinances(accueil: accueil) { app.onglet = .finances }
-                TuileChantiers(semaine: accueil.chantiers7Jours, enCours: chantiersEnCours) { ouvrirPlanning() }
+            VStack(alignment: .leading, spacing: 10) {
+                TitreSection(titre: "Cette semaine · sem. \(FriseSemaineView.numeroSemaine())", lien: "Planning", action: ouvrirPlanning)
+                FriseSemaineView(semaine: accueil.chantiers7Jours) { ouvrirPlanning() }
+                    .padding(14)
+                    .tuileMaison(rayon: 22)
             }
             .padding(.horizontal, Espace.bord)
-            .padding(.top, 12)
+            .padding(.top, 26)
+            .apparitionEnCascade(index: 5, visible: visible)
+        }
+
+        if !app.session.estOuvrier {
+            VStack(alignment: .leading, spacing: 10) {
+                TitreSection(titre: "Terrain")
+                ActionsTerrain()
+            }
+            .padding(.horizontal, Espace.bord)
+            .padding(.top, 26)
             .apparitionEnCascade(index: 6, visible: visible)
         }
 
         CarteBriefing()
             .padding(.horizontal, Espace.bord)
-            .padding(.top, 10)
+            .padding(.top, 12)
             .apparitionEnCascade(index: 7, visible: visible)
 
         if let suiviActions = app.suiviActions {
@@ -153,19 +178,28 @@ struct DecisionsView: View {
         app.onglet = .chantiers
     }
 
-    /// Date en Cinzel, puis « Bonjour, » et le prénom en italique crème (« Bonjour. » sans prénom).
+    /// Date et semaine en petites capitales, « Bonjour, Luc. » (prénom en crème), puis le résumé du jour.
     private var salutation: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text((modele.accueil?.date ?? DateEndry.longue(Date())).capitalizedPremiere)
-                .etiquetteMaison(10.5)
+                .etiquetteMaison(11)
             let lignes = Salutation.lignes(salut: modele.accueil?.salut, prenom: prenom)
-            Text("\(Text(lignes.debut))\(Text(lignes.fin.isEmpty ? "" : " "))\(Text(lignes.fin.isEmpty ? "" : lignes.fin + ".").font(Police.serif(42, relativeTo: .largeTitle, italique: true)).foregroundStyle(Color.bronze))")
-                .font(Police.serif(42, relativeTo: .largeTitle))
-                .tracking(-0.5)
+            Text("\(Text(lignes.debut))\(Text(lignes.fin.isEmpty ? "" : " "))\(Text(lignes.fin.isEmpty ? "" : lignes.fin + ".").foregroundStyle(Color.signal))")
+                .font(Police.serif(36, relativeTo: .largeTitle))
+                .tracking(-0.7)
                 .foregroundStyle(Color.encre)
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
                 .accessibilityAddTraits(.isHeader)
+            if let accueil = modele.accueil {
+                Text(ResumeDuJour.phrase(accueil: accueil, decisions: modele.nombreDecisions, devantClient: devantClient))
+                    .font(.system(size: UIFontMetrics(forTextStyle: .subheadline).scaledValue(for: 15)))
+                    .foregroundStyle(Color.encreDouce)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
+                    .accessibilityIdentifier("resume-du-jour")
+            }
         }
     }
 
@@ -174,164 +208,6 @@ struct DecisionsView: View {
         let saisi = prenomPatron.trimmingCharacters(in: .whitespacesAndNewlines)
         if saisi.isEmpty, app.session.estDemo { return Salutation.prenomDemo }
         return saisi
-    }
-}
-
-/// « Parler à Endry » : l'assistant vocal à portée de pouce, avec une onde d'or qui respire.
-struct BoutonParlerEndry: View {
-    var action: () -> Void
-    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: Espace.xs) {
-                Image(systemName: "waveform")
-                    .font(.system(size: 15, weight: .semibold))
-                    .symbolEffect(.variableColor.iterative.dimInactiveLayers, options: .repeating,
-                                  isActive: !reduireAnimations && !Configuration.testsUI)
-                Text("Parler à Endry")
-                    .styleTexte(15, relativeTo: .subheadline, graisse: .semibold)
-            }
-            .foregroundStyle(Color.espresso)
-            .padding(.horizontal, Espace.m)
-            .frame(minHeight: 44)
-            .background {
-                Capsule().fill(.degradeOr).shadow(color: Color.or.opacity(0.35), radius: 14, y: 4)
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityHint(Text("Ouvre l’assistant vocal : posez une question ou dictez une demande"))
-        .accessibilityIdentifier("parler-endry")
-    }
-}
-
-/// « Écrire » : la conversation écrite ou dictée avec l'assistant du bureau, comme une session ouverte.
-struct BoutonEcrireBureau: View {
-    var action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: Espace.xs) {
-                Image(systemName: "text.bubble")
-                    .font(.system(size: 15, weight: .semibold))
-                Text("Écrire")
-                    .styleTexte(15, relativeTo: .subheadline, graisse: .semibold)
-            }
-            .foregroundStyle(Color.orClair)
-            .padding(.horizontal, Espace.m)
-            .frame(minHeight: 44)
-            .background(Color.white.opacity(0.1), in: Capsule())
-            .overlay(Capsule().stroke(Color.or.opacity(0.35), lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-        .accessibilityHint(Text("Ouvre la conversation avec l’assistant du bureau : écrivez ou dictez"))
-        .accessibilityIdentifier("ecrire-bureau")
-    }
-}
-
-/// L'argent de la semaine : à encaisser en grand, à payer et offres en attente ; ouvre les Finances.
-struct ResumeArgent: View {
-    var accueil: Accueil
-    var ouvrir: () -> Void
-    @AppStorage(ModeDevantClient.cle) private var devantClient = false
-
-    var body: some View {
-        Button(action: ouvrir) {
-            VStack(alignment: .leading, spacing: Espace.m) {
-                HStack {
-                    Text("L’argent de la semaine").styleSurtitre()
-                    Spacer()
-                    Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.bronze)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("À encaisser").styleTexte(13, relativeTo: .footnote).foregroundStyle(Color.encreDouce)
-                    MontantAnime(montant: accueil.encaisser.total, taille: 34, afficherCentimes: false)
-                }
-                HStack(spacing: Espace.s) {
-                    if !devantClient {
-                        chiffre("À payer · 7 jours", accueil.payer.totalSemaine)
-                        Rectangle().fill(Color.filet).frame(width: Espace.filet, height: 34)
-                    }
-                    chiffre("Offres en attente", accueil.offres.total)
-                }
-            }
-            .padding(Espace.m)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .surfaceCarte(rayon: Espace.rayon)
-        }
-        .buttonStyle(.plain)
-        .accessibilityHint(Text("Ouvre l’espace Finances"))
-    }
-
-    private func chiffre(_ titre: String, _ montant: Double) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(titre).styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encrePale)
-            Text(FormatSuisse.chfArrondi(montant))
-                .font(Police.chiffres(17, relativeTo: .headline))
-                .foregroundStyle(Color.encre)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-/// Chantiers de la semaine : cartes avec une photo d’ambiance ; ouvre le Planning.
-struct ChantiersSemaine: View {
-    var semaine: [Semaine]
-    var ouvrir: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Espace.s) {
-            HStack {
-                Text("Cette semaine").styleSurtitre()
-                Spacer()
-                Button("Planning", action: ouvrir)
-                    .styleTexte(14, relativeTo: .subheadline, graisse: .medium)
-                    .foregroundStyle(Color.bronze)
-            }
-            .padding(.horizontal, Espace.bord + 4)
-            ScrollView(.horizontal) {
-                HStack(spacing: Espace.s) {
-                    ForEach(semaine) { item in
-                        Button(action: ouvrir) {
-                            HStack(spacing: Espace.s) {
-                                Image(PhotosMarque.pour(id: item.id))
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 64, height: 64)
-                                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                    .accessibilityHidden(true)
-                                VStack(alignment: .leading, spacing: 3) {
-                                    if let date = item.dateDebut {
-                                        Text("\(DateEndry.jourAbrege(date)) \(DateEndry.numeroJour(date))")
-                                            .font(Police.etiquette(Echelle.micro))
-                                            .textCase(.uppercase)
-                                            .tracking(1.6)
-                                            .foregroundStyle(Color.bronze)
-                                    }
-                                    Text(item.titre)
-                                        .styleTexte(14, relativeTo: .subheadline, graisse: .semibold)
-                                        .foregroundStyle(Color.encre)
-                                        .lineLimit(2)
-                                    if let lieu = item.lieu {
-                                        Text(lieu).styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encrePale)
-                                    }
-                                }
-                                .frame(width: 150, alignment: .leading)
-                            }
-                            .padding(Espace.s)
-                            .surfaceCarte(rayon: Espace.rayonPetit)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityElement(children: .combine)
-                    }
-                }
-                .scrollTargetLayout()
-            }
-            .scrollIndicators(.hidden)
-            .scrollClipDisabled()
-            .contentMargins(.horizontal, Espace.bord + 4, for: .scrollContent)
-            .scrollTargetBehavior(.viewAligned)
-        }
     }
 }
 
@@ -408,86 +284,6 @@ struct BandeauPause: View {
         .background(Color.ambre.opacity(0.12), in: RoundedRectangle(cornerRadius: Espace.rayonPetit, style: .continuous))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("bandeau-pause")
-    }
-}
-
-/// En-tête condensé : apparaît en verre quand le grand titre sort de l'écran.
-struct EnTeteCondense: View {
-    var titre: String
-    var detail: String?
-
-    var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: Espace.xs) {
-            Text(titre).styleTitre(17, relativeTo: .headline).foregroundStyle(Color.encre)
-            if let detail {
-                Text(detail).styleTexte(13, relativeTo: .footnote, graisse: .medium).foregroundStyle(Color.bronze)
-            }
-            Spacer()
-        }
-        .padding(.horizontal, Espace.bord)
-        .padding(.vertical, Espace.s)
-        .frame(maxWidth: .infinity)
-        .background {
-            Rectangle().fill(.ultraThinMaterial)
-                .overlay(alignment: .bottom) { Rectangle().fill(Color.bordureOr).frame(height: Espace.filet) }
-                .ignoresSafeArea(edges: .top)
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isHeader)
-    }
-}
-
-/// Pastille de résumé en verre.
-struct PastilleApercu: View {
-    var icone: String
-    var texte: String
-    var accent: Bool
-    var alerte = false
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: icone).font(.system(size: 11, weight: .bold))
-            Text(texte).styleTexte(12, relativeTo: .caption, graisse: .semibold)
-        }
-        .foregroundStyle(alerte ? Color.rouille : accent ? Color.espressoProfond : Color.encreDouce)
-        .padding(.horizontal, 12)
-        .frame(minHeight: 30)
-        .background {
-            if accent {
-                Capsule().fill(.degradeOr)
-            } else {
-                Capsule().fill(Color.surfaceCreuse)
-                    .overlay(Capsule().strokeBorder(Color.bordureOr, lineWidth: Espace.filet))
-            }
-        }
-    }
-}
-
-/// Agenda des 7 prochains jours : cartes horizontales qui s'effacent en glissant.
-struct AgendaSemaine: View {
-    var semaine: [Semaine]
-    var ouvrir: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Espace.s) {
-            EnTeteSection(titre: "Cette semaine", detail: "sur les chantiers", action: ouvrir, libelleAction: "Planning")
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Espace.s) {
-                    ForEach(semaine) { item in
-                        CarteJour(item: item)
-                            .scrollTransition(.interactive, axis: .horizontal) { contenu, phase in
-                                contenu
-                                    .scaleEffect(phase.isIdentity ? 1 : 0.92)
-                                    .opacity(phase.isIdentity ? 1 : 0.55)
-                                    .rotation3DEffect(.degrees(phase.value * -8), axis: (x: 0, y: 1, z: 0))
-                            }
-                    }
-                }
-                .scrollTargetLayout()
-            }
-            .scrollTargetBehavior(.viewAligned)
-            .scrollClipDisabled()
-        }
     }
 }
 

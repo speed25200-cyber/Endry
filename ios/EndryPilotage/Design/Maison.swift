@@ -231,8 +231,8 @@ struct BarreFine: View {
     }
 }
 
-/// Fond du poste de pilotage : une aurore liquide bronze et or (brun profond, ou papier ivoire en clair), rendue une
-/// seule fois en haute résolution avec un grain photographique fin, qui dérive très lentement ; par-dessus, la trame
+/// Fond du poste de pilotage : nuit brune presque noire et, en haut à droite, le bord lumineux d'une éclipse (arc d'or
+/// et halo), rendu une seule fois en haute résolution avec un grain fin, qui dérive très lentement ; par-dessus, la trame
 /// de points. Couvre toute la largeur (iPhone, iPad, paysage), sans rien couper. Seule une image figée se déplace :
 /// rien n'est recalculé pendant le défilement. Pause sous les écrans pleins et avec « Réduire les animations ».
 struct FondMaison: View {
@@ -291,7 +291,7 @@ struct FondMaison: View {
     }
 }
 
-/// L'aurore, rendue une fois par apparence (dégradé maillé 4 × 4 et grain fin) puis gardée en mémoire.
+/// Le fond, rendu une fois par apparence (éclipse, halo et grain) puis gardé en mémoire.
 @MainActor
 enum AuroreRendue {
     private static var cache: [Bool: UIImage] = [:]
@@ -307,48 +307,48 @@ enum AuroreRendue {
     }
 }
 
-/// Aurore bronze et or : quelques coulées de lumière chaude sur un noir brun (ou un papier ivoire), grain fin.
+/// Fond sombre : nuit brune presque noire et, en haut à droite, le bord d'une éclipse — un arc d'or fin et son halo,
+/// qui laisse toute la place à la salutation (coin haut gauche sombre). Clair : papier ivoire, reflet doré discret.
+/// Rendue une seule fois : le flou du halo ne coûte rien ensuite.
 private struct Aurore: View {
     var sombre: Bool
 
     var body: some View {
-        ZStack {
-            MeshGradient(
-                width: 4, height: 4,
-                points: [
-                    [0, 0], [0.33, 0], [0.67, 0], [1, 0],
-                    [0, 0.30], [0.28, 0.22], [0.70, 0.36], [1, 0.26],
-                    [0, 0.62], [0.36, 0.70], [0.62, 0.55], [1, 0.66],
-                    [0, 1], [0.33, 1], [0.67, 1], [1, 1],
-                ],
-                colors: sombre ? [
-                    Color(hex: 0x2B1D10), Color(hex: 0x6E4A22), Color(hex: 0x1A120B), Color(hex: 0x0F0C09),
-                    Color(hex: 0x120E0A), Color(hex: 0xB0884E), Color(hex: 0x3A2814), Color(hex: 0x14100C),
-                    Color(hex: 0x0E0B08), Color(hex: 0x24180E), Color(hex: 0x5C3D1C), Color(hex: 0x0E0B08),
-                    Color(hex: 0x0D0B09), Color(hex: 0x0D0B09), Color(hex: 0x0D0B09), Color(hex: 0x0D0B09),
-                ] : [
-                    Color(hex: 0xEADBC0), Color(hex: 0xD8B983), Color(hex: 0xF1E8D8), Color(hex: 0xF6F2EA),
-                    Color(hex: 0xF4EEE3), Color(hex: 0xE2C695), Color(hex: 0xEDDFC6), Color(hex: 0xF5F1EA),
-                    Color(hex: 0xF6F3EC), Color(hex: 0xEFE4D1), Color(hex: 0xE0C9A0), Color(hex: 0xF6F3EC),
-                    Color(hex: 0xF6F5F2), Color(hex: 0xF6F5F2), Color(hex: 0xF6F5F2), Color(hex: 0xF6F5F2),
-                ],
-                smoothsColors: true
-            )
-            // Reflet crème, comme une lumière rasante sur du métal brossé.
-            RadialGradient(colors: [Color(hex: sombre ? 0xF9DBA3 : 0xFFFFFF).opacity(sombre ? 0.16 : 0.5), .clear],
-                           center: UnitPoint(x: 0.3, y: 0.2), startRadius: 0, endRadius: 420)
-                .blendMode(sombre ? .plusLighter : .normal)
-            // Grain photographique fin (tirage fixe : le même à chaque lancement).
-            Canvas { ctx, taille in
-                var graine: UInt64 = 0x9E37_79B9_7F4A_7C15
-                func suivant() -> Double {
-                    graine = graine &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
-                    return Double(graine >> 11) / Double(1 << 53)
-                }
-                let couleur = sombre ? Color.white : Color.black
-                for _ in 0..<18_000 {
-                    let point = CGRect(x: suivant() * taille.width, y: suivant() * taille.height, width: 0.6, height: 0.6)
-                    ctx.fill(Path(point), with: .color(couleur.opacity(0.035 + 0.05 * suivant())))
+        GeometryReader { geo in
+            let l = geo.size.width
+            let h = geo.size.height
+            // Astre hors champ, en haut à droite : seul son bord est visible.
+            let rayon = l * 0.95
+            let centre = CGPoint(x: l * 1.12, y: -h * 0.12)
+            let disque = Path(ellipseIn: CGRect(x: centre.x - rayon, y: centre.y - rayon, width: rayon * 2, height: rayon * 2))
+            let or = Color(hex: sombre ? 0xF2C98A : 0xC9A061)
+            ZStack {
+                (sombre ? Color(hex: 0x0B0907) : Color(hex: 0xF6F3EC))
+                // Lumière chaude très diffuse derrière l'astre.
+                RadialGradient(colors: [or.opacity(sombre ? 0.22 : 0.28), or.opacity(sombre ? 0.06 : 0.08), .clear],
+                               center: UnitPoint(x: centre.x / l, y: centre.y / h), startRadius: rayon * 0.9, endRadius: rayon * 1.55)
+                // Halo du bord, large puis serré.
+                disque.stroke(or.opacity(sombre ? 0.30 : 0.25), lineWidth: 46).blur(radius: 38)
+                disque.stroke(or.opacity(sombre ? 0.55 : 0.4), lineWidth: 10).blur(radius: 9)
+                // Le corps de l'astre, plus sombre que la nuit.
+                disque.fill(sombre ? Color(hex: 0x060504) : Color(hex: 0xEFE8DB))
+                // L'arc lui-même : un trait d'or net, plus vif là où la lumière l'attrape.
+                disque.stroke(
+                    AngularGradient(colors: [or.opacity(0.0), or.opacity(0.35), or, Color(hex: 0xFFF1D6), or, or.opacity(0.35), or.opacity(0.0)],
+                                    center: UnitPoint(x: centre.x / l, y: centre.y / h), startAngle: .degrees(80), endAngle: .degrees(200)),
+                    lineWidth: 1.6)
+                // Grain photographique fin (tirage fixe : le même à chaque lancement).
+                Canvas { ctx, taille in
+                    var graine: UInt64 = 0x9E37_79B9_7F4A_7C15
+                    func suivant() -> Double {
+                        graine = graine &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+                        return Double(graine >> 11) / Double(1 << 53)
+                    }
+                    let couleur = sombre ? Color.white : Color.black
+                    for _ in 0..<18_000 {
+                        let point = CGRect(x: suivant() * taille.width, y: suivant() * taille.height, width: 0.6, height: 0.6)
+                        ctx.fill(Path(point), with: .color(couleur.opacity(0.03 + 0.04 * suivant())))
+                    }
                 }
             }
         }

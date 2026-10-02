@@ -487,32 +487,33 @@ struct PuceFiltre: View {
     var espace: Namespace.ID
     var action: () -> Void
 
+    /// Maison Endry : la puce active porte la loupe (teinte et filet) ; les autres restent en verre discret.
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                Text(libelle).styleTexte(14, relativeTo: .subheadline, graisse: .semibold)
+                Text(libelle).styleTexte(13.5, relativeTo: .subheadline, graisse: selectionne ? .medium : .regular)
                 if let nombre {
                     Text("\(nombre)")
-                        .font(Police.titre(12, relativeTo: .caption))
-                        .monospacedDigit()
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 1)
-                        .background((selectionne ? Color.espressoProfond : Color.encre).opacity(0.12), in: Capsule())
+                        .font(Police.mono(10.5))
+                        .foregroundStyle(Color.encreDouce)
                         .contentTransition(.numericText(value: Double(nombre)))
                 }
             }
-            .foregroundStyle(selectionne ? Color.espressoProfond : Color.encre)
+            .foregroundStyle(selectionne ? Color.encre : Color.encreDouce)
             .lineLimit(1)
             .fixedSize()
             .padding(.horizontal, 14)
-            .frame(minHeight: 36)
+            .frame(minHeight: 34)
             .background {
                 if selectionne {
-                    Capsule().fill(.degradeOr).matchedGeometryEffect(id: "puce", in: espace)
+                    Capsule().fill(Color.lentille)
+                        .overlay(Capsule().strokeBorder(Color.filetFort, lineWidth: Espace.filet))
+                        .matchedGeometryEffect(id: "puce", in: espace)
                 } else {
-                    Capsule().fill(Color.surface).overlay(Capsule().strokeBorder(Color.bordureOr, lineWidth: Espace.filet))
+                    Capsule().strokeBorder(Color.filet, lineWidth: Espace.filet)
                 }
             }
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(selectionne ? .isSelected : [])

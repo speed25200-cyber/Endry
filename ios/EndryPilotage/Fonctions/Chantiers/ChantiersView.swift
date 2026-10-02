@@ -21,11 +21,18 @@ struct ChantiersView: View {
         NavigationStack(path: $chemin) {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: Espace.m, pinnedViews: [.sectionHeaders]) {
-                    Text("Chantiers")
-                        .styleTitre(34, relativeTo: .largeTitle)
-                        .foregroundStyle(Color.encre)
-                        .padding(.top, Espace.m)
-                        .padding(.horizontal, Espace.bord)
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Chantiers").etiquetteMaison()
+                            .frame(height: 34, alignment: .center)
+                        Text(modele.tous.isEmpty ? "Les chantiers" : "\(modele.tous.count) dossiers")
+                            .font(Police.serif(40, relativeTo: .largeTitle))
+                            .foregroundStyle(Color.encre)
+                            .contentTransition(.numericText(value: Double(modele.tous.count)))
+                    }
+                    .padding(.top, Espace.s)
+                    .padding(.horizontal, Espace.bord)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(.isHeader)
 
                     Section {
                         VStack(alignment: .leading, spacing: Espace.m) {
@@ -47,7 +54,7 @@ struct ChantiersView: View {
             }
             .scrollIndicators(.hidden)
             .tirerPourActualiser { await modele.actualiser() }
-            .background(FondAmbiant())
+            .background(FondMaison(photo: nil))
             .toolbar(.hidden, for: .navigationBar)
             .onChange(of: app.dossierCible, initial: true) { _, _ in ouvrirCible() }
             // Lancement à froid : le chantier demandé arrive avec la liste.
@@ -96,7 +103,7 @@ struct ChantiersView: View {
             .padding(.horizontal, Espace.bord)
             .padding(.vertical, Espace.xs)
         }
-        .background(Color.fond.opacity(0.94))
+        .background(Color.fond.opacity(0.96))
         .sensoryFeedback(.selection, trigger: modele.filtre)
     }
 
@@ -132,78 +139,77 @@ struct ChantiersView: View {
     }
 }
 
+/// Tuile d'un chantier (Maison Endry) : client en Cinzel, objet en Cormorant, lieu et dates en mono,
+/// montant à droite, avancement en sept segments, point crème si une décision attend.
 struct LigneChantier: View {
     var dossier: Dossier
 
     var body: some View {
+        let etapes = EtapeChantier.allCases.count
+        let courant = min(max(dossier.etapeIndex, 0), etapes - 1)
         VStack(alignment: .leading, spacing: 0) {
-            ZStack(alignment: .bottomLeading) {
-                Image(PhotosMarque.pour(id: dossier.id))
-                    .resizable()
-                    .scaledToFill()
-                    .frame(height: 118)
-                    .frame(maxWidth: .infinity)
-                    .clipped()
-                    .overlay(VoilePhoto(haut: 0.15, bas: 0.85))
-                    .accessibilityHidden(true)
-                HStack(alignment: .lastTextBaseline) {
-                    Text(dossier.client.isEmpty ? dossier.titre : dossier.client)
-                        .styleTitre(22, relativeTo: .title3)
-                        .foregroundStyle(Color(hex: 0xF7F2E9))
-                        .lineLimit(1)
-                    Spacer()
-                    if let montant = dossier.montant {
-                        Text(FormatSuisse.chfArrondi(montant))
-                            .font(Police.chiffres(15, relativeTo: .subheadline))
-                            .foregroundStyle(Color.or)
-                    }
+            HStack(alignment: .firstTextBaseline) {
+                Text(dossier.client.isEmpty ? "Chantier" : dossier.client)
+                    .etiquetteMaison(10, couleur: .etiquette)
+                    .lineLimit(1)
+                Spacer(minLength: Espace.xs)
+                if dossier.decisionEnAttente {
+                    Circle().fill(Color.signal).frame(width: 8, height: 8)
+                        .accessibilityLabel(Text("Décision en attente"))
                 }
-                .padding(.horizontal, Espace.m)
-                .padding(.bottom, Espace.s)
             }
-
-            VStack(alignment: .leading, spacing: Espace.s) {
-                Text(dossier.titre)
-                    .styleTexte(14, relativeTo: .subheadline)
-                    .foregroundStyle(Color.encreDouce)
+            HStack(alignment: .firstTextBaseline, spacing: Espace.s) {
+                Text(objet)
+                    .font(Police.serif(22, relativeTo: .title3))
+                    .foregroundStyle(Color.encre)
                     .lineLimit(2)
-                HStack(spacing: Espace.xs) {
-                    if let lieu = dossier.lieu {
-                        Label(lieu, systemImage: "mappin.and.ellipse")
-                            .styleTexte(12, relativeTo: .caption, graisse: .medium)
-                            .foregroundStyle(Color.encrePale)
-                    }
-                    if let dates = dossier.dates {
-                        Label(dates, systemImage: "calendar")
-                            .styleTexte(12, relativeTo: .caption, graisse: .medium)
-                            .foregroundStyle(Color.encrePale)
-                    }
-                    Spacer()
-                    if dossier.decisionEnAttente {
-                        Pastille(texte: "Décision en attente", couleur: .bronze, icone: "circle.fill")
-                    }
-                }
-                .labelStyle(.titleAndIcon)
-
-                RailAvancement(index: dossier.etapeIndex)
-                    .padding(.top, Espace.xxs)
-                HStack {
-                    Text(dossier.etapeLibelle)
-                        .styleTexte(12, relativeTo: .caption, graisse: .semibold)
-                        .foregroundStyle(Color.bronze)
-                    Spacer()
-                    Text("Étape \(dossier.etapeIndex + 1) / 7")
-                        .styleTexte(11, relativeTo: .caption2)
-                        .foregroundStyle(Color.encrePale)
+                    .multilineTextAlignment(.leading)
+                Spacer(minLength: Espace.xs)
+                if let montant = dossier.montant {
+                    Text(FormatSuisse.francs(montant))
+                        .font(Police.serif(20, relativeTo: .headline))
                         .monospacedDigit()
+                        .foregroundStyle(Color.encre)
+                        .lineLimit(1)
                 }
             }
-            .padding(Espace.m)
+            .padding(.top, 6)
+            Text([dossier.lieu, dossier.dates].compactMap { $0 }.joined(separator: " · "))
+                .font(Police.mono(10.5))
+                .foregroundStyle(Color.encreDouce)
+                .lineLimit(1)
+                .padding(.top, 4)
+            HStack(spacing: 3) {
+                ForEach(0..<etapes, id: \.self) { index in
+                    Capsule()
+                        .fill(index < courant ? Color.encre : index == courant ? Color.signal : Color.filetFort)
+                        .frame(height: 3)
+                }
+            }
+            .padding(.top, 14)
+            HStack {
+                Text(dossier.etapeLibelle)
+                Spacer()
+                Text("Étape \(courant + 1) / \(etapes)")
+            }
+            .font(Police.mono(10.5))
+            .foregroundStyle(Color.encreDouce)
+            .padding(.top, 8)
         }
-        .clipShape(RoundedRectangle(cornerRadius: Espace.rayon, style: .continuous))
-        .surfaceCarte()
-        .contentShape(RoundedRectangle(cornerRadius: Espace.rayon, style: .continuous))
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .tuileMaison(rayon: 24)
+        .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .accessibilityElement(children: .combine)
+    }
+
+    /// « Nicolas et Linda Favre — Ch. de la Croix 41 » : le client est déjà au-dessus, on garde l'objet.
+    private var objet: String {
+        let morceaux = dossier.titre.components(separatedBy: " — ")
+        if morceaux.count > 1, morceaux[0].trimmingCharacters(in: .whitespaces) == dossier.client {
+            return morceaux.dropFirst().joined(separator: " — ")
+        }
+        return dossier.titre
     }
 }
 

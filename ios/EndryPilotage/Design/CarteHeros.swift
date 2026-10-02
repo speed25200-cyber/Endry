@@ -69,16 +69,3 @@ struct MatiereEspresso: View {
         }
     }
 }
-
-// MARK: - Effets
-
-
-// MARK: - Carte héros
-
-#Preview("Carte héros") {
-    let a = Fixtures.accueil
-    return CarteHeros(encaisser: a.encaisser, offres: a.offres, payer: a.payer) {}
-        .padding()
-        .background(Color.fond)
-        .preferredColorScheme(.dark)
-}

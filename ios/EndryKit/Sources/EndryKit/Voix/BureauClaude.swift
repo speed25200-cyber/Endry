@@ -242,12 +242,30 @@ public struct BureauClaude: Sendable {
         async let journal = try? api.journal(limite: 12)
         let (e, s, a, j) = await (etat, saisies, agents, journal)
         guard e != nil || s != nil || a != nil else { return nil }
+        if let a, !a.agents.isEmpty, let cle = cleMemoire { MemoireAgents.partage.garder(a.agents, pour: cle) }
         return EtatBureau(etat: e ?? a?.assistant, saisies: s ?? [], agents: a?.agents ?? [], journal: j ?? [])
+    }
+
+    /// Connexion chaude avant une question (écran de conversation ouvert, première lettre tapée) : la requête
+    /// qui suit ne paie ni la résolution du nom ni la poignée de main TLS.
+    public func prechauffer() async {
+        _ = try? await api.etatAssistant()
+    }
+
+    /// Clé de la mémoire des agents : l'adresse du PC (les API de démonstration et de test ne sont pas gardées).
+    private var cleMemoire: String? { (api as? ClientAPI)?.base.absoluteString }
+
+    /// Agents du PC, gardés une minute : la voix ne paie pas un aller-retour avant chaque question.
+    private func agentsConnus() async -> [AgentPC] {
+        if let cle = cleMemoire, let connus = MemoireAgents.partage.agents(pour: cle) { return connus }
+        let agents = (try? await api.agentsPC()) ?? []
+        if !agents.isEmpty, let cle = cleMemoire { MemoireAgents.partage.garder(agents, pour: cle) }
+        return agents
     }
 
     /// Agent du PC visé : nommé par le modèle vocal, cité dans la question, ou déduit du sujet.
     public func resoudreAgent(question: String, demande: String?) async -> (id: String?, nom: String?) {
-        let agents = (try? await api.agentsPC()) ?? []
+        let agents = await agentsConnus()
         if let demande, !demande.isEmpty {
             let n = RepondeurLocal.normaliser(demande)
             if let a = agents.first(where: { $0.id == n || RepondeurLocal.normaliser($0.nom) == n }) { return (a.id, a.nom) }
@@ -309,27 +327,43 @@ public struct BureauClaude: Sendable {
         return .enAttente(.saisie(id: reponse.saisieId, texte: texte), message: nil)
     }
 
-    /// Attend la réponse d'une question v1.2 : `GET /questions/{id}` chaque seconde pendant 20 s (PC en mode direct),
-    /// puis toutes les 2 s jusqu'à 3 min ; ensuite, l'événement `reponse` du PC ou la notification prennent le relais.
-    /// Au-delà (ou pour une question déposée en saisie), on ne sonde plus : `verifier` est rappelé
-    /// à chaque événement `maj saisies` du PC. `nil` : pas encore de réponse.
-    public func attendre(_ suivi: SuiviQuestion, delai: Duration = .seconds(180), intervalle: Duration = .seconds(2),
-                         rapide: Duration = .seconds(20)) async -> ReponseAgent? {
+    /// Cadence de sondage : serrée au début (en mode direct, le PC répond souvent en quelques secondes), puis plus
+    /// lâche. L'événement `reponse` du PC, quand il arrive, court-circuite l'attente (réponse affichée aussitôt).
+    public static func intervalle(apres ecoule: Duration) -> Duration {
+        if ecoule < .seconds(10) { return .milliseconds(400) }
+        if ecoule < .seconds(30) { return .milliseconds(800) }
+        return .milliseconds(1_500)
+    }
+
+    /// Attente longue proposée au PC (v1.8) : il peut garder `GET /questions/{id}` ouvert jusqu'à 20 s et répondre
+    /// à l'instant où la réponse est prête.
+    public static let attenteLongue = 20
+
+    /// Attend la réponse d'une question v1.2 jusqu'à 3 min : `GET /questions/{id}?attendre=20` (relancé aussitôt
+    /// si le PC a gardé la requête), sinon toutes les 0,4 s, puis 0,8 s, puis 1,5 s. Ensuite, l'événement `reponse`
+    /// du PC ou la notification prennent le relais. Une question déposée en saisie n'est pas sondée : `verifier` est
+    /// rappelé à chaque événement `maj saisies` du PC. `nil` : pas encore de réponse.
+    /// `intervalle` : cadence fixe (tests).
+    public func attendre(_ suivi: SuiviQuestion, delai: Duration = .seconds(180), intervalle: Duration? = nil) async -> ReponseAgent? {
         guard case .question = suivi else { return await verifier(suivi) }
         let debut = ContinuousClock.now
         let limite = debut + delai
         while ContinuousClock.now < limite, !Task.isCancelled {
-            if let r = await verifier(suivi) { return r }
-            try? await Task.sleep(for: ContinuousClock.now - debut < rapide ? min(.seconds(1), intervalle) : intervalle)
+            let avant = ContinuousClock.now
+            if let r = await verifier(suivi, attente: Self.attenteLongue) { return r }
+            // Le PC a gardé la requête ouverte (attente longue) : on la relance tout de suite, sans pause.
+            if intervalle == nil, ContinuousClock.now - avant >= .milliseconds(1_500) { continue }
+            try? await Task.sleep(for: intervalle ?? Self.intervalle(apres: ContinuousClock.now - debut))
         }
         return nil
     }
 
-    /// Une seule vérification : la réponse est-elle arrivée ?
-    public func verifier(_ suivi: SuiviQuestion) async -> ReponseAgent? {
+    /// Une seule vérification : la réponse est-elle arrivée ? `attente` : attente longue proposée au PC (secondes).
+    public func verifier(_ suivi: SuiviQuestion, attente: Int? = nil) async -> ReponseAgent? {
         switch suivi {
         case .question(let id, let agent):
-            guard let data = try? await api.envoyer(.suiviQuestion(id)),
+            let requete: Requete = attente.map { .suiviQuestion(id, attente: $0) } ?? .suiviQuestion(id)
+            guard let data = try? await api.envoyer(requete),
                   var r = try? JSONDecoder().decode(ReponseAgent.self, from: data), r.statut != .enCours else { return nil }
             if r.agent == nil { r.agent = agent }
             return r
@@ -363,5 +397,25 @@ extension Requete {
         if let conversation { corps["conversation_id"] = conversation }
         if let contexte, !contexte.isEmpty { corps["contexte"] = contexte }
         return .init(.post, "\(prefixe)/assistant/question", corps: .json(json(corps)), delai: 90)
+    }
+}
+
+/// Agents du PC déjà lus (par adresse du PC), valables une minute.
+final class MemoireAgents: @unchecked Sendable {
+    static let partage = MemoireAgents()
+    private let verrou = NSLock()
+    private var entrees: [String: (le: Date, agents: [AgentPC])] = [:]
+
+    func agents(pour cle: String, age: TimeInterval = 60) -> [AgentPC]? {
+        verrou.lock()
+        defer { verrou.unlock() }
+        guard let entree = entrees[cle], Date().timeIntervalSince(entree.le) < age else { return nil }
+        return entree.agents
+    }
+
+    func garder(_ agents: [AgentPC], pour cle: String) {
+        verrou.lock()
+        defer { verrou.unlock() }
+        entrees[cle] = (Date(), agents)
     }
 }

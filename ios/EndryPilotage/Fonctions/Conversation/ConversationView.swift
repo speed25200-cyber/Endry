@@ -71,7 +71,12 @@ struct ConversationView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
-        .task { await modele.verifierEnAttente() }
+        .task {
+            // Connexion au PC réchauffée dès l'ouverture : la première question part sans poignée de main.
+            async let chaud: Void = modele.prechauffer()
+            await modele.verifierEnAttente()
+            await chaud
+        }
         // Petit signe au toucher quand la réponse du bureau arrive.
         .sensoryFeedback(.impact(weight: .light), trigger: modele.derniereArrivee?.id)
     }
@@ -236,7 +241,9 @@ private struct ComposeurConversation: View {
                 texte = avantDictee.isEmpty ? dit : avantDictee + " " + dit
                 dicte = true
             }
-            .onChange(of: texte) { _, nouveau in
+            .onChange(of: texte) { ancien, nouveau in
+                // Première lettre : la connexion au PC est réchauffée pendant que le patron écrit.
+                if ancien.isEmpty, !nouveau.isEmpty { Task { await modele.prechauffer() } }
                 guard !natureChoisie else { return }
                 let probable = ModeleConversation.natureProbable(nouveau)
                 if probable != nature { nature = probable }
@@ -517,7 +524,15 @@ private struct MessageView: View {
             .foregroundStyle(Color.etiquette)
             switch message.etat {
             case .attente:
-                Reflexion(depuis: question?.le ?? message.le, message: message.message, activite: activite)
+                if message.texte.isEmpty {
+                    Reflexion(depuis: question?.le ?? message.le, message: message.message, activite: activite)
+                } else {
+                    // La réponse s'écrit sur le PC (v1.8) : elle apparaît mot à mot, comme une session ouverte.
+                    TexteRiche(texte: message.texte)
+                        .accessibilityIdentifier("reponse-en-cours")
+                    PointVeille(couleur: .signal, actif: true, diametre: 6)
+                        .accessibilityLabel(Text("Le bureau écrit"))
+                }
             case .differe:
                 Label(message.message ?? BureauClaude.reponseAVenir, systemImage: "clock")
                     .styleTexte(14).foregroundStyle(Color.encreDouce)

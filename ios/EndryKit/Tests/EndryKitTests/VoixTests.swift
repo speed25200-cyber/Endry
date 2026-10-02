@@ -395,8 +395,8 @@ final class RelaisBureauTests: XCTestCase {
     }
 
     func testAttendLaFinDeLaPhraseAvantDEnvoyer() {
-        XCTAssertEqual(RelaisBureau.patience(0.7), 1.5)
-        XCTAssertEqual(RelaisBureau.patience(1.0), 1.5)
+        XCTAssertEqual(RelaisBureau.patience(0.7), 1.2)
+        XCTAssertEqual(RelaisBureau.patience(1.0), 1.2)
         XCTAssertEqual(RelaisBureau.patience(2.0), 2.0)
     }
 

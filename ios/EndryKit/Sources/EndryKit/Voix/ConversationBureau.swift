@@ -439,7 +439,35 @@ public final class ModeleConversation {
         }
     }
 
-    /// Sonde la réponse (1 s pendant 20 s, puis 2 s jusqu'à 3 min), puis passe la main aux événements du PC.
+    /// `event: reponse` du PC (v1.6) : la réponse à cette question est prête. Affichée aussitôt (réponse jointe à
+    /// l'événement), sinon relue tout de suite par un seul `GET /questions/{id}` — sans attendre le prochain sondage.
+    public func recevoirReponse(questionId: String, reponse: ReponseAgent?) async {
+        guard let r = messages.first(where: { $0.role == .assistant && $0.questionId == questionId && $0.etat != .recu }) else { return }
+        let id = String(r.id.dropFirst(2))
+        var resultat = reponse
+        if resultat == nil, let bureau, let suivi = r.suivi { resultat = await bureau.verifier(suivi) }
+        guard let resultat, resultat.statut != .enCours else { return }
+        suivis[id]?.cancel()
+        suivis[id] = nil
+        // Déjà affichée entre-temps (sondage arrivé le premier) : rien à refaire.
+        guard messages.first(where: { $0.id == r.id })?.etat != .recu else { return }
+        repondre(id, avec: resultat)
+    }
+
+    /// `event: reponse_partielle` (v1.8) : la réponse s'écrit sur le PC ; elle s'affiche mot à mot pendant l'attente.
+    /// Rien n'est enregistré sur le disque avant la réponse complète.
+    public func recevoirPartiel(questionId: String, texte: String) {
+        guard let i = messages.firstIndex(where: { $0.role == .assistant && $0.questionId == questionId && $0.etat == .attente }),
+              texte.count >= messages[i].texte.count, texte != messages[i].texte else { return }
+        messages[i].texte = texte
+    }
+
+    /// Connexion au PC réchauffée (écran de conversation ouvert, première lettre tapée).
+    public func prechauffer() async {
+        await bureau?.prechauffer()
+    }
+
+    /// Sonde la réponse (0,4 s au début, puis plus lâche, jusqu'à 3 min), puis passe la main aux événements du PC.
     private func suivre(_ id: String) {
         guard let bureau, suivis[id] == nil,
               let suivi = messages.first(where: { $0.id == MessageConversation.idReponse(id) })?.suivi else { return }

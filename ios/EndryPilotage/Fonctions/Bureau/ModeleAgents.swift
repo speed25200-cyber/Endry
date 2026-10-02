@@ -112,6 +112,20 @@ final class ModeleAgents {
         await charger()
     }
 
+    /// `event: reponse` du PC : la réponse de l'agent s'affiche aussitôt dans sa fiche.
+    func recevoirReponse(questionId: String, reponse: ReponseAgent?) async {
+        for (agentId, liste) in echanges {
+            for echange in liste where echange.etat == .enCours || echange.etat == .enAttente {
+                guard case .question(let id, _)? = echange.suivi, id == questionId else { continue }
+                var resultat = reponse
+                if resultat == nil, let suivi = echange.suivi { resultat = await bureau.verifier(suivi) }
+                guard let resultat, resultat.statut != .enCours,
+                      let index = echanges[agentId]?.firstIndex(where: { $0.id == echange.id }) else { continue }
+                appliquer(resultat, a: &echanges[agentId]![index])
+            }
+        }
+    }
+
     /// Réponses arrivées depuis (appelé sur chaque `maj saisies` du PC).
     func verifierEnAttente() async {
         for (agentId, liste) in echanges {

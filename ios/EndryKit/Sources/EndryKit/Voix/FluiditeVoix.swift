@@ -25,10 +25,12 @@ public enum FinDePhrase {
         let phrase = [definitif, provisoire].map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
             .joined(separator: " ")
         let dernier = RepondeurLocal.normaliser(phrase).split(separator: " ").last.map(String.init) ?? ""
+        // Réglé pour une conversation quasi instantanée (02.10.2026) : la question part dès que le patron se tait ;
+        // une phrase manifestement inachevée garde toute sa patience.
         if motsSuspendus.contains(dernier) { return 2_400 }
-        guard provisoire.trimmingCharacters(in: .whitespaces).isEmpty else { return 1_800 }
-        if definitif.trimmingCharacters(in: .whitespaces).last == "?" { return 1_200 }
-        return 1_500
+        guard provisoire.trimmingCharacters(in: .whitespaces).isEmpty else { return 1_300 }
+        if definitif.trimmingCharacters(in: .whitespaces).last == "?" { return 800 }
+        return 1_000
     }
 }
 
@@ -199,8 +201,9 @@ public enum RelaisBureau {
     public static func annonceReponse(agent: String?) -> String {
         agent.map { "Le bureau, côté \($0), répond : " } ?? "Le bureau répond : "
     }
-    /// Une phrase coupée partirait telle quelle au bureau : on attend au moins le réglage « Long » avant d'envoyer.
-    public static func patience(_ reglage: Double) -> Double { max(reglage, 1.5) }
+    /// Une phrase coupée partirait telle quelle au bureau : un peu plus de patience qu'en conversation locale,
+    /// sans faire attendre (le réglage « Long » reste disponible).
+    public static func patience(_ reglage: Double) -> Double { max(reglage, 1.2) }
     /// Texte envoyé : exactement ce qui a été dit (espaces nettoyés), rien d'ajouté ni de reformulé.
     public static func texte(_ dit: String) -> String {
         dit.split(whereSeparator: \.isWhitespace).joined(separator: " ")

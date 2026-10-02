@@ -28,6 +28,27 @@ public struct EvenementSSE: Equatable, Sendable {
               let quoi = objet["quoi"] as? String else { return nil }
         return SujetMaj(rawValue: quoi)
     }
+
+    /// `event: reponse` (v1.6) : la réponse à une question est prête. `data` porte au moins `question_id`,
+    /// et parfois la réponse entière (v1.2 / v1.8) : l'app l'affiche alors sans même relire `GET /questions/{id}`.
+    public var reponsePrete: (questionId: String, reponse: ReponseAgent?)? {
+        guard nom == "reponse", let data = donnees.data(using: .utf8),
+              let lue = try? JSONDecoder().decode(ReponseAgent.self, from: data),
+              let id = lue.questionId, !id.isEmpty else { return nil }
+        // Réponse complète seulement si le texte (ou l'erreur) est là ; sinon, simple signal.
+        let complete = (lue.statut == .repondu && lue.reponse != nil) || (lue.statut == .erreur && lue.message != nil)
+        return (id, complete ? lue : nil)
+    }
+
+    /// `event: reponse_partielle` (v1.8, proposé) : `{question_id, texte}`, texte cumulé de la réponse en train
+    /// de s'écrire sur le PC. L'app l'affiche mot à mot, comme une session Claude ouverte.
+    public var reponsePartielle: (questionId: String, texte: String)? {
+        guard nom == "reponse_partielle",
+              let objet = (try? JSONSerialization.jsonObject(with: Data(donnees.utf8))) as? [String: Any],
+              let id = (objet["question_id"] as? String) ?? (objet["question_id"] as? Int).map(String.init),
+              let texte = objet["texte"] as? String, !id.isEmpty else { return nil }
+        return (id, texte)
+    }
 }
 
 /// Lecture ligne à ligne d'un flux SSE (format du W3C : `event:`, `data:`, commentaires `:`, ligne vide = fin).

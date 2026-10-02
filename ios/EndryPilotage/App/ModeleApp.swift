@@ -165,6 +165,17 @@ final class ModeleApp {
         flux.surSujets = { [weak self] sujets in
             await self?.recharger(sujets)
         }
+        // Réponse du bureau prête : affichée et dite à l'instant, partout où elle est attendue.
+        flux.surReponse = { [weak self] questionId, reponse in
+            guard let self else { return }
+            await self.conversation?.recevoirReponse(questionId: questionId, reponse: reponse)
+            await self.assistantActif?.recevoirReponse(questionId: questionId, reponse: reponse)
+            await self.agents?.recevoirReponse(questionId: questionId, reponse: reponse)
+        }
+        // Réponse en train de s'écrire sur le PC (v1.8) : elle apparaît mot à mot dans la conversation.
+        flux.surPartiel = { [weak self] questionId, texte in
+            self?.conversation?.recevoirPartiel(questionId: questionId, texte: texte)
+        }
     }
 
     /// Recrée les modèles d'écran quand le client API change (connexion, démo, déconnexion).

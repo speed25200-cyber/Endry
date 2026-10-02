@@ -75,7 +75,7 @@ enum ReglageVoix {
     /// comme dans une conversation ouverte avec l'assistant. Les Oui et les envois à des tiers gardent leur geste.
     static var envoiDirect: Bool { UserDefaults.standard.object(forKey: cleEnvoiDirect) as? Bool ?? true }
     /// Délai laissé pour annuler un envoi direct.
-    static let delaiAnnulation: Duration = .milliseconds(1_400)
+    static let delaiAnnulation: Duration = .milliseconds(600)
 
     static let cleDebit = "voix.debit"
     /// Débit de la voix d'Endry (multiplie le débit normal) : posé, normal, rapide, très rapide.
@@ -154,6 +154,10 @@ final class AssistantVocal {
     @ObservationIgnored private var suivis: [String: Task<Void, Never>] = [:]
     /// Questions sans réponse après 60 s : revérifiées à chaque événement `maj saisies` du PC.
     @ObservationIgnored private var enAttente: [SuiviQuestion: (question: String, agent: String?)] = [:]
+    /// Questions posées au PC (par identifiant de question) : l'événement `reponse` les retrouve aussitôt.
+    @ObservationIgnored private var questionsSuivies: [String: (suivi: SuiviQuestion, question: String, agent: String?)] = [:]
+    /// Réponses déjà dites : un sondage et un événement du PC arrivés ensemble ne la font pas dire deux fois.
+    @ObservationIgnored private var dejaDites: Set<String> = []
     @ObservationIgnored private var veille: Task<Void, Never>?
     @ObservationIgnored private var minuteries: [(effet: ExecuteurOutils.Effet, tache: Task<Void, Never>)] = []
     /// Même conversation pour les questions qui se suivent ; nouvelle après 30 min de silence.
@@ -322,6 +326,7 @@ final class AssistantVocal {
                 if let message {
                     // Hors horaires : on le dit, on ne sonde pas ; la réponse viendra par notification.
                     enAttente[suivi] = (question, agent)
+                    if case .question(let id, _) = suivi { questionsSuivies[id] = (suivi, question, agent) }
                     Task { await moteur?.signaler(message) }
                 } else {
                     suivre(suivi, question: question, agent: agent)
@@ -424,9 +429,26 @@ final class AssistantVocal {
         if cartes.count > 3 { cartes.removeLast() }
     }
 
-    /// Attend la réponse 60 s (`GET /questions/{id}` toutes les 2 s) ; ensuite, on attend `maj saisies`.
+    /// `event: reponse` du PC : la réponse attendue est affichée et dite tout de suite, sans attendre le sondage.
+    func recevoirReponse(questionId: String, reponse: ReponseAgent?) async {
+        let retenue = questionsSuivies[questionId]
+            ?? enAttente.first { if case .question(let id, _) = $0.key { return id == questionId } else { return false } }
+                .map { (suivi: $0.key, question: $0.value.question, agent: $0.value.agent) }
+        guard let retenue, !dejaDites.contains("\(retenue.suivi)") else { return }
+        var resultat = reponse
+        if resultat == nil, let bureau { resultat = await bureau.verifier(retenue.suivi) }
+        guard let resultat, resultat.statut != .enCours else { return }
+        let cle = "\(retenue.suivi)"
+        suivis[cle]?.cancel()
+        suivis[cle] = nil
+        enAttente[retenue.suivi] = nil
+        await finaliser(retenue.suivi, resultat: resultat, question: retenue.question, agent: retenue.agent)
+    }
+
+    /// Attend la réponse jusqu'à 3 min (sondage serré, attente longue proposée au PC) ; ensuite, l'événement du PC.
     private func suivre(_ suivi: SuiviQuestion, question: String, agent: String?) {
         let cle = "\(suivi)"
+        if case .question(let id, _) = suivi { questionsSuivies[id] = (suivi, question, agent) }
         guard let bureau, suivis[cle] == nil else { return }
         suivis[cle] = Task { [weak self] in
             let resultat = await bureau.attendre(suivi)
@@ -447,6 +469,8 @@ final class AssistantVocal {
     }
 
     private func finaliser(_ suivi: SuiviQuestion, resultat: ReponseAgent, question: String, agent: String?) async {
+        guard dejaDites.insert("\(suivi)").inserted else { return }
+        if case .question(let id, _) = suivi { questionsSuivies[id] = nil }
         let reponse: String
         if resultat.statut == .repondu, let texte = resultat.reponse, !texte.isEmpty {
             reponse = texte

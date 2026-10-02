@@ -480,3 +480,36 @@ L’app a un écran « Conversation » (Aujourd’hui › Écrire, Entreprise �
   documents du mois ; le compte rendu arrive dans la conversation.
 - Les comptes rendus (`fait` / `erreur`) et les questions `Q-…` du bureau entrent aussi dans le fil
   « Conversation », comme une session ouverte avec Claude.
+
+## v1.8 — conversation quasi instantanée avec le bureau (02.10.2026, à appliquer par le PC)
+
+Demande du patron : « une communication instantanée presque entre l’app et l’agent sur le PC ». Tout ce qui suit est
+**facultatif et rétrocompatible** : l’app fonctionne déjà sans, et devient instantanée dès que le PC l’applique.
+
+### Ce que l’app fait déjà (côté iPhone)
+- Une seule connexion au PC pour tout (requêtes et `/evenements`), gardée ouverte et chaude ; réchauffée dès
+  l’ouverture de la conversation et à la première lettre tapée (`GET /assistant/etat`).
+- `GET /questions/{id}` sondé toutes les 0,4 s pendant 10 s, puis 0,8 s jusqu’à 30 s, puis 1,5 s jusqu’à 3 min.
+- `event: reponse` traité à l’instant : un seul `GET /questions/{id}` pour la question visée (aucun si la réponse
+  est jointe), sans attendre les rechargements en cours.
+- Voix : la question part ~1 s après la fin de la phrase (au lieu de ~3,5 s), sans changer la règle du geste
+  pour les envois à un tiers.
+
+### À faire sur le PC, par ordre d’effet
+1. **Émettre `event: reponse` dès que la réponse est prête**, avec la réponse entière dans `data` :
+   `event: reponse` · `data: {"question_id": "Q-…", "statut": "repondu", "agent": "secretariat", "reponse": "…",
+   "decision_reference": null}`. L’app l’affiche et la dit sans autre aller-retour. (`data: {"question_id": "…"}`
+   seul reste accepté : l’app relit alors `GET /questions/{id}`.)
+2. **Réponse en flux** : pendant que l’assistant écrit, `event: reponse_partielle` ·
+   `data: {"question_id": "Q-…", "texte": "<texte cumulé depuis le début>"}`, au plus ~5 fois par seconde. L’app
+   affiche les mots à mesure dans la conversation ; la réponse finale (`event: reponse`) fait foi.
+3. **Attente longue** sur `GET /questions/{id}?attendre=20` : le PC peut garder la requête ouverte jusqu’à 20 s et
+   répondre à l’instant où la réponse est prête (sinon `{statut: "en_cours"}` à l’échéance). Un PC qui ignore le
+   paramètre répond tout de suite comme aujourd’hui ; l’app relance aussitôt une requête gardée ouverte.
+4. **Flux SSE sans tampon** : `Content-Type: text/event-stream`, `Cache-Control: no-cache`,
+   `X-Accel-Buffering: no`, écriture et vidage (`flush`) de chaque événement immédiatement ; `: ping` toutes les
+   15 s (déjà fait). Un proxy ou un tunnel qui met le flux en tampon retarde tout de plusieurs secondes.
+5. **Mode direct sans démarrage à froid** : `POST /assistant/question` répond `202` en moins de 100 ms et lance le
+   travail en arrière-plan ; une session de l’assistant reste ouverte par `conversation_id` (pas de nouveau
+   démarrage à chaque question). Une question simple peut répondre directement `200 {statut: "repondu"}`.
+6. **Connexions gardées** : HTTP/1.1 keep-alive (ou HTTP/2 via le tunnel), sans fermeture après chaque requête.

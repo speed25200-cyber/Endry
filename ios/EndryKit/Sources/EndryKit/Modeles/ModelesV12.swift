@@ -249,6 +249,13 @@ extension Requete {
     public static func suiviQuestion(_ id: String) -> Requete {
         .init(.get, "\(prefixe)/questions/\(id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id)", delai: 20)
     }
+
+    /// v1.8 (proposé) : `?attendre=N` — le PC peut garder la requête ouverte jusqu'à N secondes et répondre dès que
+    /// la réponse est prête (attente longue, sans sondage). Un PC qui ignore le paramètre répond tout de suite.
+    public static func suiviQuestion(_ id: String, attente: Int) -> Requete {
+        .init(.get, "\(prefixe)/questions/\(id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id)",
+              parametres: [Parametre("attendre", String(attente))], delai: TimeInterval(attente + 10))
+    }
 }
 
 extension EndryAPI {

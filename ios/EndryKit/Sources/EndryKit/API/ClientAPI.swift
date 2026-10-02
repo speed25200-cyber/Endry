@@ -235,16 +235,22 @@ public struct TransportURLSession: TransportHTTP {
     }
 
     /// Pas de cache disque d'URLSession (données financières), pas de cookies.
-    public static func sessionParDefaut() -> URLSession {
+    public static func sessionParDefaut() -> URLSession { partagee }
+
+    /// Une seule session pour toute l'app (requêtes et flux d'événements) : la connexion au PC reste ouverte et
+    /// chaude (TLS déjà négocié ; en HTTP/2, tout passe par la même connexion que le flux), aucune poignée de main
+    /// à refaire avant une question. Délais par requête (`Requete.delai`) ; le flux d'événements peut durer.
+    public static let partagee: URLSession = {
         let configuration = URLSessionConfiguration.ephemeral
         #if !canImport(FoundationNetworking)
         configuration.waitsForConnectivity = false
         #endif
-        configuration.timeoutIntervalForResource = 180
+        configuration.timeoutIntervalForResource = 24 * 3_600
+        configuration.httpMaximumConnectionsPerHost = 6
         configuration.httpCookieStorage = nil
         configuration.urlCache = nil
         return URLSession(configuration: configuration)
-    }
+    }()
 
     public func executer(_ requete: URLRequest) async throws -> (Data, HTTPURLResponse) {
         let (data, reponse) = try await session.data(for: requete)

@@ -13,95 +13,147 @@ extension EtatAgent {
     }
 }
 
-/// Point d'état d'un agent : il pulse quand l'agent travaille.
+/// Point d'état d'un agent : il respire quand l'agent travaille (horloge locale, rien ne scintille autour).
 struct PointEtat: View {
     var etat: EtatAgent?
     var taille: CGFloat = 8
 
     var body: some View {
-        Image(systemName: "circle.fill")
-            .font(.system(size: taille))
-            .foregroundStyle(etat?.couleur ?? Color.encrePale)
-            .symbolEffect(.pulse, isActive: etat == .occupe && !Configuration.testsUI)
-            .accessibilityHidden(true)
+        PointVeille(couleur: etat?.couleur ?? Color.encrePale, actif: etat == .occupe, diametre: taille)
+            .opacity(etat == .occupe ? 1 : 0.55)
     }
 }
 
-// MARK: - Entreprise › Le bureau
+// MARK: - Le bureau (maquette E)
 
-/// « Le bureau » : l'assistant du PC, domaine par domaine (un seul assistant), ce qu'il fait, et le journal du jour.
+/// « Le bureau » : combien d'agents travaillent, pause / reprise, tuiles des agents (état, tâche, charge du jour),
+/// journal du jour sur un rail, et « Demander au bureau… ».
 struct SectionBureau: View {
     @Environment(ModeleApp.self) private var app
     var modele: ModeleAgents
+    @State private var confirmationPause = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Espace.s) {
-            EnTeteSection(titre: "Le bureau", detail: modele.libelle)
-            if let conversation = app.conversation {
-                Button { app.ouvrirConversation() } label: {
-                    HStack(spacing: Espace.s) {
-                        Image(systemName: "text.bubble.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Color.espressoProfond)
-                            .frame(width: 38, height: 38)
-                            .background(.degradeOr, in: Circle())
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Conversation").styleTexte(16, graisse: .semibold).foregroundStyle(Color.encre)
-                            Text(conversation.reflechit ? "L’assistant réfléchit…" : "Écrire ou dicter au bureau, réponse ici")
-                                .styleTexte(13, relativeTo: .footnote).foregroundStyle(Color.encreDouce)
-                        }
-                        Spacer(minLength: 0)
-                        Image(systemName: "chevron.right").font(.system(size: 13, weight: .bold)).foregroundStyle(Color.encrePale)
-                    }
-                    .padding(Espace.m)
-                    .surfaceCarte(rayon: Espace.rayonPetit)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("ouvrir-conversation-bureau")
-            }
+        VStack(alignment: .leading, spacing: 0) {
+            enTete
             if let service = modele.service {
-                Label(service, systemImage: service.hasPrefix("Hors") ? "moon.zzz.fill" : "clock")
-                    .styleTexte(12, relativeTo: .caption, graisse: .medium)
+                Label(service, systemImage: service.hasPrefix("Hors") ? "moon.zzz" : "clock")
+                    .font(Police.mono(10.5))
                     .foregroundStyle(service.hasPrefix("Hors") ? Color.ambre : Color.encreDouce)
+                    .padding(.top, Espace.xs)
                     .accessibilityIdentifier("service-assistant")
             }
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: Espace.s), GridItem(.flexible(), spacing: Espace.s)], spacing: Espace.s) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                 ForEach(modele.agents) { agent in
                     NavigationLink(value: agent) {
                         TuileAgent(agent: agent, etat: modele.etatAffiche(agent), repasse: modele.etat?.repasse(), enDirect: modele.enDirect)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(ActionPressee())
                     .accessibilityIdentifier("agent-\(agent.id)")
                 }
             }
+            .padding(.top, Espace.l)
+
             if !modele.journal.isEmpty {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Journal").etiquetteMaison()
+                    Spacer()
+                    Text("Aujourd’hui").font(Police.mono(10.5)).foregroundStyle(Color.encreDouce)
+                }
+                .padding(.top, Espace.xl)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Journal du bureau").styleSurtitre()
-                        .padding(.bottom, Espace.xs)
-                    ForEach(Array(modele.journal.prefix(5).enumerated()), id: \.element.id) { index, entree in
-                        LigneJournal(entree: entree, agent: entree.agent.flatMap { modele.agent($0) })
-                        if index < min(modele.journal.count, 5) - 1 {
-                            Rectangle().fill(Color.filet).frame(height: Espace.filet).padding(.leading, 40)
-                        }
+                    ForEach(Array(modele.journal.prefix(6).enumerated()), id: \.element.id) { index, entree in
+                        LigneJournal(entree: entree, agent: entree.agent.flatMap { modele.agent($0) },
+                                     derniere: index == min(modele.journal.count, 6) - 1)
                     }
                 }
-                .padding(Espace.m)
-                .surfaceCarte(rayon: 22)
+                .padding(.top, Espace.s)
             } else if !modele.enDirect, modele.charge {
                 Text("L’assistant du PC répond par domaine. L’activité en direct s’affichera dès que le PC la publiera.")
                     .styleTexte(13, relativeTo: .footnote)
-                    .foregroundStyle(Color.encrePale)
+                    .foregroundStyle(Color.encreDouce)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, Espace.m)
+            }
+
+            if app.conversation != nil {
+                Button { app.ouvrirConversation() } label: {
+                    HStack(spacing: Espace.s) {
+                        Text(app.conversation?.reflechit == true ? "L’assistant réfléchit…" : "Demander au bureau…")
+                            .styleTexte(17, relativeTo: .body)
+                            .foregroundStyle(Color.encreDouce)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(Color.boutonTexte)
+                            .frame(width: 44, height: 44)
+                            .background(Color.bouton, in: Circle())
+                    }
+                    .padding(.leading, 20)
+                    .padding(.trailing, 6)
+                    .frame(height: 56)
+                    .verreMaison(Capsule())
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(ActionPressee())
+                .padding(.top, Espace.l)
+                .accessibilityLabel(Text("Demander au bureau"))
+                .accessibilityIdentifier("ouvrir-conversation-bureau")
             }
         }
         .navigationDestination(for: AgentPC.self) { agent in
             FicheAgentView(modele: modele, agentId: agent.id)
         }
+        .confirmationDialog("Mettre l’assistant en pause ?", isPresented: $confirmationPause, titleVisibility: .visible) {
+            Button("Mettre en pause") { Task { _ = await app.pilotage?.basculer() } }
+        } message: {
+            Text("Il cesse de préparer des propositions jusqu’à la reprise.")
+        }
         // Chargé à l'affichage ; ensuite, ce sont les événements du PC (SSE) qui le tiennent à jour.
         .task { await modele.charger() }
     }
+
+    private var actifs: Int { modele.agents.filter { modele.etatAffiche($0) == .occupe }.count }
+
+    private var enTete: some View {
+        HStack(alignment: .center, spacing: Espace.s) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Le bureau").etiquetteMaison()
+                Text(modele.enDirect ? (actifs == 0 ? "Au repos" : actifs == 1 ? "1 agent actif" : "\(actifs) agents actifs") : "Le bureau")
+                    .font(Police.serif(40, relativeTo: .largeTitle))
+                    .foregroundStyle(Color.encre)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .contentTransition(.numericText(value: Double(actifs)))
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: Espace.xs)
+            if let pilotage = app.pilotage, pilotage.disponible {
+                Toggle(isOn: Binding(get: { !pilotage.enPause }, set: { actif in
+                    if actif { Task { _ = await pilotage.basculer() } } else { confirmationPause = true }
+                })) {
+                    Text(pilotage.enPause ? "Pause" : "Actif")
+                        .styleTexte(14, relativeTo: .subheadline)
+                        .foregroundStyle(Color.encre)
+                }
+                .toggleStyle(.switch)
+                .tint(Color.sauge)
+                .fixedSize()
+                .disabled(pilotage.enCours)
+                .padding(.leading, 14)
+                .padding(.trailing, 6)
+                .frame(height: 44)
+                .verreMaison(Capsule())
+                .accessibilityIdentifier("pause-reprise")
+            }
+        }
+        .padding(.top, Espace.m)
+    }
 }
 
+/// Tuile d'un agent : nom, point d'état, ce qu'il fait, et en mono son état et sa charge du jour.
 struct TuileAgent: View {
     var agent: AgentPC
     /// État affiché (hors horaires plutôt que « Disponible » en dehors des heures de passage).
@@ -110,30 +162,34 @@ struct TuileAgent: View {
     var enDirect: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Espace.xs) {
-            HStack {
-                Image(systemName: agent.symbole)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Color.or)
-                    .frame(width: 38, height: 38)
-                    .background(Color.espresso, in: Circle())
-                    .overlay(Circle().stroke(Color.or.opacity(etat == .occupe && enDirect ? 0.8 : 0.25), lineWidth: 1))
-                Spacer()
-                if enDirect { PointEtat(etat: etat) }
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center) {
+                Text(agent.nom)
+                    .styleTexte(15, relativeTo: .subheadline)
+                    .foregroundStyle(Color.encre)
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                if enDirect { PointEtat(etat: etat, taille: 7) }
             }
-            Text(agent.nom)
-                .styleTitre(19, relativeTo: .headline)
-                .foregroundStyle(Color.encre)
-                .lineLimit(1)
             Text(sousTitre)
-                .styleTexte(12, relativeTo: .caption)
+                .styleTexte(13, relativeTo: .footnote)
                 .foregroundStyle(Color.encreDouce)
-                .lineLimit(2, reservesSpace: true)
+                .lineLimit(3, reservesSpace: true)
                 .multilineTextAlignment(.leading)
+                .padding(.top, 12)
+            Spacer(minLength: 10)
+            HStack(alignment: .firstTextBaseline) {
+                Text(libelleEtat)
+                Spacer(minLength: 4)
+                Text(taches)
+            }
+            .font(Police.mono(10.5))
+            .foregroundStyle(Color.encreDouce)
+            .lineLimit(1)
         }
-        .padding(Espace.m)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .surfaceCarte(rayon: 20)
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
+        .tuileMaison(rayon: 24)
         .accessibilityElement(children: .combine)
         .accessibilityHint(Text("Ouvre la fiche de l’agent"))
     }
@@ -142,44 +198,91 @@ struct TuileAgent: View {
         guard enDirect else { return agent.role ?? "Domaine de l’assistant" }
         switch etat {
         case .occupe: return agent.tache ?? "Au travail"
-        case .libre: return agent.resumeJour ?? "Disponible"
+        case .libre: return agent.resumeJour ?? "Rien en cours"
         case .pause: return "En pause"
         case .erreur: return "Bloqué : attend une intervention"
         case .horsHoraires: return repasse.map { "Repasse \($0)" } ?? "Hors horaires"
         }
     }
+
+    private var libelleEtat: String {
+        guard enDirect else { return "domaine" }
+        switch etat {
+        case .occupe: return "travaille"
+        case .libre: return "au repos"
+        case .pause: return "en pause"
+        case .erreur: return "bloqué"
+        case .horsHoraires: return "hors horaires"
+        }
+    }
+
+    private var taches: String {
+        let n = agent.traiteesJour + agent.file
+        return n == 1 ? "1 tâche" : "\(n) tâches"
+    }
 }
 
+/// Entrée du journal sur un rail : anneau (vert « fait », crème « question », rouille « erreur »), titre, agent, heure.
 struct LigneJournal: View {
     var entree: EntreeJournal
     var agent: AgentPC?
+    var derniere = false
+
+    private var couleur: Color {
+        switch entree.type {
+        case .question: .signal
+        case .erreur: .rouille
+        default: .sauge
+        }
+    }
+
+    private var statut: String {
+        switch entree.type {
+        case .question: "question"
+        case .erreur: "erreur"
+        case .emailRecu: "reçu"
+        case .info: "info"
+        default: "fait"
+        }
+    }
+
+    /// `09:24`
+    static func heure(_ date: Date) -> String {
+        let c = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0)
+    }
 
     var body: some View {
-        HStack(alignment: .top, spacing: Espace.s) {
-            Image(systemName: entree.type.icone)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(entree.type == .erreur ? Color.rouille : Color.bronze)
-                .frame(width: 28, height: 28)
-                .background(Color.or.opacity(0.12), in: Circle())
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(alignment: .top, spacing: 14) {
+            VStack(spacing: 0) {
+                Circle()
+                    .strokeBorder(couleur, lineWidth: 1.2)
+                    .frame(width: 15, height: 15)
+                    .overlay(Circle().fill(couleur).frame(width: 6, height: 6))
+                    .padding(.top, 3)
+                if !derniere {
+                    Rectangle().fill(Color.filetFort).frame(width: 1).frame(maxHeight: .infinity)
+                }
+            }
+            .frame(width: 15)
+            VStack(alignment: .leading, spacing: 3) {
                 Text(entree.titre)
-                    .styleTexte(14, relativeTo: .subheadline, graisse: .semibold)
+                    .styleTexte(15, relativeTo: .subheadline)
                     .foregroundStyle(Color.encre)
                     .fixedSize(horizontal: false, vertical: true)
-                if let detail = entree.detail {
-                    Text(detail)
-                        .styleTexte(13, relativeTo: .footnote)
-                        .foregroundStyle(Color.encreDouce)
-                        .lineLimit(3)
-                }
-                Text([agent?.nom, entree.date.map { DateEndry.ilYa($0) }, entree.decisionReference.map { "décision \($0)" }]
-                        .compactMap { $0 }.joined(separator: " · "))
-                    .styleTexte(11, relativeTo: .caption2, graisse: .medium)
-                    .foregroundStyle(Color.encrePale)
+                Text([agent?.nom, statut].compactMap { $0 }.joined(separator: " · "))
+                    .styleTexte(13, relativeTo: .footnote)
+                    .foregroundStyle(Color.encreDouce)
             }
-            Spacer(minLength: 0)
+            .padding(.bottom, derniere ? 0 : 18)
+            Spacer(minLength: Espace.xs)
+            if let date = entree.date {
+                Text(Self.heure(date))
+                    .font(Police.mono(10.5))
+                    .foregroundStyle(Color.encreDouce)
+                    .padding(.top, 2)
+            }
         }
-        .padding(.vertical, Espace.xs)
         .accessibilityElement(children: .combine)
     }
 }

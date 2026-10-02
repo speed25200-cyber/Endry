@@ -118,44 +118,34 @@ struct EntrepriseView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Espace.xl) {
-                    entete
-                        .apparitionEnCascade(index: 0, visible: visible)
-                    indicateurs
-                        .apparitionEnCascade(index: 1, visible: visible)
-                    BasculeModeClient()
-                        .apparitionEnCascade(index: 1, visible: visible)
-                    // iPad : le bureau, l'équipe et l'assistant à gauche ; clients, fournisseurs et compte à droite.
-                    Colonnes(espacement: Espace.xl) {
-                        if let agents = app.agents {
-                            SectionBureau(modele: agents)
-                                .apparitionEnCascade(index: 2, visible: visible)
-                        }
-                        if let entretiens = app.entretiens {
-                            CarteEntretiens(modele: entretiens)
-                                .apparitionEnCascade(index: 2, visible: visible)
-                        }
-                        CarteEquipe()
-                            .apparitionEnCascade(index: 2, visible: visible)
-                        if let pilotage = app.pilotage, pilotage.disponible {
-                            VStack(alignment: .leading, spacing: Espace.s) {
-                                EnTeteSection(titre: "Claude, sur le PC")
-                                CarteAssistantBureau(pilotage: pilotage)
-                            }
-                            .apparitionEnCascade(index: 2, visible: visible)
-                        }
-                    } droite: {
-                        sectionClients
-                            .apparitionEnCascade(index: 2, visible: visible)
-                        if devantClient {
-                            BlocMasqueClient(titre: "Fournisseurs")
-                                .apparitionEnCascade(index: 3, visible: visible)
-                        } else {
-                            sectionFournisseurs
-                                .apparitionEnCascade(index: 3, visible: visible)
-                        }
-                        sectionCompte
-                            .apparitionEnCascade(index: 4, visible: visible)
+                    // Maquette E : le bureau d'abord (agents, journal, demande), puis l'entreprise.
+                    if let agents = app.agents {
+                        SectionBureau(modele: agents)
+                            .apparitionEnCascade(index: 0, visible: visible)
                     }
+                    if let entretiens = app.entretiens {
+                        CarteEntretiens(modele: entretiens)
+                            .apparitionEnCascade(index: 1, visible: visible)
+                    }
+                    CarteEquipe()
+                        .apparitionEnCascade(index: 1, visible: visible)
+                    indicateurs
+                        .apparitionEnCascade(index: 2, visible: visible)
+                    BasculeModeClient()
+                        .apparitionEnCascade(index: 2, visible: visible)
+                    sectionClients
+                        .apparitionEnCascade(index: 3, visible: visible)
+                    if devantClient {
+                        BlocMasqueClient(titre: "Fournisseurs")
+                            .apparitionEnCascade(index: 3, visible: visible)
+                    } else {
+                        sectionFournisseurs
+                            .apparitionEnCascade(index: 3, visible: visible)
+                    }
+                    entete
+                        .apparitionEnCascade(index: 4, visible: visible)
+                    sectionCompte
+                        .apparitionEnCascade(index: 4, visible: visible)
                 }
                 .largeurLisible(Adaptatif.ecran)
                 .padding(.horizontal, Espace.bord)
@@ -166,7 +156,7 @@ struct EntrepriseView: View {
                 await app.argent?.charger()
                 await app.chantiers?.charger()
             }
-            .background(FondAmbiant())
+            .background(FondMaison(photo: nil))
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: $appareilsOuverts) { AppareilsView() }
         }
@@ -183,7 +173,7 @@ struct EntrepriseView: View {
 
     private var entete: some View {
         VStack(alignment: .leading, spacing: Espace.s) {
-            Text("Entreprise").styleSurtitre()
+            Text("Entreprise").etiquetteMaison()
             HStack(alignment: .center, spacing: Espace.m) {
                 LogoEndry(taille: 54)
                     .padding(8)

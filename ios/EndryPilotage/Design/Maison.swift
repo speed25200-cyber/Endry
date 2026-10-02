@@ -1,3 +1,4 @@
+import EndryKit
 import SwiftUI
 import UIKit
 
@@ -154,5 +155,88 @@ struct FondMaison: View {
         }
         .ignoresSafeArea()
         .accessibilityHidden(true)
+    }
+}
+
+/// Histogramme Maison Endry : barres arrondies, la barre mise en avant en signal, libellés en mono.
+struct Histogramme: View {
+    struct Barre: Identifiable {
+        var libelle: String
+        var valeur: Double
+        var accent = false
+        var id: String { libelle }
+    }
+
+    var barres: [Barre]
+    var hauteur: CGFloat = 66
+
+    var body: some View {
+        let maximum = max(barres.map(\.valeur).max() ?? 1, 1)
+        VStack(spacing: 8) {
+            HStack(alignment: .bottom, spacing: 6) {
+                ForEach(barres) { barre in
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(barre.accent ? Color.signal : Color.signal.opacity(0.28))
+                        .frame(height: max(4, hauteur * barre.valeur / maximum))
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .frame(height: hauteur, alignment: .bottom)
+            HStack(spacing: 6) {
+                ForEach(barres) { barre in
+                    Text(barre.libelle)
+                        .font(Police.mono(9.5))
+                        .foregroundStyle(Color.encreDouce)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(barres.map { "\($0.libelle) : \(FormatSuisse.chfArrondi($0.valeur))" }.joined(separator: ", ")))
+    }
+}
+
+/// Ligne de liste Maison Endry (Finances, chantiers) : nom à gauche et repère mono, montant serif et état à droite.
+struct LigneMaison: View {
+    var titre: String
+    var detail: String
+    var montant: String
+    var etat: String?
+    var etatAccent = false
+    var etatAlerte = false
+
+    var body: some View {
+        HStack(alignment: .center, spacing: Espace.s) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(titre)
+                    .styleTexte(15, relativeTo: .subheadline)
+                    .foregroundStyle(Color.encre)
+                    .lineLimit(1)
+                Text(detail)
+                    .font(Police.mono(10.5))
+                    .foregroundStyle(Color.encreDouce)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: Espace.xs)
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(montant)
+                    .font(Police.serif(20, relativeTo: .headline))
+                    .monospacedDigit()
+                    .foregroundStyle(Color.encre)
+                    .lineLimit(1)
+                if let etat {
+                    Text(etat)
+                        .font(Police.mono(10.5))
+                        .foregroundStyle(etatAlerte ? Color.rouille : etatAccent ? Color.signal : Color.encreDouce)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
+        .tuileMaison(rayon: 22)
+        .accessibilityElement(children: .combine)
     }
 }

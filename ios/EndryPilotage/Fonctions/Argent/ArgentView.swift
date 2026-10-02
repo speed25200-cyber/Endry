@@ -1,99 +1,82 @@
 import EndryKit
 import SwiftUI
 
-/// Argent : suivi seulement. Aucune relance, aucun paiement depuis l'app.
+/// Finances « Maison Endry » (maquette E) : vues À encaisser / À payer / Offres, grand montant, histogramme,
+/// lignes avec leur état (« Suivi seulement » : jamais de relance), heures du secrétariat (documents du bureau),
+/// nouvelle offre / nouvelle facture. Suivi seulement : aucune relance, aucun paiement depuis l'app.
 struct ArgentView: View {
     @AppStorage(ModeDevantClient.cle) private var devantClient = false
     @Environment(ModeleApp.self) private var app
     var modele: ModeleArgent
     @State private var visible = false
-    @State private var clientsDeplies: Set<String> = []
     @State private var heuresOuvertes: HeuresSecretariat?
-    @State private var vue: VueFinances = .tout
+    @State private var vue: VueFinances = .encaisser
 
-    /// Maison Endry : filtrer d'un geste ce que l'on regarde.
     enum VueFinances: Hashable {
-        case tout, encaisser, payer, offres
+        case encaisser, payer, offres
     }
-
-    private func voit(_ v: VueFinances) -> Bool { vue == .tout || vue == v }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: Espace.xl) {
-                    VStack(alignment: .leading, spacing: Espace.xxs) {
-                        Text("Finances").styleTitre(34, relativeTo: .largeTitle).foregroundStyle(Color.encre)
-                        Label("Suivi seulement : aucune relance sans votre demande.", systemImage: "hand.raised")
-                            .styleTexte(13, relativeTo: .footnote, graisse: .medium)
-                            .foregroundStyle(Color.encreDouce)
-                    }
-                    .padding(.top, Espace.m)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Finances · \(DateEndry.nomMois(Date()))")
+                        .etiquetteMaison()
+                        .padding(.top, Espace.l)
+                        .accessibilityAddTraits(.isHeader)
 
-                    // Le patron décrit ; l'assistant prépare dans Bexio ; rien ne part sans son Oui.
-                    RangeeNouveauDocument()
-
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        SelecteurSegments(options: [
-                            OptionSegment(valeur: VueFinances.tout, titre: "Tout"),
-                            OptionSegment(valeur: .encaisser, titre: "À encaisser"),
-                            OptionSegment(valeur: .payer, titre: "À payer"),
-                            OptionSegment(valeur: .offres, titre: "Offres"),
-                        ], selection: $vue)
-                    }
+                    SelecteurSegments(options: [
+                        OptionSegment(valeur: VueFinances.encaisser, titre: "À encaisser"),
+                        OptionSegment(valeur: .payer, titre: "À payer"),
+                        OptionSegment(valeur: .offres, titre: "Offres"),
+                    ], selection: $vue)
+                    .padding(.top, 14)
 
                     if modele.horsLigne {
                         BandeauHorsLigne(majLe: modele.majLe)
+                            .padding(.top, Espace.s)
                     }
 
                     switch modele.etat {
                     case .chargement where modele.argent == nil, .initial:
-                        Squelette(hauteur: 220, rayon: Espace.rayon)
-                        Squelette(hauteur: 160, rayon: Espace.rayon)
+                        Squelette(hauteur: 120, rayon: 22).padding(.top, Espace.l)
+                        Squelette(hauteur: 220, rayon: 22).padding(.top, Espace.s)
                     case .erreur(let erreur) where modele.argent == nil:
                         VueErreur(erreur: erreur) { Task { await modele.charger() } }
+                            .padding(.top, Espace.l)
                     default:
                         if let argent = modele.argent {
-                            // iPad : l'argent (encaisser, payer, refacturer) à gauche ; offres et secrétariat à droite.
-                            Colonnes(espacement: Espace.xl) {
-                                if voit(.encaisser) {
-                                    encaisser(argent.encaisser).apparitionEnCascade(index: 0, visible: visible)
+                            Group {
+                                switch vue {
+                                case .encaisser: encaisser(argent)
+                                case .payer: payer(argent)
+                                case .offres: offres(argent)
                                 }
-                                if voit(.payer) {
-                                    if devantClient {
-                                        BlocMasqueClient(titre: "À payer").apparitionEnCascade(index: 1, visible: visible)
-                                    } else {
-                                        payer(argent.payer).apparitionEnCascade(index: 1, visible: visible)
-                                    }
-                                }
-                                if vue == .tout, !devantClient {
-                                    refacturer(argent.aRefacturer).apparitionEnCascade(index: 3, visible: visible)
-                                }
-                                if voit(.encaisser) {
-                                    versements(argent.versementsNonIdentifies).apparitionEnCascade(index: 4, visible: visible)
-                                }
-                            } droite: {
-                                if voit(.offres) {
-                                    if let signees = app.offresSignees {
-                                        SectionOffresSignees(modele: signees).apparitionEnCascade(index: 2, visible: visible)
-                                    }
-                                    offres(argent.offres).apparitionEnCascade(index: 2, visible: visible)
-                                    CarteOffresASuivre(offres: argent.offres.offres).apparitionEnCascade(index: 2, visible: visible)
-                                }
-                                if vue == .tout, let heures = argent.heuresSecretariat {
-                                    secretariat(heures).apparitionEnCascade(index: 5, visible: visible)
-                                }
+                            }
+                            .id(vue)
+                            .transition(.opacity)
+                            .apparitionEnCascade(index: 0, visible: visible)
+
+                            if let heures = argent.heuresSecretariat {
+                                secretariat(heures)
+                                    .padding(.top, Espace.xl)
+                                    .apparitionEnCascade(index: 1, visible: visible)
                             }
                         }
                     }
+
+                    // Le patron décrit ; l'assistant prépare dans Bexio ; rien ne part sans son Oui.
+                    RangeeNouveauDocument()
+                        .padding(.top, Espace.l)
                 }
                 .largeurLisible(Adaptatif.ecran)
                 .padding(.horizontal, Espace.bord)
                 .padding(.bottom, 120)
+                .animation(.endry, value: vue)
             }
             .scrollIndicators(.hidden)
             .tirerPourActualiser { await modele.charger() }
-            .background(FondAmbiant())
+            .background(FondMaison(photo: nil))
             .toolbar(.hidden, for: .navigationBar)
         }
         .task {
@@ -105,253 +88,212 @@ struct ArgentView: View {
         }
     }
 
+    // MARK: - Grand montant
+
+    private func grandMontant(_ titre: String, _ montant: Double) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(titre)
+                .styleTexte(13, relativeTo: .footnote)
+                .foregroundStyle(Color.encreDouce)
+            HStack(alignment: .lastTextBaseline, spacing: 6) {
+                Text("CHF")
+                    .font(Police.mono(11))
+                    .foregroundStyle(Color.encreDouce)
+                Text(FormatSuisse.francs(montant))
+                    .font(Police.serif(64, relativeTo: .largeTitle))
+                    .monospacedDigit()
+                    .foregroundStyle(Color.encre)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .contentTransition(.numericText(value: montant))
+            }
+        }
+        .padding(.top, Espace.l)
+        .accessibilityElement(children: .combine)
+    }
+
     // MARK: - À encaisser
 
-    private func encaisser(_ e: Encaisser) -> some View {
-        VStack(alignment: .leading, spacing: Espace.m) {
-            VStack(alignment: .leading, spacing: Espace.xs) {
-                Text("À encaisser").styleSurtitre()
-                MontantAnime(montant: e.total, taille: 44, dore: true).refletDore()
-            }
-            BarreAnciennete(segments: [
-                .init(libelle: "À échoir", montant: e.anciennete.aEchoir, couleur: .or),
-                .init(libelle: "0–30 j", montant: e.anciennete.jours0a30, couleur: .bronzeMoyen),
-                .init(libelle: "31–60 j", montant: e.anciennete.jours31a60, couleur: Color(hex: 0xC4583C)),
-                .init(libelle: "> 60 j", montant: e.anciennete.plus60, couleur: .rouille),
+    @ViewBuilder
+    private func encaisser(_ argent: Argent) -> some View {
+        let e = argent.encaisser
+        VStack(alignment: .leading, spacing: 0) {
+            grandMontant("À encaisser · \(e.factures.count) facture\(e.factures.count > 1 ? "s" : "") ouverte\(e.factures.count > 1 ? "s" : "")", e.total)
+            Histogramme(barres: [
+                .init(libelle: "À échoir", valeur: e.anciennete.aEchoir, accent: true),
+                .init(libelle: "0–30 j", valeur: e.anciennete.jours0a30),
+                .init(libelle: "31–60 j", valeur: e.anciennete.jours31a60),
+                .init(libelle: "> 60 j", valeur: e.anciennete.plus60),
             ])
+            .padding(.top, Espace.m)
 
-            VStack(spacing: 0) {
-                ForEach(Array(e.parClient.enumerated()), id: \.element.id) { index, groupe in
-                    VStack(alignment: .leading, spacing: 0) {
-                        Button {
-                            withAnimation(.endry) {
-                                if clientsDeplies.contains(groupe.client) { clientsDeplies.remove(groupe.client) } else { clientsDeplies.insert(groupe.client) }
-                            }
-                        } label: {
-                            HStack(spacing: Espace.s) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(groupe.client).styleTexte(15, relativeTo: .subheadline, graisse: .semibold).foregroundStyle(Color.encre)
-                                    Text(libelleRetard(groupe.retardMax) + " · \(groupe.factures.count) facture\(groupe.factures.count > 1 ? "s" : "")")
-                                        .styleTexte(12, relativeTo: .caption, graisse: .medium)
-                                        .foregroundStyle(couleurRetard(groupe.retardMax))
-                                }
-                                Spacer()
-                                MontantView(montant: groupe.montant, taille: 16, style: .subheadline)
-                                Image(systemName: "chevron.down")
-                                    .font(.caption2.weight(.bold))
-                                    .foregroundStyle(Color.encrePale)
-                                    .rotationEffect(.degrees(clientsDeplies.contains(groupe.client) ? 180 : 0))
-                            }
-                            .padding(.vertical, Espace.s)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-
-                        if clientsDeplies.contains(groupe.client) {
-                            ForEach(groupe.factures) { facture in
-                                Button {
-                                    Task { await app.documents.ouvrir(facture.cheminPDF, nom: "\(facture.numero).pdf", api: app.session.api) }
-                                } label: {
-                                    HStack {
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(facture.titre).styleTexte(13, relativeTo: .footnote).foregroundStyle(Color.encre).lineLimit(1)
-                                            HStack(spacing: 6) {
-                                                Text(facture.numero).font(Police.reference(11)).foregroundStyle(Color.encrePale)
-                                                if let echeance = facture.echeance {
-                                                    Text("· éch. \(DateEndry.courte(echeance))").styleTexte(11, relativeTo: .caption2).foregroundStyle(Color.encrePale)
-                                                }
-                                            }
-                                        }
-                                        Spacer()
-                                        MontantView(montant: facture.montant, taille: 13, style: .footnote)
-                                        Image(systemName: "doc.richtext").font(.caption).foregroundStyle(Color.bronze)
-                                    }
-                                    .padding(.leading, Espace.s)
-                                    .padding(.vertical, 6)
-                                }
-                                .buttonStyle(.plain)
-                                .transition(.opacity.combined(with: .move(edge: .top)))
-                            }
-                            .padding(.bottom, Espace.xs)
-                        }
+            VStack(spacing: 10) {
+                ForEach(e.factures.sorted { $0.retardJours > $1.retardJours }) { facture in
+                    Button {
+                        Task { await app.documents.ouvrir(facture.cheminPDF, nom: "\(facture.numero).pdf", api: app.session.api) }
+                    } label: {
+                        LigneMaison(titre: facture.client,
+                                    detail: facture.numero + " · " + echeanceClient(facture),
+                                    montant: FormatSuisse.francs(facture.montant),
+                                    etat: facture.retardJours > 0 ? "Suivi seulement" : "Envoyée")
                     }
-                    if index < e.parClient.count - 1 {
-                        Rectangle().fill(Color.filet).frame(height: 0.5)
-                    }
+                    .buttonStyle(ActionPressee())
+                    .accessibilityHint(Text("Ouvre la facture"))
                 }
             }
+            .padding(.top, Espace.l)
+
+            if !argent.versementsNonIdentifies.isEmpty {
+                Text("Versements non identifiés").etiquetteMaison().padding(.top, Espace.xl)
+                VStack(spacing: 10) {
+                    ForEach(argent.versementsNonIdentifies) { v in
+                        LigneMaison(titre: v.titre,
+                                    detail: [v.date.map { DateEndry.courte($0) }, v.reference].compactMap { $0 }.joined(separator: " · "),
+                                    montant: FormatSuisse.francs(v.montant),
+                                    etat: "À rapprocher", etatAccent: true)
+                    }
+                }
+                .padding(.top, Espace.s)
+            }
+            Text("Suivi seulement : aucune relance ne part sans votre demande.")
+                .font(Police.mono(10))
+                .foregroundStyle(Color.encreDouce)
+                .padding(.top, Espace.s)
         }
-        .padding(Espace.l)
-        .surfaceCarte()
     }
 
-    private func libelleRetard(_ jours: Int) -> String {
-        jours <= 0 ? "À échoir" : "\(jours) j de retard"
-    }
-
-    private func couleurRetard(_ jours: Int) -> Color {
-        switch jours {
-        case ...0: .vertControle
-        case 1...30: .ambre
-        default: .rouille
-        }
+    private func echeanceClient(_ f: FactureClient) -> String {
+        if f.retardJours > 0 { return "échue depuis \(f.retardJours) j" }
+        if let echeance = f.echeance { return "échéance \(DateEndry.jourMois(echeance))" }
+        return "ouverte"
     }
 
     // MARK: - À payer
 
-    private func payer(_ p: Payer) -> some View {
-        VStack(alignment: .leading, spacing: Espace.s) {
-            EnTeteSection(titre: "À payer", detail: FormatSuisse.chfArrondi(p.total))
-            VStack(spacing: 0) {
-                ForEach(p.factures.sorted { ($0.joursRestants ?? 999) < ($1.joursRestants ?? 999) }) { f in
-                    LigneFournisseur(facture: f)
-                    if f.id != p.factures.last?.id { Rectangle().fill(Color.filet).frame(height: 0.5) }
+    @ViewBuilder
+    private func payer(_ argent: Argent) -> some View {
+        let p = argent.payer
+        if devantClient {
+            BlocMasqueClient(titre: "À payer").padding(.top, Espace.l)
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                grandMontant("À payer · \(p.factures.count) facture\(p.factures.count > 1 ? "s" : "")", p.total)
+                Histogramme(barres: Self.barresPayer(p.factures)).padding(.top, Espace.m)
+                VStack(spacing: 10) {
+                    ForEach(p.factures.sorted { ($0.joursRestants ?? 999) < ($1.joursRestants ?? 999) }) { f in
+                        LigneMaison(titre: f.fournisseur,
+                                    detail: f.numero + (f.echeance.map { " · éch. \(DateEndry.courte($0))" } ?? ""),
+                                    montant: FormatSuisse.francs(f.montant),
+                                    etat: f.joursRestants.map { $0 < 0 ? "échue" : $0 == 0 ? "aujourd’hui" : "dans \($0) j" },
+                                    etatAlerte: (f.joursRestants ?? 99) <= 3)
+                    }
+                }
+                .padding(.top, Espace.l)
+                Text("Les paiements se signent dans l’e-banking ; l’app n’émet aucun paiement.")
+                    .font(Police.mono(10))
+                    .foregroundStyle(Color.encreDouce)
+                    .padding(.top, Espace.s)
+
+                if !argent.aRefacturer.achats.isEmpty {
+                    Text("Matériel à refacturer").etiquetteMaison().padding(.top, Espace.xl)
+                    VStack(spacing: 10) {
+                        ForEach(argent.aRefacturer.achats) { achat in
+                            LigneMaison(titre: achat.libelle,
+                                        detail: [achat.chantier, achat.fournisseur].compactMap { $0 }.joined(separator: " · "),
+                                        montant: FormatSuisse.francs(achat.montant),
+                                        etat: "À refacturer", etatAccent: true)
+                        }
+                    }
+                    .padding(.top, Espace.s)
                 }
             }
-            .padding(.horizontal, Espace.m)
-            .surfaceCarte(rayon: 22)
-            Text("Les paiements se signent dans l’e-banking ; l’app n’émet aucun paiement.")
-                .styleTexte(12, relativeTo: .caption)
-                .foregroundStyle(Color.encrePale)
         }
+    }
+
+    /// Échéances à payer regroupées : échues, sous 7, 14 et 30 jours, plus tard.
+    static func barresPayer(_ factures: [FactureFournisseur]) -> [Histogramme.Barre] {
+        func somme(_ filtre: (Int) -> Bool) -> Double {
+            factures.filter { filtre($0.joursRestants ?? 999) }.reduce(0) { $0 + $1.montant }
+        }
+        return [
+            .init(libelle: "Échues", valeur: somme { $0 < 0 }),
+            .init(libelle: "7 j", valeur: somme { (0...7).contains($0) }, accent: true),
+            .init(libelle: "14 j", valeur: somme { (8...14).contains($0) }),
+            .init(libelle: "30 j", valeur: somme { (15...30).contains($0) }),
+            .init(libelle: "Plus tard", valeur: somme { $0 > 30 }),
+        ]
     }
 
     // MARK: - Offres
 
-    private func offres(_ o: Offres) -> some View {
-        let maximum = max(o.offres.map(\.montant).max() ?? 1, 1)
-        return VStack(alignment: .leading, spacing: Espace.s) {
-            EnTeteSection(titre: "Offres en attente", detail: FormatSuisse.chfArrondi(o.total))
-            VStack(alignment: .leading, spacing: Espace.m) {
+    @ViewBuilder
+    private func offres(_ argent: Argent) -> some View {
+        let o = argent.offres
+        VStack(alignment: .leading, spacing: 0) {
+            grandMontant("Offres en attente · \(o.offres.count)", o.total)
+            if !o.offres.isEmpty {
+                let plusGrande = o.offres.map(\.montant).max()
+                Histogramme(barres: o.offres.prefix(8).map {
+                    .init(libelle: String($0.numero.suffix(3)), valeur: $0.montant, accent: $0.montant == plusGrande)
+                })
+                .padding(.top, Espace.m)
+            }
+            if let signees = app.offresSignees {
+                SectionOffresSignees(modele: signees).padding(.top, Espace.l)
+            }
+            VStack(spacing: 10) {
                 ForEach(o.offres) { offre in
                     Button {
                         Task { await app.documents.ouvrir(offre.cheminPDF, nom: "\(offre.numero).pdf", api: app.session.api) }
                     } label: {
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack(alignment: .firstTextBaseline) {
-                                Text(offre.client).styleTexte(15, relativeTo: .subheadline, graisse: .semibold).foregroundStyle(Color.encre)
-                                Spacer()
-                                MontantView(montant: offre.montant, taille: 15, afficherCentimes: false, style: .subheadline)
-                            }
-                            BarreProportion(fraction: offre.montant / maximum)
-                            HStack(spacing: 6) {
-                                Text(offre.numero).font(Police.reference(11)).foregroundStyle(Color.encrePale)
-                                Text("· \(offre.titre)").styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encreDouce).lineLimit(1)
-                                Spacer()
-                                if let fin = offre.valableJusquAu {
-                                    Text("jusqu’au \(DateEndry.jourMois(fin))").styleTexte(11, relativeTo: .caption2).foregroundStyle(Color.encrePale)
-                                }
-                            }
-                        }
-                        .contentShape(Rectangle())
+                        LigneMaison(titre: offre.client,
+                                    detail: offre.numero + " · " + offre.titre,
+                                    montant: FormatSuisse.francs(offre.montant),
+                                    etat: offre.valableJusquAu.map { "jusqu’au \(DateEndry.jourMois($0))" })
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(ActionPressee())
+                    .accessibilityHint(Text("Ouvre l’offre"))
                 }
             }
-            .padding(Espace.l)
-            .surfaceCarte(rayon: 22)
-        }
-    }
-
-    // MARK: - À refacturer
-
-    private func refacturer(_ r: ARefacturer) -> some View {
-        VStack(alignment: .leading, spacing: Espace.s) {
-            EnTeteSection(titre: "Matériel à refacturer", detail: FormatSuisse.chfArrondi(r.total))
-            if r.achats.isEmpty {
-                Text("Rien à refacturer.").styleTexte(14, relativeTo: .subheadline).foregroundStyle(Color.encrePale)
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(r.achats) { achat in
-                        HStack(alignment: .top) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(achat.libelle).styleTexte(14, relativeTo: .subheadline, graisse: .semibold).foregroundStyle(Color.encre)
-                                Text([achat.chantier, achat.fournisseur].compactMap { $0 }.joined(separator: " · "))
-                                    .styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encreDouce)
-                            }
-                            Spacer()
-                            MontantView(montant: achat.montant, taille: 14, style: .subheadline)
-                        }
-                        .padding(.vertical, Espace.s)
-                        .accessibilityElement(children: .combine)
-                        if achat.id != r.achats.last?.id { Rectangle().fill(Color.filet).frame(height: 0.5) }
-                    }
-                }
-                .padding(.horizontal, Espace.m)
-                .surfaceCarte(rayon: 22)
-            }
-        }
-    }
-
-    // MARK: - Versements
-
-    private func versements(_ v: [VersementNonIdentifie]) -> some View {
-        VStack(alignment: .leading, spacing: Espace.s) {
-            EnTeteSection(titre: "Versements non identifiés", detail: v.isEmpty ? nil : "\(v.count)")
-            if v.isEmpty {
-                Text("Tous les versements sont rapprochés.").styleTexte(14, relativeTo: .subheadline).foregroundStyle(Color.encrePale)
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(v) { versement in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(versement.titre).styleTexte(14, relativeTo: .subheadline, graisse: .semibold).foregroundStyle(Color.encre).lineLimit(1)
-                                if let texte = versement.texte, versement.contrepartie != nil {
-                                    Text(texte).font(Police.reference(11)).foregroundStyle(Color.encreDouce).lineLimit(2)
-                                }
-                                if let reference = versement.reference {
-                                    Text(reference).font(Police.reference(10)).foregroundStyle(Color.encrePale).lineLimit(1)
-                                }
-                                if let date = versement.date {
-                                    Text(DateEndry.courte(date)).styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encrePale)
-                                }
-                            }
-                            Spacer()
-                            MontantView(montant: versement.montant, taille: 14, couleur: .vertControle, style: .subheadline)
-                        }
-                        .padding(.vertical, Espace.s)
-                        .accessibilityElement(children: .combine)
-                        if versement.id != v.last?.id { Rectangle().fill(Color.filet).frame(height: 0.5) }
-                    }
-                }
-                .padding(.horizontal, Espace.m)
-                .surfaceCarte(rayon: 22)
-            }
+            .padding(.top, Espace.l)
+            CarteOffresASuivre(offres: o.offres).padding(.top, Espace.l)
         }
     }
 
     // MARK: - Secrétariat
 
     private func secretariat(_ h: HeuresSecretariat) -> some View {
-        Button { heuresOuvertes = h } label: { carteSecretariat(h) }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("heures-secretariat")
-            .sheet(item: $heuresOuvertes) { HeuresSecretariatView(heures: $0) }
-    }
-
-    private func carteSecretariat(_ h: HeuresSecretariat) -> some View {
-        HStack(alignment: .center, spacing: Espace.m) {
-            ZStack {
-                Circle().fill(Color.or.opacity(0.16))
-                Image(systemName: "clock").font(.system(size: 20, weight: .medium)).foregroundStyle(Color.bronze)
-            }
-            .frame(width: 48, height: 48)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Heures de secrétariat").styleTexte(15, relativeTo: .subheadline, graisse: .semibold).foregroundStyle(Color.encre)
-                Text(h.lignes.isEmpty ? h.mois : "\(h.mois) · détail, PDF, Excel").styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encrePale)
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(FormatSuisse.heures(h.heures)).styleTitre(22, relativeTo: .title3).foregroundStyle(Color.encre)
-                if let montant = h.montant {
-                    Text(FormatSuisse.chf(montant)).styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encreDouce).monospacedDigit()
+        Button { heuresOuvertes = h } label: {
+            HStack(alignment: .center, spacing: Espace.s) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Secrétariat").etiquetteMaison()
+                    Text(FormatSuisse.heures(h.heures) + (h.montant.map { " · " + FormatSuisse.chf($0) } ?? ""))
+                        .styleTexte(15, relativeTo: .subheadline)
+                        .foregroundStyle(Color.encre)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                Spacer(minLength: Espace.xs)
+                ForEach(["PDF", "Excel"], id: \.self) { format in
+                    Text(format)
+                        .font(Police.mono(10.5))
+                        .foregroundStyle(Color.encre)
+                        .padding(.horizontal, 12)
+                        .frame(height: 32)
+                        .overlay(Capsule().strokeBorder(Color.filetFort, lineWidth: Espace.filet))
                 }
             }
-            Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(Color.encrePale)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+            .tuileMaison(rayon: 26)
+            .contentShape(Rectangle())
         }
-        .padding(Espace.l)
-        .surfaceCarte()
+        .buttonStyle(ActionPressee())
         .accessibilityElement(children: .combine)
+        .accessibilityHint(Text("Détail des heures, relevés PDF et Excel du bureau"))
+        .accessibilityIdentifier("heures-secretariat")
+        .sheet(item: $heuresOuvertes) { HeuresSecretariatView(heures: $0) }
     }
 }
 

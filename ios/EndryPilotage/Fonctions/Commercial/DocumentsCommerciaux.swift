@@ -17,24 +17,42 @@ struct RangeeNouveauDocument: View {
     var chantierId: String?
 
     var body: some View {
-        HStack(spacing: Espace.s) {
-            bouton(.offre, titre: "Nouvelle offre", icone: "doc.badge.plus")
-            bouton(.facture, titre: "Nouvelle facture", icone: "doc.text.fill")
+        HStack(spacing: 10) {
+            bouton(.offre, titre: "Nouvelle offre", principal: false)
+            bouton(.facture, titre: "Nouvelle facture", principal: true)
         }
     }
 
-    private func bouton(_ type: TypeDemandeDocument, titre: String, icone: String) -> some View {
+    /// Maison Endry : capsule de verre (offre) et capsule pleine crème dorée (facture).
+    @ViewBuilder
+    private func bouton(_ type: TypeDemandeDocument, titre: String, principal: Bool) -> some View {
         Button {
             app.nouveauDocument(type, chantier: chantierId)
         } label: {
-            Label(titre, systemImage: icone)
-                .styleTexte(14, relativeTo: .subheadline, graisse: .semibold)
-                .foregroundStyle(Color.encre)
-                .frame(maxWidth: .infinity, minHeight: 48)
-                .surfaceCarte(rayon: 16)
+            Text(titre)
+                .styleTexte(15, relativeTo: .subheadline)
+                .foregroundStyle(principal ? Color.boutonTexte : Color.encre)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity, minHeight: 54)
+                .background {
+                    if principal {
+                        Capsule().fill(Color.bouton).shadow(color: Color.ombre, radius: 14, y: 8)
+                    }
+                }
+                .modifier(VerreSiSecondaire(actif: !principal))
+                .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(ActionPressee())
         .accessibilityIdentifier("nouveau-\(type.rawValue)")
+    }
+}
+
+private struct VerreSiSecondaire: ViewModifier {
+    var actif: Bool
+
+    func body(content: Content) -> some View {
+        if actif { content.verreMaison(Capsule()) } else { content }
     }
 }
 

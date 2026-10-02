@@ -200,13 +200,15 @@ final class EndryPilotageUITests: XCTestCase {
         let app = lancer()
         XCTAssertTrue(titreDecisions(app).waitForExistence(timeout: 8))
         app.buttons["onglet-finances"].tap()
+        // Maison Endry : les offres ont leur vue (À encaisser / À payer / Offres).
+        let vueOffres = app.buttons["segment-offres"]
+        XCTAssertTrue(vueOffres.waitForExistence(timeout: 8))
+        vueOffres.tap()
         let signees = app.descendants(matching: .any)["offres-signees"].firstMatch
         atteindre(signees, dans: app)
         XCTAssertTrue(signees.waitForExistence(timeout: 8))
         capturer(app, "22-offres-signees")
-        app.swipeDown(velocity: .fast)
-        app.swipeDown(velocity: .fast)
-        let nouvelle = app.buttons["nouveau-offre"]
+        let nouvelle = atteindre(app.buttons["nouveau-offre"], dans: app, essais: 14)
         XCTAssertTrue(nouvelle.waitForExistence(timeout: 5))
         nouvelle.tap()
         let client = app.textFields["champ-client"]

@@ -120,35 +120,53 @@ struct RangeeOutilsTerrain: View {
     var chantierId: String?
     var outils: [OutilTerrain] = OutilTerrain.allCases
 
+    /// Maison Endry : tuiles de verre en grille de deux, monogramme rond (RG, BL, 3D), titre et sous-titre.
     var body: some View {
-        HStack(spacing: Espace.s) {
+        LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
             ForEach(outils) { outil in
                 Button {
                     app.ouvrirOutil(outil, chantier: chantierId)
                 } label: {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Image(systemName: outil.icone)
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundStyle(Color.bronze)
-                            .frame(width: 34, height: 34)
-                            .background(Color.or.opacity(0.18), in: Circle())
-                        Text(outil.titre)
-                            .styleTexte(13, relativeTo: .footnote, graisse: .semibold)
+                    HStack(spacing: 12) {
+                        Text(outil.monogramme)
+                            .font(Police.mono(12))
                             .foregroundStyle(Color.encre)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.85)
-                        Text(outil.sousTitre)
-                            .styleTexte(11, relativeTo: .caption2)
-                            .foregroundStyle(Color.encrePale)
-                            .lineLimit(2)
+                            .frame(width: 40, height: 40)
+                            .background(Color.lentille, in: Circle())
+                            .overlay(Circle().strokeBorder(Color.filet, lineWidth: Espace.filet))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(outil.titre)
+                                .styleTexte(15, relativeTo: .subheadline)
+                                .foregroundStyle(Color.encre)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                            Text(outil.sousTitre)
+                                .styleTexte(12.5, relativeTo: .caption)
+                                .foregroundStyle(Color.encreDouce)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                        Spacer(minLength: 0)
                     }
-                    .frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
-                    .padding(Espace.s)
-                    .surfaceCarte(rayon: 18)
+                    .padding(.horizontal, 12)
+                    .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
+                    .tuileMaison(rayon: 24)
+                    .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(ActionPressee())
                 .accessibilityIdentifier("outil-\(outil.rawValue)")
             }
+        }
+    }
+}
+
+extension OutilTerrain {
+    /// Monogramme des tuiles « Sur place ».
+    var monogramme: String {
+        switch self {
+        case .regie: "RG"
+        case .bonLivraison: "BL"
+        case .releve: "3D"
         }
     }
 }

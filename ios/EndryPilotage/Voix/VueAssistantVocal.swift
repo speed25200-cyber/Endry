@@ -15,6 +15,8 @@ struct VueAssistantVocal: View {
     @State private var assistant: AssistantVocal?
     @State private var question = ""
     @State private var apparu = false
+    /// Début de la phase en cours : le chronomètre de l'anneau repart à chaque phase.
+    @State private var debutPhase = Date()
     @FocusState private var clavier: Bool
 
     /// Questions du quotidien, à toucher plutôt qu'à dire.
@@ -29,8 +31,6 @@ struct VueAssistantVocal: View {
     var body: some View {
         ZStack {
             fond
-            LueurBord(assistant: assistant)
-                .opacity(apparu ? 1 : 0)
             VStack(spacing: 0) {
                 barreHaute
                     .opacity(apparu ? 1 : 0)
@@ -41,12 +41,14 @@ struct VueAssistantVocal: View {
                 disposition {
                     sphere
                     VStack(alignment: compact ? .leading : .center, spacing: 0) {
-                        EtatAssistant(phase: assistant?.phase ?? .preparation)
-                            .padding(.top, compact ? 0 : Espace.xs)
+                        // L'anneau affiche l'état en grand ; en disposition « lecture », il passe en petites capitales.
+                        if compact {
+                            EtatAssistant(phase: assistant?.phase ?? .preparation)
+                        }
                         if let nom = assistant?.nomMoteur, !nom.isEmpty {
                             Label(nom, systemImage: nom.contains("Apple Intelligence") ? "sparkles" : "waveform")
-                                .font(PoliceAssistant.texte(11, .medium, relativeTo: .caption2))
-                                .foregroundStyle(Color.orClair.opacity(0.4))
+                                .font(Police.mono(10))
+                                .foregroundStyle(Color.encreDouce.opacity(0.7))
                                 .padding(.top, 6)
                                 .accessibilityLabel(Text("Moteur vocal : \(nom)"))
                                 .transition(.opacity)
@@ -122,6 +124,7 @@ struct VueAssistantVocal: View {
             }
         }
         .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.5), trigger: assistant?.phase)
+        .onChange(of: assistant?.phase) { debutPhase = Date() }
         .toast(Binding(get: { app.decisions?.toast }, set: { nouveau in if let modele = app.decisions { modele.toast = nouveau } }), decalageBas: Espace.l)
     }
 
@@ -131,15 +134,13 @@ struct VueAssistantVocal: View {
         return !assistant.cartes.isEmpty || assistant.reponse.count > 150
     }
 
-    /// L'app reste devinée derrière un voile espresso profond : l'assistant se pose au-dessus, sans rupture.
+    /// Maison Endry : brun profond, un halo crème à peine posé autour de l'anneau.
     private var fond: some View {
         ZStack {
-            Rectangle().fill(.ultraThinMaterial)
-            Color(hex: 0x0E0A06).opacity(0.9)
-            // Le halo suit la sphère : au centre, ou en haut à gauche quand la réponse prend la place.
-            RadialGradient(colors: [Color(hex: 0x9F722A).opacity(0.22), .clear],
+            Color.fond
+            RadialGradient(colors: [Color.signal.opacity(0.08), .clear],
                            center: compact ? UnitPoint(x: 0.12, y: 0.1) : UnitPoint(x: 0.5, y: 0.36),
-                           startRadius: 10, endRadius: compact ? 260 : 360)
+                           startRadius: 10, endRadius: compact ? 240 : 320)
         }
         .opacity(apparu ? 1 : 0)
         .ignoresSafeArea()
@@ -159,11 +160,20 @@ struct VueAssistantVocal: View {
     // MARK: - Morceaux
 
     private var barreHaute: some View {
-        HStack {
-            PastilleClaude(etat: assistant?.etatBureau) {
-                Task { await assistant?.poser("Que fait Claude sur le PC en ce moment ?") }
+        HStack(spacing: Espace.xs) {
+            HStack(spacing: 8) {
+                PointVeille(couleur: .sauge, actif: assistant?.pret ?? false)
+                Text(ReglageVoix.relaisBureau ? "Relais direct · bureau" : "Endry · assistant")
+                    .font(Police.mono(11))
+                    .textCase(.uppercase)
+                    .tracking(0.8)
+                    .foregroundStyle(Color.encre)
+                    .lineLimit(1)
             }
-            .disabled(!(assistant?.pret ?? false))
+            .padding(.horizontal, 14)
+            .frame(height: 40)
+            .verreMaison(Capsule())
+            .accessibilityElement(children: .combine)
             Spacer()
             if app.conversation != nil {
                 Button {
@@ -171,23 +181,23 @@ struct VueAssistantVocal: View {
                     app.ouvrirConversation()
                 } label: {
                     Image(systemName: "text.bubble")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.orClair)
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundStyle(Color.encre)
                         .frame(width: 40, height: 40)
-                        .background(Color.white.opacity(0.08), in: Circle())
-                        .overlay(Circle().stroke(Color.or.opacity(0.2), lineWidth: Espace.filet))
+                        .verreMaison(Circle())
                 }
+                .buttonStyle(ActionPressee())
                 .accessibilityLabel(Text("Ouvrir la conversation écrite"))
                 .accessibilityIdentifier("ouvrir-conversation")
             }
             Button(action: fermer) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.orClair)
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundStyle(Color.encre)
                     .frame(width: 40, height: 40)
-                    .background(Color.white.opacity(0.08), in: Circle())
-                    .overlay(Circle().stroke(Color.or.opacity(0.2), lineWidth: Espace.filet))
+                    .verreMaison(Circle())
             }
+            .buttonStyle(ActionPressee())
             .keyboardShortcut(.cancelAction)
             .accessibilityLabel(Text("Fermer l’assistant vocal"))
             .accessibilityIdentifier("fermer-assistant")
@@ -196,7 +206,13 @@ struct VueAssistantVocal: View {
     }
 
     private var sphere: some View {
-        OrbeEndry(assistant: assistant)
+        Group {
+            if compact {
+                OrbeSiri(diametre: 56, actif: assistant?.phase == .parole || assistant?.phase == .ecoute)
+            } else {
+                AnneauVoix(assistant: assistant, debut: debutPhase)
+            }
+        }
             .frame(maxWidth: compact ? 64 : 330, maxHeight: compact ? 64 : 330)
             .scaleEffect(apparu ? 1 : 0.35)
             .blur(radius: apparu ? 0 : 24)
@@ -234,12 +250,11 @@ struct VueAssistantVocal: View {
                         Task { await assistant?.poser(texte) }
                     } label: {
                         Text(texte)
-                            .font(PoliceAssistant.texte(14, .medium, relativeTo: .subheadline))
-                            .foregroundStyle(Color.orClair.opacity(0.9))
+                            .font(PoliceAssistant.texte(14, .regular, relativeTo: .subheadline))
+                            .foregroundStyle(Color.encre)
                             .padding(.horizontal, Espace.m)
                             .frame(minHeight: 40)
-                            .background(Color.white.opacity(0.06), in: Capsule())
-                            .overlay(Capsule().stroke(Color.or.opacity(0.22), lineWidth: Espace.filet))
+                            .verreMaison(Capsule())
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("suggestion-\(index)")
@@ -255,10 +270,10 @@ struct VueAssistantVocal: View {
     private var champQuestion: some View {
         let vide = question.trimmingCharacters(in: .whitespaces).isEmpty
         return HStack(spacing: Espace.xs) {
-            TextField("", text: $question, prompt: Text("Écrire à Endry…").foregroundStyle(Color.orClair.opacity(0.4)))
+            TextField("", text: $question, prompt: Text("Écrire à Endry…").foregroundStyle(Color.encreDouce))
                 .font(PoliceAssistant.texte(16))
-                .foregroundStyle(Color.orClair)
-                .tint(Color.or)
+                .foregroundStyle(Color.encre)
+                .tint(Color.signal)
                 .focused($clavier)
                 .submitLabel(.send)
                 .onSubmit(envoyerQuestion)
@@ -267,10 +282,10 @@ struct VueAssistantVocal: View {
                 .accessibilityIdentifier("champ-assistant")
             Button(action: envoyerQuestion) {
                 Image(systemName: "arrow.up")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(Color.espresso)
-                    .frame(width: 36, height: 36)
-                    .background(Color.or, in: Circle())
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.boutonTexte)
+                    .frame(width: 40, height: 40)
+                    .background(Color.bouton, in: Circle())
             }
             .disabled(vide)
             .opacity(vide ? 0.35 : 1)
@@ -280,8 +295,8 @@ struct VueAssistantVocal: View {
             .accessibilityLabel(Text("Envoyer la question"))
             .accessibilityIdentifier("envoyer-question")
         }
-        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Color.or.opacity(clavier ? 0.45 : 0.18), lineWidth: Espace.filet))
+        .verreMaison(Capsule())
+        .overlay(Capsule().strokeBorder(Color.signal.opacity(clavier ? 0.45 : 0), lineWidth: Espace.filet))
         .animation(.endryVif, value: clavier)
     }
 
@@ -365,10 +380,25 @@ private struct TranscriptionAssistant: View {
     var body: some View {
         let reponse = assistant?.reponse ?? ""
         let enReponse = !reponse.isEmpty
-        VStack(spacing: Espace.m) {
+        VStack(alignment: .leading, spacing: Espace.m) {
             if let assistant, !(assistant.definitif.isEmpty && assistant.provisoire.isEmpty) {
+                if !enReponse {
+                    VStack(spacing: 10) {
+                        HStack {
+                            Text("Transcription")
+                            Spacer()
+                            Text("FR-CH")
+                        }
+                        .font(Police.mono(10.5))
+                        .textCase(.uppercase)
+                        .foregroundStyle(Color.encreDouce)
+                        Rectangle().fill(Color.filetFort).frame(height: Espace.filet)
+                    }
+                    .transition(.opacity)
+                    .accessibilityHidden(true)
+                }
                 MotsEnDirect(definitif: assistant.definitif, provisoire: assistant.provisoire,
-                             taille: enReponse ? 16 : 30, poids: enReponse ? .medium : .semibold,
+                             taille: enReponse ? 17 : 36, poids: enReponse ? .medium : .regular,
                              opacite: enReponse ? 0.5 : 1)
                     .transition(.opacity)
                     .accessibilityElement(children: .ignore)
@@ -377,10 +407,11 @@ private struct TranscriptionAssistant: View {
             }
             if let assistant, enReponse {
                 let (dit, reste) = Self.decouper(reponse, lu: assistant.reponseLue)
-                Text("\(Text(dit).foregroundStyle(Color(hex: 0xFBEBD0)))\(Text(reste).foregroundStyle(Color.orClair.opacity(0.28)))")
-                    .font(PoliceAssistant.texte(23, .medium, relativeTo: .title3))
+                Text("\(Text(dit).foregroundStyle(Color.encre))\(Text(reste).foregroundStyle(Color.encre.opacity(0.3)))")
+                    .font(Police.serif(28, relativeTo: .title2))
                     .tracking(-0.3)
-                    .multilineTextAlignment(.center)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .lineSpacing(3)
                     .minimumScaleFactor(0.75)
                     .lineLimit(8)
@@ -511,12 +542,12 @@ private struct MotsEnDirect: View {
         let confirmes = Self.mots(definitif)
         let enCours = Self.mots(provisoire)
         let tous = confirmes.map { ($0, true) } + enCours.map { ($0, false) }
-        LigneCentree(espacement: taille * 0.28, interligne: taille * 0.18) {
+        LigneCentree(espacement: taille * 0.24, interligne: taille * 0.05, aGauche: true) {
             ForEach(Array(tous.enumerated()), id: \.offset) { index, element in
                 Text(element.0)
-                    .font(PoliceAssistant.texte(taille, poids, relativeTo: .title))
+                    .font(taille > 20 ? Police.serif(taille, relativeTo: .title) : PoliceAssistant.texte(taille, poids, relativeTo: .title))
                     .tracking(-0.4)
-                    .foregroundStyle(Color(hex: 0xFBEBD0).opacity((element.1 ? 1 : 0.55) * opacite))
+                    .foregroundStyle(Color.encre.opacity((element.1 ? 1 : 0.4) * opacite))
                     .transition(reduireAnimations ? .opacity : .asymmetric(
                         insertion: .modifier(active: MotQuiApparait(etat: 0), identity: MotQuiApparait(etat: 1)),
                         removal: .opacity))
@@ -547,6 +578,8 @@ private struct MotQuiApparait: ViewModifier {
 private struct LigneCentree: Layout {
     var espacement: CGFloat
     var interligne: CGFloat
+    /// Lignes alignées à gauche (transcription Maison Endry) plutôt que centrées.
+    var aGauche = false
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let largeur = proposal.width ?? .infinity
@@ -559,7 +592,7 @@ private struct LigneCentree: Layout {
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         var y = bounds.minY
         for ligne in decouper(subviews, largeur: bounds.width) {
-            var x = bounds.midX - ligne.largeur / 2
+            var x = aGauche ? bounds.minX : bounds.midX - ligne.largeur / 2
             for index in ligne.indices {
                 let taille = subviews[index].sizeThatFits(.unspecified)
                 subviews[index].place(at: CGPoint(x: x, y: y + ligne.hauteur - taille.height), proposal: .unspecified)

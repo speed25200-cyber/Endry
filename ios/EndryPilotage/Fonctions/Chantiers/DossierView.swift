@@ -1,172 +1,308 @@
 import EndryKit
 import SwiftUI
 
-/// Détail d'un chantier : avancement, documents, achats fournisseurs, notes, dictée.
+/// Chantier « Maison Endry » (maquette E) : photo fondue dans le brun, retour et lieu en verre (itinéraire),
+/// client en Cinzel, titre en Cormorant, avancement en 7 étapes, offre et période, décision en attente,
+/// outils sur place, documents, achats, notes, et « Dicter pour ce chantier ».
 struct DossierView: View {
     @AppStorage(ModeDevantClient.cle) private var devantClient = false
     @Environment(ModeleApp.self) private var app
+    @Environment(\.dismiss) private var fermer
+    @Environment(\.openURL) private var ouvrirLien
     @State var modele: ModeleDossier
     @State private var visible = false
 
     var body: some View {
         let dossier = modele.dossier
         ScrollView {
-            VStack(alignment: .leading, spacing: Espace.l) {
-                ZStack(alignment: .bottomLeading) {
-                    PhotoVivante(nom: PhotosMarque.pour(id: dossier.id), mention: false)
-                        .frame(height: 300)
-                        .overlay(VoilePhoto(haut: 0.55, bas: 1))
-                    VStack(alignment: .leading, spacing: Espace.xs) {
-                        HStack {
-                            Text((dossier.lieu ?? dossier.id).uppercased())
-                                .font(Police.etiquette(Echelle.micro))
-                                .tracking(2.2)
-                                .foregroundStyle(Color.or)
-                            if dossier.decisionEnAttente {
-                                Pastille(texte: "Décision en attente", couleur: .or, icone: "circle.fill")
-                            }
-                            if PhotosMarque.estIllustrative(PhotosMarque.pour(id: dossier.id)) {
-                                Spacer(minLength: Espace.xs)
-                                MentionIllustrative()
-                            }
-                        }
-                        Text(dossier.client.isEmpty ? dossier.titre : dossier.client)
-                            .styleTitre(34, relativeTo: .largeTitle)
-                            .foregroundStyle(Color(hex: 0xF7F2E9))
-                        Text(dossier.titre)
-                            .styleTitre(22, relativeTo: .title3, graisse: .italique)
-                            .foregroundStyle(Color(hex: 0xE9DFCF))
-                    }
-                    .padding(.horizontal, Espace.bord)
-                    .padding(.bottom, Espace.s)
-                }
-                .padding(.horizontal, -Espace.bord)
-                .apparitionEnCascade(index: 0, visible: visible)
+            VStack(alignment: .leading, spacing: 0) {
+                enTete(dossier)
+                    .apparitionEnCascade(index: 0, visible: visible)
 
-                // iPad : l'avancement et les outils à gauche, les documents et les achats à droite.
-                Colonnes {
-                    // Avancement
-                    VStack(alignment: .leading, spacing: Espace.m) {
-                        HStack(alignment: .firstTextBaseline) {
-                            Text(dossier.etapeLibelle).styleTitre(20, relativeTo: .title3).foregroundStyle(Color.encre)
-                            Spacer()
-                            if let montant = dossier.montant {
-                                MontantView(montant: montant, taille: 22, style: .title3)
-                            }
-                        }
-                        RailAvancement(index: dossier.etapeIndex, compact: false)
-                        if dossier.dateDebut != nil || dossier.dates != nil {
-                            HStack(spacing: Espace.l) {
-                                if let debut = dossier.dateDebut {
-                                    infoDate("Début", DateEndry.courte(debut))
-                                }
-                                if let fin = dossier.dateFin {
-                                    infoDate("Fin", DateEndry.courte(fin))
-                                }
-                                if dossier.dateDebut == nil, let dates = dossier.dates {
-                                    infoDate("Travaux", dates)
-                                }
-                            }
-                        }
-                    }
-                    .padding(Espace.l)
-                    .surfaceCarte()
+                avancement(dossier)
+                    .padding(.top, Espace.xl)
                     .apparitionEnCascade(index: 1, visible: visible)
 
-                    Button {
-                        app.dicter(pour: dossier)
-                    } label: {
-                        Label("Dicter pour ce chantier", systemImage: "mic.fill")
-                    }
-                    .buttonStyle(BoutonPrincipal())
-                    .accessibilityIdentifier("dicter-chantier")
+                resume(dossier)
+                    .padding(.top, Espace.l)
                     .apparitionEnCascade(index: 2, visible: visible)
 
-                    // Sur place : régie à faire signer, bon du fournisseur, relevé pour l'offre.
-                    RangeeOutilsTerrain(chantierId: dossier.id)
-                        .apparitionEnCascade(index: 3, visible: visible)
+                Text("Sur place").etiquetteMaison()
+                    .padding(.top, Espace.xl)
+                // Sur place : régie à faire signer, bon du fournisseur, relevé pour l'offre.
+                RangeeOutilsTerrain(chantierId: dossier.id)
+                    .padding(.top, Espace.s)
+                    .apparitionEnCascade(index: 3, visible: visible)
 
-                    RangeeNouveauDocument(chantierId: dossier.id)
-
-                    // Ce que vous avez décidé pour ce chantier, et ce que le bureau en a fait.
-                    ActiviteChantier(chantierId: dossier.id)
-
-                    if modele.horsLigne {
-                        BandeauHorsLigne(majLe: nil)
-                    }
-
-                    if case .chargement = modele.etat, dossier.elements.isEmpty {
-                        SqueletteCarte()
-                    }
-
-                } droite: {
-                    if !dossier.documents.isEmpty {
-                        section("Documents") {
+                if !dossier.documents.isEmpty {
+                    Text("Documents").etiquetteMaison()
+                        .padding(.top, Espace.xl)
+                    ScrollView(.horizontal) {
+                        HStack(spacing: 8) {
                             ForEach(dossier.documents) { element in
-                                LigneElement(element: element, chargement: app.documents.chargement == element.pdf) {
+                                Button {
                                     if let pdf = element.pdf {
                                         Task { await app.documents.ouvrir(pdf, nom: "\(element.numeroAffiche ?? element.libelle).pdf", api: app.session.api) }
                                     }
+                                } label: {
+                                    Text("\(element.type == .offre ? "Offre" : "Facture") \(element.numeroAffiche ?? element.libelle).pdf")
+                                        .font(Police.mono(11))
+                                        .foregroundStyle(Color.encre)
+                                        .lineLimit(1)
+                                        .padding(.horizontal, 14)
+                                        .frame(height: 36)
+                                        .verreMaison(Capsule())
                                 }
+                                .buttonStyle(ActionPressee())
+                                .disabled(element.pdf == nil)
                             }
                         }
-                        .apparitionEnCascade(index: 3, visible: visible)
+                        .padding(.vertical, 6)
                     }
-
-                    if devantClient, !dossier.achats.isEmpty || !dossier.facturesFournisseurs.isEmpty {
-                        BlocMasqueClient(titre: "Achats fournisseurs")
-                            .apparitionEnCascade(index: 4, visible: visible)
-                    } else if !dossier.achats.isEmpty || !dossier.facturesFournisseurs.isEmpty {
-                        section("Achats fournisseurs") {
-                            ForEach(dossier.achats) { element in
-                                LigneElement(element: element, chargement: false, action: nil)
-                            }
-                            ForEach(dossier.facturesFournisseurs.filter { f in !dossier.achats.contains { $0.ref == f.numero } }) { f in
-                                LigneFournisseur(facture: f)
-                            }
-                        }
-                        .apparitionEnCascade(index: 4, visible: visible)
-                    }
-
-                    if let note = dossier.note, !note.isEmpty {
-                        section("Notes") {
-                            Text(note)
-                                .styleTexte(15)
-                                .foregroundStyle(Color.encre)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, Espace.s)
-                        }
-                        .apparitionEnCascade(index: 5, visible: visible)
-                    }
+                    .scrollIndicators(.hidden)
+                    .scrollClipDisabled()
+                    .padding(.top, Espace.xs)
                 }
-                .largeurLisible(Adaptatif.ecran)
+
+                if devantClient, !dossier.achats.isEmpty || !dossier.facturesFournisseurs.isEmpty {
+                    BlocMasqueClient(titre: "Achats fournisseurs").padding(.top, Espace.xl)
+                } else if !dossier.achats.isEmpty || !dossier.facturesFournisseurs.isEmpty {
+                    section("Achats fournisseurs") {
+                        ForEach(dossier.achats) { element in
+                            LigneElement(element: element, chargement: false, action: nil)
+                        }
+                        ForEach(dossier.facturesFournisseurs.filter { f in !dossier.achats.contains { $0.ref == f.numero } }) { f in
+                            LigneFournisseur(facture: f)
+                        }
+                    }
+                    .padding(.top, Espace.xl)
+                }
+
+                if let note = dossier.note, !note.isEmpty {
+                    section("Notes") {
+                        Text(note)
+                            .styleTexte(15)
+                            .foregroundStyle(Color.encre)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, Espace.s)
+                    }
+                    .padding(.top, Espace.xl)
+                }
+
+                RangeeNouveauDocument(chantierId: dossier.id)
+                    .padding(.top, Espace.xl)
+
+                // Ce que vous avez décidé pour ce chantier, et ce que le bureau en a fait.
+                ActiviteChantier(chantierId: dossier.id)
+                    .padding(.top, Espace.l)
+
+                if modele.horsLigne {
+                    BandeauHorsLigne(majLe: nil).padding(.top, Espace.m)
+                }
+                if case .chargement = modele.etat, dossier.elements.isEmpty {
+                    SqueletteCarte().padding(.top, Espace.m)
+                }
+
+                Button {
+                    app.dicter(pour: dossier)
+                } label: {
+                    Label("Dicter pour ce chantier", systemImage: "waveform")
+                        .styleTexte(17, relativeTo: .body)
+                        .foregroundStyle(Color.boutonTexte)
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(Color.bouton, in: Capsule())
+                        .shadow(color: Color.ombre, radius: 16, y: 10)
+                }
+                .buttonStyle(ActionPressee())
+                .padding(.top, Espace.xl)
+                .accessibilityIdentifier("dicter-chantier")
             }
+            .largeurLisible(Adaptatif.lecture)
             .padding(.horizontal, Espace.bord)
             .padding(.bottom, 120)
         }
         .scrollIndicators(.hidden)
-        .background(FondAmbiant())
-        .navigationBarTitleDisplayMode(.inline)
+        .background(FondMaison(photo: nil))
+        .toolbar(.hidden, for: .navigationBar)
         .task {
             visible = true
             await modele.charger()
         }
     }
 
-    private func infoDate(_ libelle: String, _ valeur: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(libelle).styleSurtitre()
-            Text(valeur).styleTexte(15, relativeTo: .subheadline, graisse: .semibold).foregroundStyle(Color.encre).monospacedDigit()
+    // MARK: - En-tête
+
+    private func enTete(_ dossier: Dossier) -> some View {
+        ZStack(alignment: .bottomLeading) {
+            PhotoVivante(nom: PhotosMarque.pour(id: dossier.id), mention: false)
+                .frame(height: 340)
+                .opacity(0.55)
+                .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.45),
+                                             .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom))
+                .padding(.horizontal, -Espace.bord)
+            VStack(alignment: .leading, spacing: 8) {
+                if !dossier.client.isEmpty {
+                    Text(dossier.client).etiquetteMaison(10.5, couleur: .signal)
+                }
+                titre(dossier.titre)
+            }
+            .padding(.bottom, 4)
         }
+        .overlay(alignment: .top) {
+            HStack {
+                Button { fermer() } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundStyle(Color.encre)
+                        .frame(width: 40, height: 40)
+                        .verreMaison(Circle())
+                        .frame(width: 44, height: 44)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(ActionPressee())
+                .accessibilityLabel(Text("Retour"))
+                .accessibilityIdentifier("retour-chantier")
+                Spacer()
+                if let lieu = dossier.lieu {
+                    Button {
+                        let requete = lieu.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? lieu
+                        if let lien = URL(string: "maps://?daddr=\(requete)") { ouvrirLien(lien) }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "mappin.and.ellipse").font(.system(size: 14))
+                            Text(lieu).styleTexte(15, relativeTo: .subheadline).lineLimit(1)
+                        }
+                        .foregroundStyle(Color.encre)
+                        .padding(.horizontal, 16)
+                        .frame(height: 40)
+                        .verreMaison(Capsule())
+                    }
+                    .buttonStyle(ActionPressee())
+                    .accessibilityHint(Text("Ouvre l’itinéraire dans Plans"))
+                    .accessibilityIdentifier("itineraire-chantier")
+                }
+            }
+            .padding(.top, Espace.xs)
+        }
+    }
+
+    /// Titre en Cormorant ; ce qui suit le tiret long passe en italique (« Villa Morel — *PAC air-eau* »).
+    private func titre(_ texte: String) -> some View {
+        let morceaux = texte.components(separatedBy: " — ")
+        let debut = morceaux.first ?? texte
+        let fin = morceaux.dropFirst().joined(separator: " — ")
+        return Text("\(Text(debut))\(Text(fin.isEmpty ? "" : " — "))\(Text(fin).font(Police.serif(40, relativeTo: .largeTitle, italique: true)))")
+            .font(Police.serif(40, relativeTo: .largeTitle))
+            .foregroundStyle(Color.encre)
+            .tracking(-0.4)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    // MARK: - Avancement
+
+    private func avancement(_ dossier: Dossier) -> some View {
+        let etapes = EtapeChantier.allCases
+        let courant = min(max(dossier.etapeIndex, 0), etapes.count - 1)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Avancement").etiquetteMaison()
+                Spacer()
+                Text("Étape \(courant + 1) / \(etapes.count) · \(dossier.etapeLibelle)")
+                    .font(Police.mono(10.5))
+                    .foregroundStyle(Color.encreDouce)
+            }
+            HStack(alignment: .top, spacing: 4) {
+                ForEach(Array(etapes.enumerated()), id: \.offset) { index, etape in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Capsule()
+                            .fill(index < courant ? Color.encre : index == courant ? Color.signal : Color.filetFort)
+                            .frame(height: 3)
+                        Text(etape.libelle)
+                            .styleTexte(11, relativeTo: .caption2)
+                            .foregroundStyle(index <= courant ? Color.encre : Color.encreDouce)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text("Avancement : étape \(courant + 1) sur \(etapes.count), \(dossier.etapeLibelle)"))
+    }
+
+    // MARK: - Offre, période, décision
+
+    private func resume(_ dossier: Dossier) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: Espace.m) {
+                if let montant = dossier.montant, !devantClient {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Offre").font(Police.mono(10.5)).foregroundStyle(Color.encreDouce)
+                        Text(FormatSuisse.francs(montant))
+                            .font(Police.serif(30, relativeTo: .title))
+                            .monospacedDigit()
+                            .foregroundStyle(Color.encre)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Période").font(Police.mono(10.5)).foregroundStyle(Color.encreDouce)
+                    Text(periode(dossier))
+                        .styleTexte(17, relativeTo: .body)
+                        .monospacedDigit()
+                        .foregroundStyle(Color.encre)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .padding(.top, 6)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.vertical, 16)
+            if dossier.decisionEnAttente {
+                Rectangle().fill(Color.filet).frame(height: Espace.filet)
+                Button {
+                    if let reference = dossier.referenceDecision { app.referenceCiblee = reference }
+                    app.onglet = .aujourdhui
+                } label: {
+                    HStack(spacing: 8) {
+                        Text("\(Text("Décision en attente").foregroundStyle(Color.encre))\(Text(" · à décider dans l’accueil").foregroundStyle(Color.encreDouce))")
+                            .styleTexte(15, relativeTo: .subheadline)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        Spacer(minLength: 4)
+                        Circle().fill(Color.signal).frame(width: 9, height: 9)
+                    }
+                    .padding(.vertical, 16)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("decision-chantier")
+            }
+        }
+        .padding(.horizontal, 16)
+        .tuileMaison(rayon: 26)
+    }
+
+    private func periode(_ dossier: Dossier) -> String {
+        if let debut = dossier.dateDebut {
+            let d = DateEndry.jourMois(debut)
+            if let fin = dossier.dateFin, fin != debut { return "\(d) – \(DateEndry.jourMois(fin))" }
+            return d
+        }
+        return dossier.dates ?? "À planifier"
     }
 
     private func section<Contenu: View>(_ titre: String, @ViewBuilder contenu: () -> Contenu) -> some View {
         VStack(alignment: .leading, spacing: Espace.s) {
-            EnTeteSection(titre: titre)
+            Text(titre).etiquetteMaison()
             VStack(spacing: 0) { contenu() }
                 .padding(.horizontal, Espace.m)
                 .padding(.vertical, Espace.xxs)
-                .surfaceCarte(rayon: 22)
+                .tuileMaison(rayon: 22)
         }
     }
 }

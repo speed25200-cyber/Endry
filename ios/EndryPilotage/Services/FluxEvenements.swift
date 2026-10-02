@@ -21,6 +21,8 @@ final class FluxEvenements {
     private var aRecharger: Set<SujetMaj> = []
     private var rechargement: Task<Void, Never>?
     private static let intervalleInterrogation: Duration = .seconds(60)
+    /// Attente avant de rouvrir le flux : quasi immédiate après une coupure, puis plus espacée après des échecs.
+    private static let attentesReconnexion: [Duration] = [.milliseconds(300), .seconds(2), .seconds(5), .seconds(15)]
 
     func demarrer(client: ClientAPI) {
         arreter()
@@ -57,7 +59,7 @@ final class FluxEvenements {
                 if echecs >= 4 { echecs = 1 }
             } else {
                 // Reconnexion quasi immédiate après une coupure (tunnel, changement de réseau), puis plus espacée.
-                try? await Task.sleep(for: [.milliseconds(300), .seconds(2), .seconds(5), .seconds(15)][min(echecs, 3)])
+                try? await Task.sleep(for: Self.attentesReconnexion[min(echecs, 3)])
                 // Le flux revient : ce qui a pu changer pendant la coupure est relu.
                 if echecs == 0 { signaler([.saisies, .agents]) }
             }

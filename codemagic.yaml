@@ -180,7 +180,10 @@ workflows:
       vars:
         XCODE_PROJECT: ios/EndryPilotage.xcodeproj
         BUNDLE_ID: com.endrysa.endry
-        # Facultatif : APP_STORE_APPLE_ID (identifiant numérique de l'app) en variable Codemagic.
+        # Identifiant numérique public de l'app dans App Store Connect : sert à lire le dernier n° TestFlight.
+        APP_STORE_APPLE_ID: "6816534155"
+        # Plancher : les builds de l'ancien compte Codemagic sont montés jusqu'au n° 33.
+        BUILD_MINIMUM: "34"
     triggering:
       events:
         - tag
@@ -238,6 +241,7 @@ workflows:
           case "$DERNIER" in ''|*[!0-9]*) DERNIER=0 ;; esac
           SUIVANT=$(( DERNIER + 1 ))
           if [ "$SUIVANT" -lt "${BUILD_NUMBER:-1}" ]; then SUIVANT="$BUILD_NUMBER"; fi
+          if [ "$SUIVANT" -lt "${BUILD_MINIMUM:-1}" ]; then SUIVANT="$BUILD_MINIMUM"; fi
           echo "Build n° $SUIVANT"
           cd ios && agvtool new-version -all "$SUIVANT"
       - name: Construire l'IPA

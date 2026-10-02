@@ -33,26 +33,30 @@ struct EnTeteMaison: View {
             .accessibilityLabel(Text("Endry SA, sanitaire, chauffage, ventilation"))
             .accessibilityAddTraits(.isHeader)
             Spacer(minLength: Espace.xs)
-            BoutonRondVerre(libelle: "Rechercher", identifiant: "bouton-recherche") {
-                app.recherchePresentee = true
-            } contenu: {
-                Image(systemName: "magnifyingglass").font(.system(size: 15, weight: .regular))
-            }
-            if app.conversation != nil {
-                BoutonRondVerre(libelle: "Écrire au bureau", identifiant: "ecrire-bureau") {
-                    app.ouvrirConversation()
-                } contenu: {
-                    Image(systemName: "text.bubble").font(.system(size: 15, weight: .regular))
-                }
-            }
-            BoutonRondVerre(libelle: app.session.estDemo ? "Profil et réglages, mode démo" : "Profil et réglages",
-                            identifiant: "bouton-reglages") {
-                app.reglagesPresentes = true
-            } contenu: {
-                if let initiale {
-                    Text(initiale).font(Police.serif(19, relativeTo: .headline))
-                } else {
-                    Image(systemName: "person").font(.system(size: 15, weight: .regular))
+            ConteneurVerre {
+                HStack(spacing: Espace.xs) {
+                    BoutonRondVerre(libelle: "Rechercher", identifiant: "bouton-recherche") {
+                        app.recherchePresentee = true
+                    } contenu: {
+                        Image(systemName: "magnifyingglass").font(.system(size: 15, weight: .regular))
+                    }
+                    if app.conversation != nil {
+                        BoutonRondVerre(libelle: "Écrire au bureau", identifiant: "ecrire-bureau") {
+                            app.ouvrirConversation()
+                        } contenu: {
+                            Image(systemName: "text.bubble").font(.system(size: 15, weight: .regular))
+                        }
+                    }
+                    BoutonRondVerre(libelle: app.session.estDemo ? "Profil et réglages, mode démo" : "Profil et réglages",
+                                    identifiant: "bouton-reglages") {
+                        app.reglagesPresentes = true
+                    } contenu: {
+                        if let initiale {
+                            Text(initiale).font(Police.serif(19, relativeTo: .headline))
+                        } else {
+                            Image(systemName: "person").font(.system(size: 15, weight: .regular))
+                        }
+                    }
                 }
             }
         }

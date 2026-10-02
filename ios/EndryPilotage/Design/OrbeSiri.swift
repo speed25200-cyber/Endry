@@ -34,7 +34,7 @@ struct OrbeSiri: View {
             Canvas { ctx, taille in
                 let c = CGPoint(x: taille.width / 2, y: taille.height / 2)
                 let r = taille.width
-                ctx.addFilter(.blur(radius: r * 0.085))
+                // Volutes en dégradés radiaux (bord déjà fondu) : aucun filtre de flou à recalculer à chaque image.
                 ctx.blendMode = .screen
                 // (couleur, taille relative, orbite relative, vitesse angulaire, phase)
                 let volutes: [(Color, Double, Double, Double, Double)] = [
@@ -47,8 +47,12 @@ struct OrbeSiri: View {
                     let angle = t * vit * vitesse + phase
                     let rayon = r * orbite * (1 + 0.25 * sin(t * 0.8 + phase))
                     let p = CGPoint(x: c.x + cos(angle) * rayon, y: c.y + sin(angle) * rayon)
-                    let s = r * part
-                    ctx.fill(Path(ellipseIn: CGRect(x: p.x - s / 2, y: p.y - s / 2, width: s, height: s)), with: .color(couleur))
+                    let s = r * part * 1.4
+                    ctx.fill(Path(ellipseIn: CGRect(x: p.x - s / 2, y: p.y - s / 2, width: s, height: s)),
+                             with: .radialGradient(Gradient(stops: [.init(color: couleur, location: 0),
+                                                                    .init(color: couleur.opacity(0.8), location: 0.38),
+                                                                    .init(color: couleur.opacity(0), location: 1)]),
+                                                   center: p, startRadius: 0, endRadius: s / 2))
                 }
             }
             .clipShape(Circle())
@@ -56,8 +60,7 @@ struct OrbeSiri: View {
                 .strokeBorder(AngularGradient(colors: [Self.creme.opacity(0), Self.creme.opacity(0.95), Self.glacier.opacity(0.7),
                                                        Self.ambre.opacity(0), Self.creme.opacity(0)],
                                               center: .center),
-                              lineWidth: max(d * 0.05, 1.5))
-                .blur(radius: 0.6)
+                              lineWidth: max(d * 0.045, 1.5))
                 .rotationEffect(.radians(t * 1.75 * vitesse))
                 .padding(d * 0.08)
             // Verre : ombre intérieure en bas, éclat en haut à gauche, liseré.

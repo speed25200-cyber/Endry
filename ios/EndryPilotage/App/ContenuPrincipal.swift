@@ -42,12 +42,7 @@ struct ContenuPrincipal: View {
         @Bindable var documents = app.documents
         ZStack(alignment: .bottom) {
             ZStack {
-                ecran(.aujourdhui) {
-                    if let m = app.decisions {
-                        DecisionsView(modele: m).id(ObjectIdentifier(m))
-                            .environment(\.animationsEnPause, app.conversationPresentee || app.assistantPresente)
-                    }
-                }
+                ecran(.aujourdhui) { if let m = app.decisions { DecisionsView(modele: m).id(ObjectIdentifier(m)) } }
                 ecran(.chantiers) { if let m = app.chantiers { EspaceChantiers(modele: m).id(ObjectIdentifier(m)) } }
                 ecran(.saisie) { if let m = app.saisie { SaisieView(modele: m).id(ObjectIdentifier(m)) } }
                 ecran(.finances) { if let m = app.argent { ArgentView(modele: m).id(ObjectIdentifier(m)) } }
@@ -150,8 +145,10 @@ struct ContenuPrincipal: View {
     private func ecran<Contenu: View>(_ onglet: Onglet, @ViewBuilder contenu: () -> Contenu) -> some View {
         let actif = app.onglet == onglet
         contenu()
+            // Onglet caché ou écran plein par-dessus : ses animations (points en direct, orbe) s'arrêtent.
+            .environment(\.animationsEnPause, !actif || app.conversationPresentee || app.assistantPresente)
+            // Fondu seul (sans mise à l'échelle) : l'écran n'est pas redessiné image par image pendant le changement.
             .opacity(actif ? 1 : 0)
-            .scaleEffect(actif ? 1 : 0.985)
             .allowsHitTesting(actif)
             .accessibilityHidden(!actif)
             // L'écran actif passe devant : les écrans masqués ne recouvrent jamais ses champs.

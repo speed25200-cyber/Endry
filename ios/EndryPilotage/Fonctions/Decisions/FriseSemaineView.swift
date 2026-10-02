@@ -21,9 +21,11 @@ struct FriseSemaineView: View {
                         .foregroundStyle(Color.encreDouce)
                         .frame(height: 30)
                 } else {
-                    DispositionFrise(colonnes: bandes.map(\.debut)) {
-                        ForEach(bandes) { bande in
-                            puce(bande, jours: jours)
+                    ConteneurVerre {
+                        DispositionFrise(colonnes: bandes.map(\.debut)) {
+                            ForEach(bandes) { bande in
+                                puce(bande, jours: jours)
+                            }
                         }
                     }
                 }

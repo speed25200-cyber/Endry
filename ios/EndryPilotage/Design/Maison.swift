@@ -46,9 +46,10 @@ extension View {
     /// bord haut, ombre longue et douce. Sans flou d'arrière-plan : rien ne se recalcule pendant le défilement.
     func tuileMaison(rayon: CGFloat = 24) -> some View {
         let forme = RoundedRectangle(cornerRadius: rayon, style: .continuous)
+        // Ombre portée par le style de remplissage : dessinée avec la forme, sans passe hors écran du contenu.
         return background {
-            forme.fill(LinearGradient(colors: [Color.tuileHaut, Color.tuileTeinte], startPoint: .topLeading, endPoint: .bottomTrailing))
-                .shadow(color: Color.ombre.opacity(0.55), radius: 22, y: 14)
+            forme.fill(LinearGradient(colors: [Color.tuileHaut, Color.tuileTeinte], startPoint: .topLeading, endPoint: .bottomTrailing)
+                .shadow(.drop(color: Color.ombre.opacity(0.55), radius: 22, y: 14)))
         }
         .overlay { forme.strokeBorder(Color.filet, lineWidth: Espace.filet) }
         .overlay {
@@ -76,8 +77,7 @@ extension View {
 
     private func verrePlat<S: InsettableShape>(_ forme: S) -> some View {
         background {
-            forme.fill(Color.verreTeinte)
-                .shadow(color: Color.ombre.opacity(0.5), radius: 16, y: 10)
+            forme.fill(Color.verreTeinte.shadow(.drop(color: Color.ombre.opacity(0.5), radius: 16, y: 10)))
         }
         .overlay { forme.strokeBorder(Color.filet, lineWidth: Espace.filet) }
         .overlay {
@@ -85,6 +85,26 @@ extension View {
                                lineWidth: 1)
                 .opacity(0.6)
         }
+    }
+}
+
+/// Regroupe des éléments de verre voisins : sur iOS 26, un seul échantillonnage de l'arrière-plan pour tout le
+/// groupe (et les formes proches fusionnent comme du verre liquide) au lieu d'une passe par élément.
+struct ConteneurVerre<Contenu: View>: View {
+    /// Distance sous laquelle deux formes fusionnent ; 0 : chacune garde sa forme.
+    var espacement: CGFloat = 0
+    @ViewBuilder var contenu: Contenu
+
+    var body: some View {
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: espacement) { contenu }
+        } else {
+            contenu
+        }
+        #else
+        contenu
+        #endif
     }
 }
 
@@ -212,6 +232,8 @@ struct BarreFine: View {
 }
 
 /// Fond Maison Endry : brun profond (ou papier) et, en haut à gauche, la photo d'ambiance fondue en halo.
+/// La photo est réduite une seule fois à quelques pixels puis agrandie en douceur : le même halo qu'un flou de
+/// 70 pt, sans filtre à recalculer.
 struct FondMaison: View {
     var photo: String? = PhotosMarque.accueil
     @Environment(\.colorScheme) private var schema
@@ -220,21 +242,48 @@ struct FondMaison: View {
         // La photo est posée en calque : elle ne doit jamais élargir l'écran (520 pt > largeur d'un iPhone).
         Color.fond
             .overlay(alignment: .topLeading) {
-                if let photo {
-                    Image(photo)
+                if let photo, let halo = HaloAmbiance.image(photo) {
+                    Image(uiImage: halo)
                         .resizable()
-                        .scaledToFill()
-                        .frame(width: 520, height: 520)
-                        .blur(radius: 70)
-                        .saturation(1.3)
-                        .opacity(schema == .dark ? 0.34 : 0.2)
-                        .offset(x: -90, y: -170)
+                        .interpolation(.high)
+                        .frame(width: 560, height: 560)
+                        .opacity(schema == .dark ? 0.38 : 0.22)
+                        .offset(x: -110, y: -190)
                         .allowsHitTesting(false)
                 }
             }
             .clipped()
             .ignoresSafeArea()
             .accessibilityHidden(true)
+    }
+}
+
+/// Photos d'ambiance réduites à 24 px, fondu radial intégré (calculées une fois, gardées en mémoire) :
+/// ni flou, ni masque, ni filtre de couleur à recalculer à chaque image.
+@MainActor
+enum HaloAmbiance {
+    private static var cache: [String: UIImage] = [:]
+
+    static func image(_ nom: String) -> UIImage? {
+        if let deja = cache[nom] { return deja }
+        guard let source = UIImage(named: nom) else { return nil }
+        let cote: CGFloat = 24
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let petite = UIGraphicsImageRenderer(size: CGSize(width: cote, height: cote), format: format).image { contexte in
+            source.draw(in: CGRect(x: 0, y: 0, width: cote, height: cote))
+            // Fondu radial : opaque au centre, transparent sur les bords.
+            let cg = contexte.cgContext
+            cg.setBlendMode(.destinationIn)
+            let couleurs = [UIColor.black.cgColor, UIColor.black.withAlphaComponent(0).cgColor] as CFArray
+            if let degrade = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: couleurs, locations: [0.15, 1]) {
+                let centre = CGPoint(x: cote / 2, y: cote / 2)
+                cg.drawRadialGradient(degrade, startCenter: centre, startRadius: 0, endCenter: centre, endRadius: cote / 2,
+                                      options: [])
+            }
+        }
+        cache[nom] = petite
+        return petite
     }
 }
 

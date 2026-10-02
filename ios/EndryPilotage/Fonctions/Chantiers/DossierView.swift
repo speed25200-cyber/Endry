@@ -134,11 +134,14 @@ struct DossierView: View {
 
     private func enTete(_ dossier: Dossier) -> some View {
         ZStack(alignment: .bottomLeading) {
+            // Voile vers le fond plutôt qu'un masque : pas de rendu hors écran pendant le lent zoom de la photo.
             PhotoVivante(nom: PhotosMarque.pour(id: dossier.id), mention: false)
                 .frame(height: 340)
-                .opacity(0.55)
-                .mask(LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.45),
-                                             .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom))
+                .overlay {
+                    LinearGradient(stops: [.init(color: Color.fond.opacity(0.45), location: 0),
+                                           .init(color: Color.fond.opacity(0.5), location: 0.45),
+                                           .init(color: Color.fond, location: 1)], startPoint: .top, endPoint: .bottom)
+                }
                 .padding(.horizontal, -Espace.bord)
             VStack(alignment: .leading, spacing: 8) {
                 if !dossier.client.isEmpty {

@@ -20,26 +20,28 @@ struct ActionsTerrain: View {
     ]
 
     var body: some View {
-        HStack(spacing: Espace.xs) {
-            ForEach(actions) { action in
-                Button { action.ouvrir(app) } label: {
-                    VStack(spacing: 6) {
-                        Image(systemName: action.icone)
-                            .font(.system(size: 19, weight: .light))
-                            .foregroundStyle(Color.encre)
-                            .frame(width: 58, height: 58)
-                            .verreMaison(Circle(), interactif: true)
-                        Text(action.titre)
-                            .styleTexte(13, relativeTo: .footnote)
-                            .foregroundStyle(Color.encre)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+        ConteneurVerre {
+            HStack(spacing: Espace.xs) {
+                ForEach(actions) { action in
+                    Button { action.ouvrir(app) } label: {
+                        VStack(spacing: 6) {
+                            Image(systemName: action.icone)
+                                .font(.system(size: 19, weight: .light))
+                                .foregroundStyle(Color.encre)
+                                .frame(width: 58, height: 58)
+                                .verreMaison(Circle(), interactif: true)
+                            Text(action.titre)
+                                .styleTexte(13, relativeTo: .footnote)
+                                .foregroundStyle(Color.encre)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
                     }
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
+                    .buttonStyle(ActionPressee())
+                    .accessibilityIdentifier("action-\(action.id)")
                 }
-                .buttonStyle(ActionPressee())
-                .accessibilityIdentifier("action-\(action.id)")
             }
         }
     }

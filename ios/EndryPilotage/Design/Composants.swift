@@ -339,13 +339,14 @@ struct Squelette: View {
     var largeur: CGFloat? = nil
     var rayon: CGFloat = 8
     @Environment(\.accessibilityReduceMotion) private var reduireAnimations
+    @Environment(\.animationsEnPause) private var enPause
 
     var body: some View {
         RoundedRectangle(cornerRadius: rayon, style: .continuous)
             .fill(Color.surfaceCreuse)
             .frame(width: largeur, height: hauteur)
             .overlay {
-                if !reduireAnimations, !Configuration.testsUI {
+                if !reduireAnimations, !enPause, !Configuration.testsUI {
                     TimelineView(.animation(minimumInterval: 1 / 30)) { contexte in
                         let t = contexte.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 1.6) / 1.6
                         GeometryReader { geo in

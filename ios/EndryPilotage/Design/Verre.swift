@@ -148,6 +148,7 @@ private struct FondBarre: View {
                                   lineWidth: 1)
                     .opacity(0.5)
             }
+            // Barre fixe : son ombre ne change jamais (l'orbe animé est posé au-dessus, hors de ce calque).
             .shadow(color: Color.ombre, radius: 20, y: 14)
     }
 }
@@ -170,8 +171,9 @@ struct BoutonOrbe: View {
             }
             ouvrirAssistant()
         } label: {
+            // L'ombre est portée par un disque fixe derrière l'orbe : elle n'est pas recalculée à chaque image.
             OrbeSiri(diametre: 52, actif: actif || presse)
-                .shadow(color: Color.ombre, radius: 12, y: 8)
+                .background { Circle().fill(Color.fond.shadow(.drop(color: Color.ombre, radius: 12, y: 8))) }
                 .overlay(Circle().strokeBorder(Color.filet, lineWidth: Espace.filet))
                 .scaleEffect(presse ? 1.06 : 1)
                 .frame(width: 60, height: 60)

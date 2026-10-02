@@ -25,7 +25,7 @@ struct SaisieView: View {
                     VStack(alignment: .leading, spacing: Espace.xxs) {
                         Text("Saisie terrain").styleSurtitre()
                         Text("Dites-le, c’est transmis.")
-                            .styleTitre(30, relativeTo: .largeTitle)
+                            .font(Police.serif(36, relativeTo: .largeTitle))
                             .foregroundStyle(Color.encre)
                     }
                     .padding(.top, Espace.m)
@@ -135,7 +135,7 @@ struct SaisieView: View {
                     .accessibilityIdentifier("texte-saisie")
             }
             .padding(Espace.s)
-            .surfaceCarte(rayon: 22)
+            .verreMaison(RoundedRectangle(cornerRadius: 24, style: .continuous))
 
             HStack(spacing: Espace.s) {
                 if VNDocumentCameraViewController.isSupported {

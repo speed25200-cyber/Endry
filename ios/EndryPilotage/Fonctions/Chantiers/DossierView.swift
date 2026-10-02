@@ -46,7 +46,7 @@ struct DossierView: View {
                                     }
                                 } label: {
                                     Text("\(element.type == .offre ? "Offre" : "Facture") \(element.numeroAffiche ?? element.libelle).pdf")
-                                        .font(Police.mono(11))
+                                        .font(Police.mono(12))
                                         .foregroundStyle(Color.encre)
                                         .lineLimit(1)
                                         .padding(.horizontal, 14)
@@ -186,16 +186,8 @@ struct DossierView: View {
         }
     }
 
-    /// Titre en Cormorant ; ce qui suit le tiret long passe en italique (« Villa Morel — *PAC air-eau* »).
     private func titre(_ texte: String) -> some View {
-        let morceaux = texte.components(separatedBy: " — ")
-        let debut = morceaux.first ?? texte
-        let fin = morceaux.dropFirst().joined(separator: " — ")
-        return Text("\(Text(debut))\(Text(fin.isEmpty ? "" : " — "))\(Text(fin).font(Police.serif(40, relativeTo: .largeTitle, italique: true)))")
-            .font(Police.serif(40, relativeTo: .largeTitle))
-            .foregroundStyle(Color.encre)
-            .tracking(-0.4)
-            .fixedSize(horizontal: false, vertical: true)
+        TitreAdaptatif(texte: texte, grand: 40)
             .accessibilityAddTraits(.isHeader)
     }
 
@@ -209,7 +201,7 @@ struct DossierView: View {
                 Text("Avancement").etiquetteMaison()
                 Spacer()
                 Text("Étape \(courant + 1) / \(etapes.count) · \(dossier.etapeLibelle)")
-                    .font(Police.mono(10.5))
+                    .font(Police.mono(11.5))
                     .foregroundStyle(Color.encreDouce)
             }
             HStack(alignment: .top, spacing: 4) {
@@ -239,7 +231,7 @@ struct DossierView: View {
             HStack(alignment: .top, spacing: Espace.m) {
                 if let montant = dossier.montant, !devantClient {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Offre").font(Police.mono(10.5)).foregroundStyle(Color.encreDouce)
+                        Text("Offre").font(Police.mono(11.5)).foregroundStyle(Color.encreDouce)
                         Text(FormatSuisse.francs(montant))
                             .font(Police.serif(30, relativeTo: .title))
                             .monospacedDigit()
@@ -250,7 +242,7 @@ struct DossierView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Période").font(Police.mono(10.5)).foregroundStyle(Color.encreDouce)
+                    Text("Période").font(Police.mono(11.5)).foregroundStyle(Color.encreDouce)
                     Text(periode(dossier))
                         .styleTexte(17, relativeTo: .body)
                         .monospacedDigit()

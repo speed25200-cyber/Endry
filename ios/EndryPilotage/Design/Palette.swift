@@ -50,6 +50,8 @@ extension Color {
     /// Verre et tuiles : crème dorée à peine posée (sombre), blanc laiteux (clair).
     static let verreTeinte = Color(clair: 0xFFFFFF, sombre: 0xF9DBA3, opaciteClair: 0.6, opaciteSombre: 0.06)
     static let tuileTeinte = Color(clair: 0xFFFFFF, sombre: 0xF9DBA3, opaciteClair: 0.72, opaciteSombre: 0.045)
+    /// Haut de tuile, un ton plus clair : donne du relief au dégradé.
+    static let tuileHaut = Color(clair: 0xFFFFFF, sombre: 0xF9DBA3, opaciteClair: 0.9, opaciteSombre: 0.085)
     /// Pastille de genre (« Offre », « E-mail »).
     static let puce = Color(clair: 0xF9DBA3, sombre: 0xF9DBA3, opaciteClair: 0.55, opaciteSombre: 0.12)
     /// Loupe de la barre d'onglets.

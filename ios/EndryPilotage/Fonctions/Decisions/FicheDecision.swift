@@ -42,7 +42,7 @@ struct FicheDecision: View {
                         chantier(dossier).padding(.top, Espace.xl)
                     }
                     Text("Rien ne part chez un tiers sans votre geste.")
-                        .font(Police.mono(10))
+                        .styleTexte(12, relativeTo: .caption)
                         .foregroundStyle(Color.encreDouce)
                         .frame(maxWidth: .infinity)
                         .padding(.top, Espace.xl)
@@ -95,7 +95,7 @@ struct FicheDecision: View {
                     .font(.system(size: 15, weight: .regular))
                     .foregroundStyle(Color.encre)
                     .frame(width: 40, height: 40)
-                    .verreMaison(Circle())
+                    .verreMaison(Circle(), interactif: true)
                     .frame(width: 44, height: 44)
                     .contentShape(Circle())
             }
@@ -104,7 +104,7 @@ struct FicheDecision: View {
             .accessibilityIdentifier("fermer-fiche")
             Spacer(minLength: Espace.xs)
             Text(([carte.genre.uppercased(), carte.reference] + (rang.map { [$0] } ?? [])).joined(separator: " · "))
-                .font(Police.mono(10.5))
+                .font(Police.mono(11.5))
                 .foregroundStyle(Color.encre)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -112,7 +112,7 @@ struct FicheDecision: View {
                 .frame(height: 40)
                 .verreMaison(Capsule())
         }
-        .padding(.top, Espace.m)
+        .padding(.top, Espace.s)
     }
 
     private var rang: String? {
@@ -125,16 +125,8 @@ struct FicheDecision: View {
         return "Proposé par l’assistant" + quand
     }
 
-    /// Titre en Cormorant ; ce qui suit le tiret long passe en italique (« Réponse à Mme Rey — *variante WC* »).
     private var titre: some View {
-        let morceaux = carte.titre.components(separatedBy: " — ")
-        let debut = morceaux.first ?? carte.titre
-        let fin = morceaux.dropFirst().joined(separator: " — ")
-        return Text("\(Text(debut))\(Text(fin.isEmpty ? "" : " — "))\(Text(fin).font(Police.serif(40, relativeTo: .largeTitle, italique: true)))")
-            .font(Police.serif(40, relativeTo: .largeTitle))
-            .foregroundStyle(Color.encre)
-            .tracking(-0.4)
-            .fixedSize(horizontal: false, vertical: true)
+        TitreAdaptatif(texte: carte.titre, grand: 38)
             .accessibilityAddTraits(.isHeader)
     }
 
@@ -176,10 +168,10 @@ struct FicheDecision: View {
 
     private func ligneDetail(_ libelle: String, _ valeur: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: Espace.s) {
-            Text(libelle.uppercased())
-                .font(Police.mono(10.5))
+            Text(libelle)
+                .styleTexte(13, relativeTo: .footnote)
                 .foregroundStyle(Color.encreDouce)
-                .frame(width: 70, alignment: .leading)
+                .frame(width: 64, alignment: .leading)
             Text(valeur)
                 .styleTexte(15, relativeTo: .subheadline)
                 .foregroundStyle(Color.encre)
@@ -192,7 +184,7 @@ struct FicheDecision: View {
 
     private func controleVue(_ controle: Controle) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Contrôle").font(Police.mono(10.5)).textCase(.uppercase).foregroundStyle(Color.encreDouce)
+            Text("Contrôle").etiquetteMaison()
             if controle.pointsAVerifier.isEmpty {
                 pastille(controle.resume, ok: controle.ok)
             } else {
@@ -232,7 +224,7 @@ struct FicheDecision: View {
 
     private func rubrique(_ titre: String, _ texte: String, selection: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(titre).font(Police.mono(10.5)).textCase(.uppercase).foregroundStyle(Color.encreDouce)
+            Text(titre).etiquetteMaison()
             Text(texte)
                 .styleTexte(17, relativeTo: .body)
                 .foregroundStyle(Color.encre)
@@ -260,7 +252,7 @@ struct FicheDecision: View {
                         .foregroundStyle(Color.encre)
                         .lineLimit(2)
                     Text([dossier.client, dossier.etapeLibelle].joined(separator: " · "))
-                        .font(Police.mono(10.5))
+                        .font(Police.mono(11.5))
                         .foregroundStyle(Color.encreDouce)
                 }
                 Spacer(minLength: 0)
@@ -302,8 +294,7 @@ struct FicheDecision: View {
                 HStack(spacing: 0) {
                     Button { confirmationNon = true } label: {
                         Text("Non")
-                            .font(Police.mono(12, relativeTo: .footnote))
-                            .textCase(.uppercase)
+                            .styleTexte(16, relativeTo: .body, graisse: .medium)
                             .foregroundStyle(Color.rouille)
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .contentShape(Rectangle())
@@ -313,8 +304,7 @@ struct FicheDecision: View {
                     // « Corriger » sur toute validation ; `modifiable` ne fait que pré-remplir le texte à retoucher.
                     Button { feuille = .corriger } label: {
                         Text("Corriger")
-                            .font(Police.mono(12, relativeTo: .footnote))
-                            .textCase(.uppercase)
+                            .styleTexte(16, relativeTo: .body, graisse: .medium)
                             .foregroundStyle(Color.encre)
                             .frame(maxWidth: .infinity, minHeight: 50)
                             .contentShape(Rectangle())
@@ -325,16 +315,8 @@ struct FicheDecision: View {
                 .disabled(!modele.actionsPossibles || enCours)
             }
         }
-        .background {
-            RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .fill(Color.fond.opacity(0.55))
-                .background { Color.clear.verre(RoundedRectangle(cornerRadius: 32, style: .continuous)) }
-                .shadow(color: Color.ombre, radius: 24, y: 12)
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 32, style: .continuous)
-                .strokeBorder(Color.filetFort, lineWidth: Espace.filet)
-        }
+        .verreMaison(RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .shadow(color: Color.ombre, radius: 24, y: 12)
         .frame(maxWidth: 560)
     }
 }

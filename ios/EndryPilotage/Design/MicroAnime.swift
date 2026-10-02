@@ -17,21 +17,26 @@ struct MicroAnime: View {
                     // Anneaux concentriques : ils s'écartent avec la voix.
                     ForEach(0..<3, id: \.self) { i in
                         Circle()
-                            .strokeBorder(Color.or.opacity(ecoute ? 0.45 - Double(i) * 0.12 : 0.18 - Double(i) * 0.05), lineWidth: 1)
+                            .strokeBorder(Color.signal.opacity(ecoute ? 0.5 - Double(i) * 0.14 : 0.16 - Double(i) * 0.04), lineWidth: 0.75)
                             .frame(width: diametre + CGFloat(i + 1) * 26, height: diametre + CGFloat(i + 1) * 26)
                             .scaleEffect(ecoute && !reduireAnimations ? 1 + CGFloat(niveau) * (0.10 + CGFloat(i) * 0.06) : 1)
                             .animation(.endry, value: niveau)
                     }
 
-                    Circle()
-                        .fill(ecoute ? AnyShapeStyle(Color.espresso) : AnyShapeStyle(.degradeOr))
-                        .frame(width: diametre, height: diametre)
-                        .overlay(Circle().strokeBorder(Color.or.opacity(ecoute ? 0.9 : 0.5), lineWidth: ecoute ? 2 : 1))
-                        .shadow(color: Color.bronzeMoyen.opacity(ecoute ? 0.2 : 0.45), radius: 24, y: 10)
+                    // Maison Endry : bulle de verre au repos, crème dorée pendant l'écoute.
+                    Group {
+                        if ecoute {
+                            Circle().fill(Color.bouton)
+                                .shadow(color: Color.signal.opacity(0.35), radius: 26, y: 8)
+                        } else {
+                            Color.clear.verreMaison(Circle(), interactif: true)
+                        }
+                    }
+                    .frame(width: diametre, height: diametre)
 
-                    Image(systemName: ecoute ? "stop.fill" : "mic.fill")
-                        .font(.system(size: diametre * 0.3, weight: .semibold))
-                        .foregroundStyle(ecoute ? Color.or : Color.espresso)
+                    Image(systemName: ecoute ? "stop.fill" : "mic")
+                        .font(.system(size: diametre * 0.26, weight: ecoute ? .semibold : .light))
+                        .foregroundStyle(ecoute ? Color.boutonTexte : Color.encre)
                         .contentTransition(.symbolEffect(.replace))
                 }
                 .keyframeAnimator(initialValue: 1.0, trigger: ecoute) { contenu, echelle in
@@ -43,9 +48,6 @@ struct MicroAnime: View {
                         SpringKeyframe(1.0, duration: 0.3)
                     }
                 }
-                .phaseAnimator(ecoute || reduireAnimations ? [false] : [false, true]) { contenu, phase in
-                    contenu.scaleEffect(phase ? 1.035 : 1)
-                } animation: { _ in .easeInOut(duration: 2.2) }
             }
             .buttonStyle(.plain)
             .frame(height: diametre + 90)
@@ -70,7 +72,7 @@ struct FormeOnde: View {
         HStack(alignment: .center, spacing: 3) {
             ForEach(Array(historique.enumerated()), id: \.offset) { index, valeur in
                 Capsule()
-                    .fill(active ? AnyShapeStyle(.degradeOr) : AnyShapeStyle(Color.filet))
+                    .fill(active ? Color.signal : Color.filetFort)
                     .frame(width: 3, height: max(3, CGFloat(active ? valeur : 0.05) * 36 * enveloppe(index)))
                     .animation(.endry, value: valeur)
             }

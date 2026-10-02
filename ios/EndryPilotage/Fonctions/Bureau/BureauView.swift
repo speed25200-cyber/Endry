@@ -38,7 +38,7 @@ struct SectionBureau: View {
             enTete
             if let service = modele.service {
                 Label(service, systemImage: service.hasPrefix("Hors") ? "moon.zzz" : "clock")
-                    .font(Police.mono(10.5))
+                    .font(Police.mono(11.5))
                     .foregroundStyle(service.hasPrefix("Hors") ? Color.ambre : Color.encreDouce)
                     .padding(.top, Espace.xs)
                     .accessibilityIdentifier("service-assistant")
@@ -58,7 +58,7 @@ struct SectionBureau: View {
                 HStack(alignment: .firstTextBaseline) {
                     Text("Journal").etiquetteMaison()
                     Spacer()
-                    Text("Aujourd’hui").font(Police.mono(10.5)).foregroundStyle(Color.encreDouce)
+                    Text("Aujourd’hui").font(Police.mono(11.5)).foregroundStyle(Color.encreDouce)
                 }
                 .padding(.top, Espace.xl)
                 VStack(alignment: .leading, spacing: 0) {
@@ -183,7 +183,7 @@ struct TuileAgent: View {
                 Spacer(minLength: 4)
                 Text(taches)
             }
-            .font(Police.mono(10.5))
+            .font(Police.mono(11.5))
             .foregroundStyle(Color.encreDouce)
             .lineLimit(1)
         }
@@ -269,6 +269,7 @@ struct LigneJournal: View {
                 Text(entree.titre)
                     .styleTexte(15, relativeTo: .subheadline)
                     .foregroundStyle(Color.encre)
+                    .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
                 Text([agent?.nom, statut].compactMap { $0 }.joined(separator: " · "))
                     .styleTexte(13, relativeTo: .footnote)
@@ -278,7 +279,7 @@ struct LigneJournal: View {
             Spacer(minLength: Espace.xs)
             if let date = entree.date {
                 Text(Self.heure(date))
-                    .font(Police.mono(10.5))
+                    .font(Police.mono(11.5))
                     .foregroundStyle(Color.encreDouce)
                     .padding(.top, 2)
             }

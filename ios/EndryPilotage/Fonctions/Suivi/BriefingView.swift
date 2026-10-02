@@ -19,7 +19,7 @@ struct CarteBriefing: View {
                 Image(systemName: app.lecteur.enLecture ? "pause.fill" : "play.fill")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Color.boutonTexte)
-                    .frame(width: 40, height: 40)
+                    .frame(width: 44, height: 44)
                     .background(Color.bouton, in: Circle())
                     .contentTransition(.symbolEffect(.replace))
             }
@@ -33,7 +33,7 @@ struct CarteBriefing: View {
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 5) {
                         Text("Briefing du jour")
-                            .styleTexte(13, relativeTo: .subheadline)
+                            .styleTexte(15, relativeTo: .subheadline)
                             .foregroundStyle(Color.encre)
                         if app.lecteur.enLecture, let debutLecture {
                             TimelineView(.periodic(from: debutLecture, by: 0.25)) { contexte in
@@ -44,7 +44,7 @@ struct CarteBriefing: View {
                         }
                     }
                     Text(Self.minutesSecondes(duree))
-                        .font(Police.mono(10.5))
+                        .font(Police.mono(11.5))
                         .foregroundStyle(Color.encreDouce)
                         .padding(.trailing, 8)
                 }
@@ -55,8 +55,8 @@ struct CarteBriefing: View {
         }
         .padding(.leading, 6)
         .padding(.trailing, 8)
-        .frame(height: 50)
-        .tuileMaison(rayon: 26)
+        .frame(height: 58)
+        .tuileMaison(rayon: 29)
         .onChange(of: app.lecteur.enLecture) { _, lecture in
             if !lecture { debutLecture = nil }
         }

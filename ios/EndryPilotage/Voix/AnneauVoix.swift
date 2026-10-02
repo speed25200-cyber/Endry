@@ -68,7 +68,7 @@ struct AnneauVoix: View {
                 .monospacedDigit()
                 .foregroundStyle(Color.encre)
             Text(Self.libelle(assistant?.phase ?? .preparation))
-                .font(Police.mono(11))
+                .font(Police.mono(12))
                 .textCase(.uppercase)
                 .tracking(1.2)
                 .foregroundStyle(Color.encreDouce)

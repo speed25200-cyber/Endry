@@ -97,7 +97,7 @@ struct ArgentView: View {
                 .foregroundStyle(Color.encreDouce)
             HStack(alignment: .lastTextBaseline, spacing: 6) {
                 Text("CHF")
-                    .font(Police.mono(11))
+                    .font(Police.mono(12))
                     .foregroundStyle(Color.encreDouce)
                 Text(FormatSuisse.francs(montant))
                     .font(Police.serif(64, relativeTo: .largeTitle))
@@ -156,7 +156,7 @@ struct ArgentView: View {
                 .padding(.top, Espace.s)
             }
             Text("Suivi seulement : aucune relance ne part sans votre demande.")
-                .font(Police.mono(10))
+                .font(Police.mono(11.5))
                 .foregroundStyle(Color.encreDouce)
                 .padding(.top, Espace.s)
         }
@@ -190,7 +190,7 @@ struct ArgentView: View {
                 }
                 .padding(.top, Espace.l)
                 Text("Les paiements se signent dans l’e-banking ; l’app n’émet aucun paiement.")
-                    .font(Police.mono(10))
+                    .font(Police.mono(11.5))
                     .foregroundStyle(Color.encreDouce)
                     .padding(.top, Espace.s)
 
@@ -277,7 +277,7 @@ struct ArgentView: View {
                 Spacer(minLength: Espace.xs)
                 ForEach(["PDF", "Excel"], id: \.self) { format in
                     Text(format)
-                        .font(Police.mono(10.5))
+                        .font(Police.mono(11.5))
                         .foregroundStyle(Color.encre)
                         .padding(.horizontal, 12)
                         .frame(height: 32)

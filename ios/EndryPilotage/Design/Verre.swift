@@ -101,7 +101,7 @@ struct BarreOnglets: View {
                     .font(.system(size: 18, weight: .light))
                     .frame(height: 20)
                 Text(onglet.titre)
-                    .font(.system(size: 9.5, weight: actif ? .medium : .regular))
+                    .font(.system(size: 10.5, weight: actif ? .medium : .regular))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }

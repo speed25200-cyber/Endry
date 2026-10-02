@@ -100,12 +100,12 @@ struct TuileFinances: View {
     private func ligne(_ titre: String, _ montant: Double) -> some View {
         HStack(alignment: .firstTextBaseline) {
             Text(titre)
-                .styleTexte(11.5, relativeTo: .caption)
+                .styleTexte(13, relativeTo: .caption)
                 .foregroundStyle(Color.encreDouce)
                 .lineLimit(1)
             Spacer(minLength: 4)
             Text(FormatSuisse.francs(montant))
-                .font(Police.serif(20, relativeTo: .headline))
+                .font(Police.serif(23, relativeTo: .headline))
                 .monospacedDigit()
                 .foregroundStyle(Color.encre)
                 .lineLimit(1)
@@ -128,7 +128,7 @@ struct TuileChantiers: View {
                     Text("Chantiers").etiquetteMaison()
                     Spacer(minLength: 4)
                     Text("Sem. \(Self.numeroSemaine())")
-                        .font(Police.mono(10.5))
+                        .font(Police.mono(11.5))
                         .foregroundStyle(Color.encreDouce)
                 }
                 Spacer(minLength: Espace.s)
@@ -148,7 +148,7 @@ struct TuileChantiers: View {
                     }
                 } else {
                     Text("Rien de planifié")
-                        .styleTexte(11.5, relativeTo: .caption)
+                        .styleTexte(13, relativeTo: .caption)
                         .foregroundStyle(Color.encreDouce)
                 }
             }
@@ -167,13 +167,13 @@ struct TuileChantiers: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
                 Text(Self.nomCourt(titre: titre, client: client))
-                    .styleTexte(11.5, relativeTo: .caption)
+                    .styleTexte(13, relativeTo: .caption)
                     .foregroundStyle(Color.encre)
                     .lineLimit(1)
                 Spacer(minLength: 4)
                 if let etape {
                     Text("\(etape.index + 1)/\(EtapeChantier.allCases.count)")
-                        .font(Police.mono(10.5))
+                        .font(Police.mono(11.5))
                         .foregroundStyle(Color.encreDouce)
                 }
             }

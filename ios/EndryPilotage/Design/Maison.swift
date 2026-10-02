@@ -5,34 +5,33 @@ import UIKit
 // MARK: - Maison Endry : briques de la maquette E (voir ios/Maquettes/MaisonEndry/STYLE.md)
 
 extension Police {
-    /// Cormorant Garamond à la taille de la maquette (hors échelle : grands chiffres, titres de tuile),
-    /// mis à l'échelle avec Dynamic Type.
+    /// Cormorant Garamond à la taille voulue (grands chiffres, titres courts), mis à l'échelle avec Dynamic Type.
     static func serif(_ taille: CGFloat, relativeTo style: Font.TextStyle = .title, italique: Bool = false) -> Font {
         .custom(italique ? GraisseTitre.italique.nom : GraisseTitre.medium.nom, size: taille, relativeTo: style)
     }
 
-    /// Chiffres et repères discrets (heures, « 4/7 », « Glisser pour valider ») : SF Mono.
-    static func mono(_ taille: CGFloat = 10.5, relativeTo style: Font.TextStyle = .caption2) -> Font {
+    /// Chiffres et repères discrets (heures, « 4/7 », références) : SF Mono.
+    static func mono(_ taille: CGFloat = 11.5, relativeTo style: Font.TextStyle = .caption) -> Font {
         .system(size: UIFontMetrics(forTextStyle: style.uiKit).scaledValue(for: taille), weight: .regular, design: .monospaced)
     }
 }
 
 extension View {
     /// Étiquette de section Cinzel en capitales espacées (« À DÉCIDER », « FINANCES »).
-    func etiquetteMaison(_ taille: CGFloat = 10.5, couleur: Color = .etiquette) -> some View {
+    func etiquetteMaison(_ taille: CGFloat = 11.5, couleur: Color = .etiquette) -> some View {
         font(Police.etiquette(taille))
             .textCase(.uppercase)
-            .tracking(taille * 0.2)
+            .tracking(taille * 0.18)
             .foregroundStyle(couleur)
     }
 
-    /// Tuile Maison Endry : surface à peine teintée, filet fin, reflet sur le bord haut, ombre longue et douce.
-    /// Volontairement sans flou d'arrière-plan : rien ne se recalcule pendant le défilement.
+    /// Tuile Maison Endry : surface teintée en dégradé (plus claire en haut à gauche), filet fin, reflet sur le
+    /// bord haut, ombre longue et douce. Sans flou d'arrière-plan : rien ne se recalcule pendant le défilement.
     func tuileMaison(rayon: CGFloat = 24) -> some View {
         let forme = RoundedRectangle(cornerRadius: rayon, style: .continuous)
         return background {
-            forme.fill(Color.tuileTeinte)
-                .shadow(color: Color.ombre.opacity(0.55), radius: 20, y: 14)
+            forme.fill(LinearGradient(colors: [Color.tuileHaut, Color.tuileTeinte], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .shadow(color: Color.ombre.opacity(0.55), radius: 22, y: 14)
         }
         .overlay { forme.strokeBorder(Color.filet, lineWidth: Espace.filet) }
         .overlay {
@@ -42,9 +41,23 @@ extension View {
         }
     }
 
-    /// Verre Maison Endry pour les pastilles et boutons ronds posés sur le fond (statut, recherche, actions).
-    /// Teinte crème et filet : même rendu sur toutes les versions d'iOS, sans effet de verre animé.
-    func verreMaison<S: InsettableShape>(_ forme: S) -> some View {
+    /// Verre Maison Endry pour ce qui flotte (pastilles, boutons ronds, barres) : Liquid Glass teinté crème
+    /// sur iOS 26 (réagit au toucher si `interactif`), verre teinté et filet avant.
+    @ViewBuilder
+    func verreMaison<S: InsettableShape>(_ forme: S, interactif: Bool = false) -> some View {
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            glassEffect(interactif ? Glass.regular.tint(Color.verreTeinte).interactive() : Glass.regular.tint(Color.verreTeinte), in: forme)
+                .overlay { forme.strokeBorder(Color.filet, lineWidth: Espace.filet) }
+        } else {
+            verrePlat(forme)
+        }
+        #else
+        verrePlat(forme)
+        #endif
+    }
+
+    private func verrePlat<S: InsettableShape>(_ forme: S) -> some View {
         background {
             forme.fill(Color.verreTeinte)
                 .shadow(color: Color.ombre.opacity(0.5), radius: 16, y: 10)
@@ -54,6 +67,48 @@ extension View {
             forme.strokeBorder(LinearGradient(colors: [Color.refletBord, .clear], startPoint: .topLeading, endPoint: .center),
                                lineWidth: 1)
                 .opacity(0.6)
+        }
+    }
+}
+
+/// Titre adaptatif : le Cormorant d'apparat pour les titres courts ; plus le texte est long, plus il se fait
+/// discret, jusqu'au texte courant (SF Pro) au-delà de 110 signes — jamais de mur de grandes lettres.
+/// Ce qui suit un tiret long passe en italique (« Réponse à Mme Rey — *variante WC* »).
+struct TitreAdaptatif: View {
+    var texte: String
+    /// Taille du serif pour un titre court.
+    var grand: CGFloat = 36
+    var lignes: Int? = nil
+    var couleur: Color = .encre
+
+    private var longueur: Int { texte.count }
+
+    private var taille: CGFloat {
+        switch longueur {
+        case ...32: grand
+        case ...64: (grand * 0.78).rounded()
+        default: max((grand * 0.64).rounded(), 22)
+        }
+    }
+
+    var body: some View {
+        if longueur > 110 {
+            Text(texte)
+                .styleTexte(19, relativeTo: .title3, graisse: .medium)
+                .lineSpacing(4)
+                .foregroundStyle(couleur)
+                .lineLimit(lignes)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            let morceaux = texte.components(separatedBy: " — ")
+            let debut = morceaux.first ?? texte
+            let fin = morceaux.dropFirst().joined(separator: " — ")
+            Text("\(Text(debut))\(Text(fin.isEmpty ? "" : " — "))\(Text(fin).font(Police.serif(taille, relativeTo: .title, italique: true)))")
+                .font(Police.serif(taille, relativeTo: .title))
+                .tracking(-0.3)
+                .foregroundStyle(couleur)
+                .lineLimit(lignes)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
@@ -95,9 +150,9 @@ struct BoutonRondVerre<Contenu: View>: View {
         Button(action: action) {
             contenu
                 .foregroundStyle(Color.encre)
-                .frame(width: 40, height: 40)
-                .verreMaison(Circle())
-                .frame(width: 44, height: 44)
+                .frame(width: 42, height: 42)
+                .verreMaison(Circle(), interactif: true)
+                .frame(width: 46, height: 46)
                 .contentShape(Circle())
         }
         .buttonStyle(ActionPressee())
@@ -187,7 +242,7 @@ struct Histogramme: View {
             HStack(spacing: 6) {
                 ForEach(barres) { barre in
                     Text(barre.libelle)
-                        .font(Police.mono(9.5))
+                        .font(Police.mono(11))
                         .foregroundStyle(Color.encreDouce)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -213,24 +268,24 @@ struct LigneMaison: View {
         HStack(alignment: .center, spacing: Espace.s) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(titre)
-                    .styleTexte(15, relativeTo: .subheadline)
+                    .styleTexte(16, relativeTo: .subheadline)
                     .foregroundStyle(Color.encre)
                     .lineLimit(1)
                 Text(detail)
-                    .font(Police.mono(10.5))
+                    .font(Police.mono(11.5))
                     .foregroundStyle(Color.encreDouce)
                     .lineLimit(1)
             }
             Spacer(minLength: Espace.xs)
             VStack(alignment: .trailing, spacing: 3) {
                 Text(montant)
-                    .font(Police.serif(20, relativeTo: .headline))
+                    .font(Police.serif(23, relativeTo: .headline))
                     .monospacedDigit()
                     .foregroundStyle(Color.encre)
                     .lineLimit(1)
                 if let etat {
                     Text(etat)
-                        .font(Police.mono(10.5))
+                        .font(Police.mono(11.5))
                         .foregroundStyle(etatAlerte ? Color.rouille : etatAccent ? Color.signal : Color.encreDouce)
                         .lineLimit(1)
                 }

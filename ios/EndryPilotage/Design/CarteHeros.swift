@@ -38,40 +38,20 @@ struct AuroreOr: View {
 
 /// Fond des écrans : noir chaud (ou ivoire), aurore or presque imperceptible, grain photographique léger
 /// (shader Metal). Figé : rendu une fois, le défilement ne le redessine pas.
+/// Fond des écrans secondaires (Maison Endry) : brun profond ou papier, une lueur crème à peine posée en haut.
+/// Aucun dégradé animé ni grain : rien ne se recalcule pendant le défilement.
 struct FondAmbiant: View {
-    @Environment(\.colorScheme) private var schema
-
     var body: some View {
-        ZStack(alignment: .top) {
-            Color.fond
-            MeshGradient(
-                width: 3,
-                height: 3,
-                points: AuroreOr.points(t: 7, amplitude: 1),
-                colors: schema == .dark ? Self.nuit : Self.jour,
-                smoothsColors: true
-            )
-            .frame(height: 560)
-            .mask(LinearGradient(colors: [.black, .black.opacity(0.6), .clear], startPoint: .top, endPoint: .bottom))
-        }
-        .colorEffect(ShaderLibrary.grain(.float(schema == .dark ? 0.035 : 0.025)))
-        .ignoresSafeArea()
-        .accessibilityHidden(true)
+        Color.fond
+            .overlay(alignment: .topLeading) {
+                RadialGradient(colors: [Color.signal.opacity(0.10), .clear], center: .topLeading, startRadius: 0, endRadius: 420)
+                    .allowsHitTesting(false)
+            }
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
     }
-
-    private static let nuit: [Color] = [
-        Color(hex: 0x33281C), Color(hex: 0x241C15), Color(hex: 0x211A13),
-        Color(hex: 0x2A2118), Color(hex: 0x3A2D1C), Color(hex: 0x221B14),
-        Color(hex: 0x211A13), Color(hex: 0x211A13), Color(hex: 0x211A13),
-    ]
-    private static let jour: [Color] = [
-        Color(hex: 0xEFE7D8), Color(hex: 0xF6F5F2), Color(hex: 0xF6F5F2),
-        Color(hex: 0xF3EDE2), Color(hex: 0xEDE2CD), Color(hex: 0xF6F5F2),
-        Color(hex: 0xF6F5F2), Color(hex: 0xF6F5F2), Color(hex: 0xF6F5F2),
-    ]
 }
 
-/// Matière des cartes héros : aurore + grain + lueur chaude (shader Metal), filet doré. Figée.
 struct MatiereEspresso: View {
     var rayon: CGFloat = Espace.rayon
 

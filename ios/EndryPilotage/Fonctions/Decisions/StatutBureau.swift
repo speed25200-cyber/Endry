@@ -12,18 +12,18 @@ struct StatutBureau: View {
             HStack(spacing: Espace.xs) {
                 PointVeille(couleur: .sauge, actif: modele.enDirect)
                 Text("\(Text(titre).foregroundStyle(Color.encre).fontWeight(.medium))\(Text(detail).foregroundStyle(Color.encreDouce))")
-                    .styleTexte(12.5, relativeTo: .footnote)
+                    .styleTexte(14, relativeTo: .footnote)
                     .lineLimit(1)
                     .truncationMode(.tail)
                 Spacer(minLength: Espace.xs)
                 Text(compte)
-                    .font(Police.mono(10.5))
+                    .font(Police.mono(11.5))
                     .foregroundStyle(Color.encreDouce)
                     .lineLimit(1)
                     .fixedSize()
             }
-            .padding(.horizontal, Espace.s)
-            .frame(maxWidth: .infinity, minHeight: 34)
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, minHeight: 42)
             .verreMaison(Capsule())
             .contentShape(Capsule())
         }

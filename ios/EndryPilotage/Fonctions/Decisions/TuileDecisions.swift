@@ -52,10 +52,10 @@ struct TuileDecisions: View {
                     .accessibilityAddTraits(.isHeader)
                     .accessibilityIdentifier("titre-a-decider")
                 Text(carte.genre)
-                    .font(Police.mono(9.5))
+                    .font(Police.mono(12))
                     .foregroundStyle(Color.encre)
-                    .padding(.horizontal, 8)
-                    .frame(height: 20)
+                    .padding(.horizontal, 9)
+                    .frame(height: 22)
                     .background(Color.puce, in: Capsule())
                     .lineLimit(1)
                 Spacer(minLength: Espace.xs)
@@ -69,13 +69,8 @@ struct TuileDecisions: View {
             }
 
             Button { ouvrir(carte) } label: {
-                Text(carte.titre)
-                    .font(Police.serif(23, relativeTo: .title3))
-                    .tracking(-0.2)
-                    .foregroundStyle(Color.encre)
+                TitreAdaptatif(texte: carte.titre, grand: 26, lignes: 3)
                     .multilineTextAlignment(.leading)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, 8)
                     .contentShape(Rectangle())

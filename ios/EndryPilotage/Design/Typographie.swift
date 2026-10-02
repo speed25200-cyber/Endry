@@ -95,10 +95,7 @@ extension View {
 
     /// Étiquette en capitales Cinzel, espacées comme la devise du logo.
     func styleSurtitre() -> some View {
-        font(Police.etiquette(Echelle.micro))
-            .textCase(.uppercase)
-            .tracking(2.2)
-            .foregroundStyle(Color.bronze)
+        etiquetteMaison()
     }
 
     func styleTexte(_ taille: CGFloat = 17, relativeTo style: Font.TextStyle = .body, graisse: Police.GraisseTexte = .regular) -> some View {

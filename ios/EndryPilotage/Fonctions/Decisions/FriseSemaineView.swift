@@ -17,9 +17,9 @@ struct FriseSemaineView: View {
             VStack(alignment: .leading, spacing: 10) {
                 if bandes.isEmpty {
                     Text("Aucun chantier planifié cette semaine")
-                        .font(Police.mono(10.5))
+                        .font(Police.mono(11.5))
                         .foregroundStyle(Color.encreDouce)
-                        .frame(height: 24)
+                        .frame(height: 30)
                 } else {
                     DispositionFrise(colonnes: bandes.map(\.debut)) {
                         ForEach(bandes) { bande in
@@ -42,16 +42,16 @@ struct FriseSemaineView: View {
     private func puce(_ bande: FriseSemaine.Bande, jours: [Date]) -> some View {
         HStack(spacing: 6) {
             Text(jours.indices.contains(bande.debut) ? DateEndry.jourAbrege(jours[bande.debut]).prefix(2).capitalized : "")
-                .font(Police.mono(10.5))
+                .font(Police.mono(11.5))
                 .foregroundStyle(Color.encreDouce)
             Text(Self.titreCourt(bande.titre))
-                .styleTexte(11.5, relativeTo: .caption)
+                .styleTexte(13, relativeTo: .caption)
                 .foregroundStyle(Color.encre)
                 .lineLimit(1)
         }
-        .padding(.horizontal, 10)
-        .frame(height: 24)
-        .tuileMaison(rayon: 12)
+        .padding(.horizontal, 12)
+        .frame(height: 30)
+        .verreMaison(Capsule())
     }
 
     /// « Villa Morel — PAC air-eau 10 kW » → « Villa Morel ».
@@ -65,7 +65,7 @@ struct FriseSemaineView: View {
 /// et sans dépasser le bord droit.
 struct DispositionFrise: Layout {
     var colonnes: [Int]
-    var hauteur: CGFloat = 24
+    var hauteur: CGFloat = 30
     var ecart: CGFloat = 6
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
@@ -147,7 +147,7 @@ struct AxeSemaine: View {
                 ForEach(Array(jours.enumerated()), id: \.offset) { _, jour in
                     let aujourdhui = DateEndry.memeJour(jour, maintenant)
                     Text("\(DateEndry.jourAbrege(jour).prefix(2).capitalized) \(DateEndry.numeroJour(jour))")
-                        .font(Police.mono(9.5))
+                        .font(Police.mono(11))
                         .foregroundStyle(aujourdhui ? Color.signal : Color.encreDouce)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)

@@ -175,7 +175,7 @@ struct LigneChantier: View {
             }
             .padding(.top, 6)
             Text([dossier.lieu, dossier.dates].compactMap { $0 }.joined(separator: " · "))
-                .font(Police.mono(10.5))
+                .font(Police.mono(11.5))
                 .foregroundStyle(Color.encreDouce)
                 .lineLimit(1)
                 .padding(.top, 4)
@@ -192,7 +192,7 @@ struct LigneChantier: View {
                 Spacer()
                 Text("Étape \(courant + 1) / \(etapes)")
             }
-            .font(Police.mono(10.5))
+            .font(Police.mono(11.5))
             .foregroundStyle(Color.encreDouce)
             .padding(.top, 8)
         }

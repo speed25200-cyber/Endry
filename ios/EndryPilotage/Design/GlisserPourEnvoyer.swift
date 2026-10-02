@@ -54,7 +54,7 @@ struct GlisserPourEnvoyer: View {
                     .padding(.leading, marge + diametre / 2)
 
                 Text(enCours ? (envoi ? "Envoi…" : "Validation…") : valide ? (envoi ? "Envoyé" : "Validé") : libelle)
-                    .font(Police.mono(11, relativeTo: .footnote))
+                    .font(Police.mono(12, relativeTo: .footnote))
                     .foregroundStyle(Color.encreDouce)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)

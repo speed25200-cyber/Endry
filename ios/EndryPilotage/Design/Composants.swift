@@ -3,22 +3,23 @@ import SwiftUI
 
 // MARK: - Surfaces
 
+/// Carte Maison Endry : la surface par défaut est la tuile de la maquette (dégradé teinté, filet, reflet,
+/// ombre longue) ; une couleur de remplissage explicite garde un aplat (états, alertes).
 struct SurfaceCarte: ViewModifier {
     var rayon: CGFloat = Espace.rayon
     var remplissage: Color = .surface
 
     func body(content: Content) -> some View {
-        let forme = RoundedRectangle(cornerRadius: rayon, style: .continuous)
-        content
-            .background {
-                // Ombre portée par la forme seule : aucun rendu hors écran du contenu pendant le défilement.
-                forme.fill(remplissage.shadow(.drop(color: Color.ombre, radius: 22, y: 12)))
-                    // Lumière rasante venue du haut : la carte semble taillée dans la matière.
-                    .overlay(forme.fill(LinearGradient(colors: [Color.reflet, .clear],
-                                                       startPoint: .top, endPoint: .center)))
-            }
-            // Filet or 0.5 pt à 18 %.
-            .overlay { forme.strokeBorder(Color.bordureOr, lineWidth: Espace.filet) }
+        if remplissage == .surface {
+            content.tuileMaison(rayon: rayon)
+        } else {
+            let forme = RoundedRectangle(cornerRadius: rayon, style: .continuous)
+            content
+                .background {
+                    forme.fill(remplissage.shadow(.drop(color: Color.ombre, radius: 22, y: 12)))
+                }
+                .overlay { forme.strokeBorder(Color.filet, lineWidth: Espace.filet) }
+        }
     }
 }
 
@@ -60,6 +61,7 @@ private struct ApparitionCascade: ViewModifier {
 
 // MARK: - En-têtes
 
+/// En-tête de section Maison Endry : étiquette Cinzel, détail en mono, action discrète à droite.
 struct EnTeteSection: View {
     var titre: String
     var detail: String? = nil
@@ -67,12 +69,13 @@ struct EnTeteSection: View {
     var libelleAction = "Tout voir"
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(titre).styleTitre(22, relativeTo: .title3)
-                .foregroundStyle(Color.encre)
+        HStack(alignment: .firstTextBaseline, spacing: Espace.xs) {
+            Text(titre).etiquetteMaison()
             if let detail {
-                Text(detail).styleTexte(13, relativeTo: .footnote, graisse: .medium)
-                    .foregroundStyle(Color.encrePale)
+                Text(detail)
+                    .font(Police.mono(11.5))
+                    .foregroundStyle(Color.encreDouce)
+                    .lineLimit(1)
             }
             Spacer()
             if let action {
@@ -451,28 +454,27 @@ private struct EtiquetteBouton<Etiquette: View>: View {
     var body: some View {
         if principal {
             label
-                .styleTexte(17, relativeTo: .body, graisse: .semibold)
-                .foregroundStyle(Color.espressoProfond)
-                .frame(maxWidth: .infinity, minHeight: 54)
+                .styleTexte(17, relativeTo: .body, graisse: .medium)
+                .foregroundStyle(couleur == nil ? Color.boutonTexte : Color.espressoProfond)
+                .frame(maxWidth: .infinity, minHeight: 56)
                 .padding(.horizontal, Espace.m)
                 .background {
                     Capsule()
-                        .fill(couleur.map { AnyShapeStyle($0) } ?? AnyShapeStyle(.degradeOr))
-                        .overlay(Capsule().fill(LinearGradient(colors: [Color.white.opacity(0.28), .clear],
+                        .fill(couleur ?? Color.bouton)
+                        .overlay(Capsule().fill(LinearGradient(colors: [Color.white.opacity(0.18), .clear],
                                                                startPoint: .top, endPoint: .center)))
                         .opacity(actif ? 1 : 0.35)
                 }
-                .shadow(color: (couleur ?? Color.or).opacity(actif ? 0.35 : 0), radius: presse ? 6 : 14, y: presse ? 2 : 6)
+                .shadow(color: Color.ombre.opacity(actif ? 1 : 0), radius: presse ? 6 : 16, y: presse ? 3 : 10)
                 .scaleEffect(presse ? 0.97 : 1)
                 .animation(.endryVif, value: presse)
         } else {
             label
-                .styleTexte(17, relativeTo: .body, graisse: .semibold)
+                .styleTexte(17, relativeTo: .body, graisse: .medium)
                 .foregroundStyle((couleur ?? Color.encre).opacity(actif ? 1 : 0.4))
-                .frame(maxWidth: .infinity, minHeight: 54)
+                .frame(maxWidth: .infinity, minHeight: 56)
                 .padding(.horizontal, Espace.m)
-                .background(Color.surfaceCreuse.opacity(presse ? 1 : 0.6), in: Capsule())
-                .overlay(Capsule().strokeBorder(Color.bordureOr, lineWidth: Espace.filet))
+                .verreMaison(Capsule())
                 .scaleEffect(presse ? 0.97 : 1)
                 .animation(.endryVif, value: presse)
         }
@@ -494,7 +496,7 @@ struct PuceFiltre: View {
                 Text(libelle).styleTexte(13.5, relativeTo: .subheadline, graisse: selectionne ? .medium : .regular)
                 if let nombre {
                     Text("\(nombre)")
-                        .font(Police.mono(10.5))
+                        .font(Police.mono(11.5))
                         .foregroundStyle(Color.encreDouce)
                         .contentTransition(.numericText(value: Double(nombre)))
                 }

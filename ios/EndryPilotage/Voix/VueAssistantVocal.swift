@@ -47,7 +47,7 @@ struct VueAssistantVocal: View {
                         }
                         if let nom = assistant?.nomMoteur, !nom.isEmpty {
                             Label(nom, systemImage: nom.contains("Apple Intelligence") ? "sparkles" : "waveform")
-                                .font(Police.mono(10))
+                                .font(Police.mono(11.5))
                                 .foregroundStyle(Color.encreDouce.opacity(0.7))
                                 .padding(.top, 6)
                                 .accessibilityLabel(Text("Moteur vocal : \(nom)"))
@@ -164,7 +164,7 @@ struct VueAssistantVocal: View {
             HStack(spacing: 8) {
                 PointVeille(couleur: .sauge, actif: assistant?.pret ?? false)
                 Text(ReglageVoix.relaisBureau ? "Relais direct · bureau" : "Endry · assistant")
-                    .font(Police.mono(11))
+                    .font(Police.mono(12))
                     .textCase(.uppercase)
                     .tracking(0.8)
                     .foregroundStyle(Color.encre)
@@ -389,7 +389,7 @@ private struct TranscriptionAssistant: View {
                             Spacer()
                             Text("FR-CH")
                         }
-                        .font(Police.mono(10.5))
+                        .font(Police.mono(11.5))
                         .textCase(.uppercase)
                         .foregroundStyle(Color.encreDouce)
                         Rectangle().fill(Color.filetFort).frame(height: Espace.filet)

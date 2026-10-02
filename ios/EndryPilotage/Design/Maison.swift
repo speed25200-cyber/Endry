@@ -7,7 +7,18 @@ import UIKit
 extension Police {
     /// Cormorant Garamond à la taille voulue (grands chiffres, titres courts), mis à l'échelle avec Dynamic Type.
     static func serif(_ taille: CGFloat, relativeTo style: Font.TextStyle = .title, italique: Bool = false) -> Font {
-        .custom(italique ? GraisseTitre.italique.nom : GraisseTitre.medium.nom, size: taille, relativeTo: style)
+        cormorant(italique ? GraisseTitre.italique.nom : GraisseTitre.medium.nom, taille: taille, relativeTo: style)
+    }
+
+    /// Cormorant avec chiffres alignés (« 01 », « 49’673 », « 0:03 ») : par défaut, la fonte dessine des chiffres
+    /// elzéviriens (« OI », chiffres qui descendent), illisibles dans les montants et les compteurs.
+    static func cormorant(_ nom: String, taille: CGFloat, relativeTo style: Font.TextStyle) -> Font {
+        guard let base = UIFont(name: nom, size: taille) else { return .custom(nom, size: taille, relativeTo: style) }
+        // kNumberCaseType (21) / kUpperCaseNumbersSelector (1) : chiffres alignés sur les capitales.
+        let reglages: [[UIFontDescriptor.FeatureKey: Int]] = [[.type: 21, .selector: 1]]
+        let descripteur = base.fontDescriptor.addingAttributes([.featureSettings: reglages])
+        let police = UIFont(descriptor: descripteur, size: taille)
+        return Font(UIFontMetrics(forTextStyle: style.uiKit).scaledFont(for: police))
     }
 
     /// Chiffres et repères discrets (heures, « 4/7 », références) : SF Mono.

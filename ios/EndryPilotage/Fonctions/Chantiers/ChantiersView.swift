@@ -207,7 +207,8 @@ struct LigneChantier: View {
     private var objet: String {
         let morceaux = dossier.titre.components(separatedBy: " — ")
         if morceaux.count > 1, morceaux[0].trimmingCharacters(in: .whitespaces) == dossier.client {
-            return morceaux.dropFirst().joined(separator: " — ")
+            let reste = morceaux.dropFirst().joined(separator: " — ")
+            return reste.prefix(1).uppercased() + String(reste.dropFirst())
         }
         return dossier.titre
     }

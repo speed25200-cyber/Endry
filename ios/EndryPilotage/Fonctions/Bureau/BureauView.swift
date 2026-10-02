@@ -4,8 +4,8 @@ import SwiftUI
 extension EtatAgent {
     var couleur: Color {
         switch self {
-        case .libre: .sauge
-        case .occupe: .bronze
+        case .libre: .encrePale
+        case .occupe: .sauge
         case .pause: .ambre
         case .erreur: .rouille
         case .horsHoraires: .encrePale

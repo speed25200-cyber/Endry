@@ -163,8 +163,8 @@ struct ArgentView: View {
     }
 
     private func echeanceClient(_ f: FactureClient) -> String {
-        if f.retardJours > 0 { return "échue depuis \(f.retardJours) j" }
-        if let echeance = f.echeance { return "échéance \(DateEndry.jourMois(echeance))" }
+        if f.retardJours > 0 { return "+\(f.retardJours) j" }
+        if let echeance = f.echeance { return "éch. \(DateEndry.jourMois(echeance))" }
         return "ouverte"
     }
 

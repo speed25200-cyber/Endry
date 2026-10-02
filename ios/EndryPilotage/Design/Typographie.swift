@@ -35,7 +35,7 @@ enum Police {
     static let facteurSerif: CGFloat = 1.18
 
     static func titre(_ taille: CGFloat, relativeTo style: Font.TextStyle = .title, graisse: GraisseTitre = .semibold) -> Font {
-        .custom(graisse.nom, size: Echelle.palier(taille) * facteurSerif, relativeTo: style)
+        cormorant(graisse.nom, taille: Echelle.palier(taille) * facteurSerif, relativeTo: style)
     }
 
     static func texte(_ taille: CGFloat = 17, relativeTo style: Font.TextStyle = .body, graisse: GraisseTexte = .regular) -> Font {

@@ -218,8 +218,9 @@ struct FicheDecision: View {
                 .lineLimit(2)
         }
         .padding(.horizontal, 14)
-        .frame(minHeight: 34)
-        .verreMaison(Capsule())
+        .padding(.vertical, 8)
+        .frame(minHeight: 36)
+        .verreMaison(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     private func rubrique(_ titre: String, _ texte: String, selection: Bool = false) -> some View {

@@ -143,13 +143,13 @@ struct RangeeOutilsTerrain: View {
                             Text(outil.sousTitre)
                                 .styleTexte(12.5, relativeTo: .caption)
                                 .foregroundStyle(Color.encreDouce)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer(minLength: 0)
                     }
                     .padding(.horizontal, 12)
-                    .frame(maxWidth: .infinity, minHeight: 64, alignment: .leading)
+                    .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
                     .tuileMaison(rayon: 24)
                     .contentShape(Rectangle())
                 }

@@ -41,7 +41,7 @@ struct FriseSemaineView: View {
 
     private func puce(_ bande: FriseSemaine.Bande, jours: [Date]) -> some View {
         HStack(spacing: 6) {
-            Text(jours.indices.contains(bande.debut) ? DateEndry.jourAbrege(jours[bande.debut]).prefix(2).capitalized : "")
+            Text(Self.plage(bande, jours: jours))
                 .font(Police.mono(11.5))
                 .foregroundStyle(Color.encreDouce)
             Text(Self.titreCourt(bande.titre))
@@ -52,6 +52,14 @@ struct FriseSemaineView: View {
         .padding(.horizontal, 12)
         .frame(height: 30)
         .verreMaison(Capsule())
+    }
+
+    /// « Lu », ou « Lu–Ve » pour un chantier de plusieurs jours (« …–Di » s'il continue la semaine suivante).
+    static func plage(_ bande: FriseSemaine.Bande, jours: [Date]) -> String {
+        func jour(_ i: Int) -> String {
+            jours.indices.contains(i) ? DateEndry.jourAbrege(jours[i]).prefix(2).capitalized : ""
+        }
+        return bande.fin > bande.debut ? "\(jour(bande.debut))–\(jour(bande.fin))" : jour(bande.debut)
     }
 
     /// « Villa Morel — PAC air-eau 10 kW » → « Villa Morel ».
@@ -88,8 +96,14 @@ struct DispositionFrise: Layout {
         for (index, vue) in subviews.enumerated() {
             let l = min(vue.sizeThatFits(.unspecified).width, largeur * 0.62)
             let debut = colonnes.indices.contains(index) ? colonnes[index] : 0
-            let x = max(0, min(CGFloat(debut) * colonne, largeur - l))
-            let rang = fins.firstIndex { $0 + 8 <= x } ?? fins.count
+            let voulu = max(0, min(CGFloat(debut) * colonne, largeur - l))
+            // Sur la première rangée qui a la place, juste après la pastille précédente si elle déborde sur ce jour.
+            var place: (x: CGFloat, rang: Int)?
+            for (rang, fin) in fins.enumerated() {
+                let x = max(voulu, fin + 8)
+                if x + l <= largeur { place = (x, rang); break }
+            }
+            let (x, rang) = place ?? (voulu, fins.count)
             if rang == fins.count { fins.append(0) }
             fins[rang] = x + l
             resultat.append((x, l, rang))

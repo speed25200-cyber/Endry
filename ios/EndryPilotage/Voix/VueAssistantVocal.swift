@@ -102,6 +102,13 @@ struct VueAssistantVocal: View {
             .padding(.horizontal, Espace.bord)
             .padding(.bottom, Espace.s)
         }
+        // Glisser vers le bas depuis le haut de l'écran : fermer (en plus du bouton).
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 24).onEnded { geste in
+                let vertical = geste.translation.height
+                if geste.startLocation.y < 320, vertical > 90, abs(geste.translation.width) < vertical { fermer() }
+            }
+        )
         .environment(\.colorScheme, .dark)
         .presentationBackground(.clear)
         .animation(.endry(reduire: reduireAnimations), value: assistant?.cartes ?? [])
@@ -150,14 +157,12 @@ struct VueAssistantVocal: View {
     }
 
     /// Le micro est rendu tout de suite (l'arrêt se fait hors du fil principal), puis un fondu court et l'écran part.
+    /// Fermer : l'écran part à l'instant, sans attendre ni le son ni une animation ; le micro et la voix
+    /// s'arrêtent ensuite, hors du fil principal. Rien ne peut retenir l'écran ouvert.
     private func fermer() {
         clavier = false
+        app.fermerAssistant()
         assistant?.arreter()
-        withAnimation(.easeIn(duration: 0.16)) { apparu = false }
-        Task {
-            try? await Task.sleep(for: .milliseconds(160))
-            app.fermerAssistant()
-        }
     }
 
     // MARK: - Morceaux
@@ -178,32 +183,26 @@ struct VueAssistantVocal: View {
             .verreMaison(Capsule())
             .accessibilityElement(children: .combine)
             Spacer()
-            if app.conversation != nil {
-                Button {
-                    assistant?.arreter()
-                    app.ouvrirConversation()
-                } label: {
-                    Image(systemName: "text.bubble")
-                        .font(.system(size: 15, weight: .regular))
-                        .foregroundStyle(Color.encre)
-                        .frame(width: 40, height: 40)
-                        .verreMaison(Circle())
+            ConteneurVerre {
+                HStack(spacing: Espace.xs) {
+                    if app.conversation != nil {
+                        BoutonRondVerre(libelle: "Ouvrir la conversation écrite", identifiant: "ouvrir-conversation") {
+                            assistant?.arreter()
+                            app.ouvrirConversation()
+                        } contenu: {
+                            Image(systemName: "text.bubble").font(.system(size: 15, weight: .regular))
+                        }
+                    }
+                    // Fermer : grande zone de toucher, verre interactif (comme les autres boutons ronds de l'app).
+                    BoutonRondVerre(libelle: "Fermer l’assistant vocal", identifiant: "fermer-assistant", action: fermer) {
+                        Image(systemName: "xmark").font(.system(size: 15, weight: .semibold))
+                    }
+                    .padding(6)
+                    .contentShape(Rectangle())
+                    .highPriorityGesture(TapGesture().onEnded { fermer() })
+                    .keyboardShortcut(.cancelAction)
                 }
-                .buttonStyle(ActionPressee())
-                .accessibilityLabel(Text("Ouvrir la conversation écrite"))
-                .accessibilityIdentifier("ouvrir-conversation")
             }
-            Button(action: fermer) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundStyle(Color.encre)
-                    .frame(width: 40, height: 40)
-                    .verreMaison(Circle())
-            }
-            .buttonStyle(ActionPressee())
-            .keyboardShortcut(.cancelAction)
-            .accessibilityLabel(Text("Fermer l’assistant vocal"))
-            .accessibilityIdentifier("fermer-assistant")
         }
         .padding(.top, Espace.xs)
     }

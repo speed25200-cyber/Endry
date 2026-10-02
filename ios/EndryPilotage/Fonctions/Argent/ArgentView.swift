@@ -132,6 +132,13 @@ struct ArgentView: View {
                 .init(libelle: "> 60 j", valeur: e.anciennete.plus60),
             ])
             .padding(.top, Espace.m)
+            let echu = e.anciennete.jours0a30 + e.anciennete.jours31a60 + e.anciennete.plus60
+            BandeChiffres(elements: [
+                .init(valeur: FormatSuisse.francs(e.anciennete.aEchoir), libelle: "Non échu"),
+                .init(valeur: FormatSuisse.francs(echu), libelle: "Échu", ton: echu > 0 ? .alerte : nil),
+                .init(valeur: FormatSuisse.francs(e.anciennete.plus60), libelle: "Plus de 60 j", ton: e.anciennete.plus60 > 0 ? .alerte : nil),
+            ])
+            .padding(.top, Espace.m)
 
             VStack(spacing: 10) {
                 ForEach(e.factures.sorted { $0.retardJours > $1.retardJours }) { facture in
@@ -185,6 +192,13 @@ struct ArgentView: View {
             VStack(alignment: .leading, spacing: 0) {
                 grandMontant("À payer · \(p.factures.count) facture\(p.factures.count > 1 ? "s" : "")", p.total)
                 Histogramme(barres: Self.barresPayer(p.factures)).padding(.top, Espace.m)
+                let echues = Self.somme(p.factures) { $0 < 0 }
+                BandeChiffres(elements: [
+                    .init(valeur: FormatSuisse.francs(echues), libelle: "Échues", ton: echues > 0 ? .alerte : nil),
+                    .init(valeur: FormatSuisse.francs(Self.somme(p.factures) { (0...7).contains($0) }), libelle: "Sous 7 jours"),
+                    .init(valeur: FormatSuisse.francs(Self.somme(p.factures) { $0 > 7 }), libelle: "Plus tard"),
+                ])
+                .padding(.top, Espace.m)
                 VStack(spacing: 10) {
                     ForEach(p.factures.sorted { ($0.joursRestants ?? 999) < ($1.joursRestants ?? 999) }) { f in
                         LigneMaison(titre: f.fournisseur,
@@ -216,11 +230,14 @@ struct ArgentView: View {
         }
     }
 
+    /// Somme des factures dont l'échéance (jours restants, 999 si inconnue) passe le filtre.
+    static func somme(_ factures: [FactureFournisseur], _ filtre: (Int) -> Bool) -> Double {
+        factures.filter { filtre($0.joursRestants ?? 999) }.reduce(0) { $0 + $1.montant }
+    }
+
     /// Échéances à payer regroupées : échues, sous 7, 14 et 30 jours, plus tard.
     static func barresPayer(_ factures: [FactureFournisseur]) -> [Histogramme.Barre] {
-        func somme(_ filtre: (Int) -> Bool) -> Double {
-            factures.filter { filtre($0.joursRestants ?? 999) }.reduce(0) { $0 + $1.montant }
-        }
+        func somme(_ filtre: (Int) -> Bool) -> Double { Self.somme(factures, filtre) }
         return [
             .init(libelle: "Échues", valeur: somme { $0 < 0 }),
             .init(libelle: "7 j", valeur: somme { (0...7).contains($0) }, accent: true),

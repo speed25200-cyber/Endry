@@ -204,9 +204,13 @@ public struct ReponseAgent: Decodable, Sendable, Hashable {
     public var sources: [SourceReponse]
     public var decisionReference: String?
     public var message: String?
+    /// v1.9 : documents joints à la réponse (PDF, Excel…), à prévisualiser et enregistrer dans l'app.
+    public var documents: [Piece]
 
     public init(statut: StatutReponse, questionId: String? = nil, agent: String? = nil, reponse: String? = nil,
-                sources: [SourceReponse] = [], decisionReference: String? = nil, message: String? = nil) {
+                sources: [SourceReponse] = [], decisionReference: String? = nil, message: String? = nil,
+                documents: [Piece] = []) {
+        self.documents = documents
         self.statut = statut
         self.questionId = questionId
         self.agent = agent
@@ -226,6 +230,17 @@ public struct ReponseAgent: Decodable, Sendable, Hashable {
         agent = c.texte("agent")
         sources = c.liste("sources")
         decisionReference = c.texte("decision_reference").flatMap { $0.isEmpty ? nil : $0 }
+        // Documents joints (`documents`, `pieces` ou `fichiers`), puis liens vers des documents dans le texte.
+        var joints: [Piece] = c.liste("documents")
+        if joints.isEmpty { joints = c.liste("pieces") }
+        if joints.isEmpty { joints = c.liste("fichiers") }
+        joints = joints.filter { !$0.url.isEmpty }
+        if let texte = reponse {
+            let extrait = Piece.extraire(du: texte)
+            for piece in extrait.pieces where !joints.contains(where: { $0.url == piece.url }) { joints.append(piece) }
+            if !extrait.pieces.isEmpty { reponse = extrait.texte }
+        }
+        documents = joints
     }
 }
 

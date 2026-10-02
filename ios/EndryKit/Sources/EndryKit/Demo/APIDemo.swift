@@ -450,6 +450,9 @@ public actor APIDemo: EndryAPI {
     /// Réponses fictives de Claude, cohérentes avec les données de démonstration.
     static func reponseClaude(_ question: String) -> String {
         let q = question.lowercased()
+        if q.contains("pdf") || q.contains("offre") || q.contains("document") {
+            return "Voici l’offre OF-00037 pour Mme Rey (variante WC), en PDF : [Offre OF-00037.pdf](/app/doc/offre/OF-00037). Rien n’est parti chez le client."
+        }
         if q.contains("gander") || q.contains("adoucisseur") {
             return "Mme Gander attend toujours la visite pour l’adoucisseur. Je propose jeudi à 8 h ; rien n’est parti, la proposition est dans vos décisions si vous voulez l’envoyer."
         }

@@ -1,4 +1,5 @@
 import EndryKit
+import QuickLook
 import SwiftUI
 import UIKit
 
@@ -11,6 +12,8 @@ struct ConversationView: View {
     @Environment(\.dismiss) private var fermer
     @Bindable var modele: ModeleConversation
     @State private var historique = false
+    /// PDF et fichiers joints aux réponses : téléchargés, vignettes, aperçu plein écran.
+    @State private var documents = DocumentsConversation()
     @FocusState private var clavier: Bool
 
     private static let suggestions = [
@@ -66,6 +69,8 @@ struct ConversationView: View {
             }
         }
         .background(FondMaison(discret: true))
+        .environment(documents)
+        .quickLookPreview(Binding(get: { documents.apercu }, set: { documents.apercu = $0 }))
         .sheet(isPresented: $historique) {
             HistoriqueConversations(modele: modele)
                 .presentationDetents([.medium, .large])
@@ -552,6 +557,9 @@ private struct MessageView: View {
             case .recu, .envoye:
                 TexteRiche(texte: message.texte)
                     .accessibilityIdentifier("reponse-conversation")
+                if let pieces = message.documents, !pieces.isEmpty {
+                    CartesDocuments(pieces: pieces)
+                }
                 actions
                 if let reference = message.decisionReference {
                     Button {

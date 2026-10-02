@@ -53,6 +53,8 @@ public struct MessageConversation: Codable, Identifiable, Equatable, Sendable {
     public var message: String?
     /// Question partie sans réseau : renvoyée d'elle-même au retour du réseau.
     public var aRenvoyer: Bool?
+    /// Documents joints à la réponse (PDF, Excel…) : aperçu et enregistrement dans l'app.
+    public var documents: [Piece]?
 
     public init(id: String = UUID().uuidString, role: Role, texte: String, le: Date = Date(), conversation: String,
                 nature: Nature = .question, source: Source = .ecrit, etat: Etat = .recu, agent: String? = nil) {
@@ -325,13 +327,14 @@ public final class ModeleConversation {
             etat = .erreur
         }
         repondre(id, texte: texte, etat: etat, agent: r.agent.map { AgentBureau(rawValue: $0)?.nom ?? $0 },
-                 decision: r.decisionReference)
+                 decision: r.decisionReference, documents: r.documents)
     }
 
     public func repondre(_ id: String, texte: String, etat: MessageConversation.Etat = .recu, agent: String? = nil,
-                         decision: String? = nil) {
+                         decision: String? = nil, documents: [Piece] = []) {
         var r = reponseOuNouvelle(id)
         r.texte = texte
+        if !documents.isEmpty { r.documents = documents }
         r.etat = etat
         r.le = Date()
         r.message = nil

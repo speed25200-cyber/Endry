@@ -102,7 +102,7 @@ public struct Controle: Decodable, Sendable, Hashable {
     }
 }
 
-public struct Piece: Decodable, Sendable, Hashable, Identifiable {
+public struct Piece: Codable, Sendable, Hashable, Identifiable {
     public var nom: String
     public var url: String
 
@@ -121,6 +121,71 @@ public struct Piece: Decodable, Sendable, Hashable, Identifiable {
 
     public var estPDF: Bool {
         nom.lowercased().hasSuffix(".pdf") || url.contains("/app/doc/") || url.lowercased().hasSuffix(".pdf")
+    }
+
+    private enum Cles: String, CodingKey { case nom, url }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: Cles.self)
+        try c.encode(nom, forKey: .nom)
+        try c.encode(url, forKey: .url)
+    }
+
+    /// Extension du fichier (« pdf », « xlsx »), d'après le nom puis l'adresse ; `pdf` pour un document du bureau.
+    public var extensionFichier: String {
+        let n = (nom as NSString).pathExtension.lowercased()
+        if !n.isEmpty { return n }
+        let u = ((URL(string: url)?.path ?? url) as NSString).pathExtension.lowercased()
+        if !u.isEmpty { return u }
+        return url.contains("/app/doc/") ? "pdf" : ""
+    }
+
+    /// Libellé du type (« PDF », « Excel », « Word »).
+    public var libelleType: String {
+        switch extensionFichier {
+        case "pdf": "PDF"
+        case "xlsx", "xls", "csv": "Excel"
+        case "docx", "doc": "Word"
+        case "png", "jpg", "jpeg", "heic": "Image"
+        case "": "Document"
+        default: extensionFichier.uppercased()
+        }
+    }
+
+    static let extensionsDocument: Set<String> = ["pdf", "xlsx", "xls", "csv", "docx", "doc", "pptx", "png", "jpg", "jpeg", "heic", "txt", "zip"]
+
+    /// Liens vers des documents dans une réponse en Markdown (`[Offre OF-00037.pdf](/app/doc/offre/OF-00037)`) :
+    /// les documents trouvés, et le texte où chaque lien est remplacé par son seul libellé.
+    public static func extraire(du texte: String) -> (texte: String, pieces: [Piece]) {
+        guard texte.contains("](") else { return (texte, []) }
+        var pieces: [Piece] = []
+        var sortie = ""
+        var reste = Substring(texte)
+        while let ouvrant = reste.firstIndex(of: "[") {
+            sortie += reste[..<ouvrant]
+            let apres = reste[reste.index(after: ouvrant)...]
+            guard let fermant = apres.firstIndex(of: "]"),
+                  apres[fermant...].hasPrefix("]("),
+                  let finLien = apres[apres.index(fermant, offsetBy: 2)...].firstIndex(of: ")") else {
+                sortie += "["
+                reste = apres
+                continue
+            }
+            let libelle = String(apres[..<fermant])
+            let adresse = String(apres[apres.index(fermant, offsetBy: 2)..<finLien]).trimmingCharacters(in: .whitespaces)
+            let piece = Piece(nom: libelle.isEmpty ? (URL(string: adresse)?.lastPathComponent ?? "Document") : libelle, url: adresse)
+            let estDocument = adresse.contains("/app/doc/") || adresse.contains("/documents/")
+                || extensionsDocument.contains(piece.extensionFichier) && !adresse.lowercased().hasPrefix("mailto:")
+            if estDocument {
+                if !pieces.contains(where: { $0.url == adresse }) { pieces.append(piece) }
+                sortie += libelle
+            } else {
+                sortie += reste[ouvrant...finLien]
+            }
+            reste = apres[apres.index(after: finLien)...]
+        }
+        sortie += reste
+        return (sortie, pieces)
     }
 }
 

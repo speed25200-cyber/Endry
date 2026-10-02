@@ -513,3 +513,18 @@ Demande du patron : « une communication instantanée presque entre l’app et l
    travail en arrière-plan ; une session de l’assistant reste ouverte par `conversation_id` (pas de nouveau
    démarrage à chaque question). Une question simple peut répondre directement `200 {statut: "repondu"}`.
 6. **Connexions gardées** : HTTP/1.1 keep-alive (ou HTTP/2 via le tunnel), sans fermeture après chaque requête.
+
+## v1.9 — documents dans la conversation (02.10.2026, à appliquer par le PC)
+
+Demande du patron : « quand je demande un PDF dans le chat, pouvoir voir l’aperçu et l’enregistrer, comme sur Claude ».
+
+- `Reponse` (réponse à `POST /assistant/question`, `GET /questions/{id}`, `event: reponse`) peut porter
+  `documents: [{"nom": "Offre OF-00037.pdf", "url": "/app/doc/offre/OF-00037"}]` (`pieces` ou `fichiers` acceptés).
+  `url` : chemin sur le PC (téléchargé avec le jeton de l’appareil) ; PDF, Excel, Word, images.
+- À défaut, un lien Markdown vers un document dans le texte de la réponse suffit :
+  `[Offre OF-00037.pdf](/app/doc/offre/OF-00037)` — l’app le retire du texte et l’affiche en document joint.
+- **App** : sous la réponse, une carte par document (vignette de la première page, nom, type) ; toucher = aperçu
+  plein écran (feuilleter, zoomer) ; flèche = « Enregistrer dans Fichiers » ou partager. Les fichiers restent
+  dans le dossier temporaire de l’app et sont effacés au lancement et à la déconnexion.
+- Le PC sert ces fichiers comme les PDF d’offres et de factures (`GET /app/doc/…`), avec le bon `Content-Type`
+  et, en cas d’échec, `503 {erreur: "pdf_indisponible", message}` en JSON.

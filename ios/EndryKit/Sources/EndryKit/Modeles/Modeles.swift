@@ -775,7 +775,7 @@ public struct Semaine: Decodable, Sendable, Hashable, Identifiable {
         lieu = c.texte("lieu").flatMap(Dossier.nonVide)
         dates = c.texte("dates").flatMap(Dossier.nonVide)
         debut = (c.texte("debut") ?? c.texte("date_debut")).flatMap(Dossier.nonVide)
-        fin = c.texte("date_fin").flatMap(Dossier.nonVide)
+        fin = (c.texte("fin") ?? c.texte("date_fin")).flatMap(Dossier.nonVide)
     }
 
     public var dateDebut: Date? { debut.flatMap(DateEndry.lire) }

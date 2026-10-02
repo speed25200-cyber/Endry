@@ -39,3 +39,36 @@ final class PlanningTests: XCTestCase {
         XCTAssertEqual(Planning.jours(depuis: jour("2026-09-28"), nombre: 14).count, 14)
     }
 }
+
+/// Frise de la semaine (accueil Maison Endry) : bandes bornées à lundi → dimanche.
+final class FriseSemaineTests: XCTestCase {
+    private func semaine(_ json: String) throws -> [Semaine] {
+        try JSONDecoder().decode([Semaine].self, from: Data(json.utf8))
+    }
+
+    func testBandesBorneesALaSemaine() throws {
+        let jours = DateEndry.semaine(contenant: DateEndry.lire("2026-10-01")!)
+        let s = try semaine(#"""
+        [{"id":"18","titre":"Villa Morel","debut":"2026-09-28","fin":"2026-10-02"},
+         {"id":"12","titre":"PPE Les Cèdres","debut":"2026-08-31","date_fin":"2026-10-09"},
+         {"id":"24","titre":"Les Pâquerets","debut":"2026-10-05"},
+         {"id":"30","titre":"Sans date"}]
+        """#)
+        let b = FriseSemaine.bandes(s, jours: jours)
+        // Même jour de début : la bande la plus courte d'abord.
+        XCTAssertEqual(b.map(\.id), ["18", "12"])
+        XCTAssertEqual(b[0].debut, 0)
+        XCTAssertEqual(b[0].fin, 4)
+        XCTAssertFalse(b[0].continueApres)
+        XCTAssertEqual(b[1].debut, 0)
+        XCTAssertEqual(b[1].fin, 6)
+        XCTAssertTrue(b[1].dejaCommence)
+        XCTAssertTrue(b[1].continueApres)
+    }
+
+    func testMaximumDeBandes() throws {
+        let jours = DateEndry.semaine(contenant: DateEndry.lire("2026-10-01")!)
+        let s = try semaine(#"[{"id":"a","titre":"A","debut":"2026-09-29"},{"id":"b","titre":"B","debut":"2026-09-30"},{"id":"c","titre":"C","debut":"2026-10-01"},{"id":"d","titre":"D","debut":"2026-10-02"}]"#)
+        XCTAssertEqual(FriseSemaine.bandes(s, jours: jours, maximum: 3).map(\.id), ["a", "b", "c"])
+    }
+}

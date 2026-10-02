@@ -204,6 +204,14 @@ struct DecisionsView: View {
                         .padding(.horizontal, Espace.bord)
                         .transitionDefilement()
                 }
+                if let accueil = modele.accueil, !accueil.chantiers7Jours.isEmpty {
+                    FriseSemaineView(semaine: accueil.chantiers7Jours) {
+                        app.vueChantiers = .planning
+                        app.onglet = .chantiers
+                    }
+                    .padding(.horizontal, Espace.bord)
+                    .transitionDefilement()
+                }
                 // iPad : ce qui a été fait et le briefing à gauche ; le bureau, l'argent et la semaine à droite.
                 Colonnes(ecart: 0) {
                     if let suiviActions = app.suiviActions {

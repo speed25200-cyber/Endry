@@ -9,6 +9,14 @@ struct ArgentView: View {
     @State private var visible = false
     @State private var clientsDeplies: Set<String> = []
     @State private var heuresOuvertes: HeuresSecretariat?
+    @State private var vue: VueFinances = .tout
+
+    /// Maison Endry : filtrer d'un geste ce que l'on regarde.
+    enum VueFinances: Hashable {
+        case tout, encaisser, payer, offres
+    }
+
+    private func voit(_ v: VueFinances) -> Bool { vue == .tout || vue == v }
 
     var body: some View {
         NavigationStack {
@@ -25,6 +33,15 @@ struct ArgentView: View {
                     // Le patron décrit ; l'assistant prépare dans Bexio ; rien ne part sans son Oui.
                     RangeeNouveauDocument()
 
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        SelecteurSegments(options: [
+                            OptionSegment(valeur: VueFinances.tout, titre: "Tout"),
+                            OptionSegment(valeur: .encaisser, titre: "À encaisser"),
+                            OptionSegment(valeur: .payer, titre: "À payer"),
+                            OptionSegment(valeur: .offres, titre: "Offres"),
+                        ], selection: $vue)
+                    }
+
                     if modele.horsLigne {
                         BandeauHorsLigne(majLe: modele.majLe)
                     }
@@ -39,23 +56,31 @@ struct ArgentView: View {
                         if let argent = modele.argent {
                             // iPad : l'argent (encaisser, payer, refacturer) à gauche ; offres et secrétariat à droite.
                             Colonnes(espacement: Espace.xl) {
-                                encaisser(argent.encaisser).apparitionEnCascade(index: 0, visible: visible)
-                                if devantClient {
-                                    BlocMasqueClient(titre: "À payer").apparitionEnCascade(index: 1, visible: visible)
-                                } else {
-                                    payer(argent.payer).apparitionEnCascade(index: 1, visible: visible)
+                                if voit(.encaisser) {
+                                    encaisser(argent.encaisser).apparitionEnCascade(index: 0, visible: visible)
                                 }
-                                if !devantClient {
+                                if voit(.payer) {
+                                    if devantClient {
+                                        BlocMasqueClient(titre: "À payer").apparitionEnCascade(index: 1, visible: visible)
+                                    } else {
+                                        payer(argent.payer).apparitionEnCascade(index: 1, visible: visible)
+                                    }
+                                }
+                                if vue == .tout, !devantClient {
                                     refacturer(argent.aRefacturer).apparitionEnCascade(index: 3, visible: visible)
                                 }
-                                versements(argent.versementsNonIdentifies).apparitionEnCascade(index: 4, visible: visible)
-                            } droite: {
-                                if let signees = app.offresSignees {
-                                    SectionOffresSignees(modele: signees).apparitionEnCascade(index: 2, visible: visible)
+                                if voit(.encaisser) {
+                                    versements(argent.versementsNonIdentifies).apparitionEnCascade(index: 4, visible: visible)
                                 }
-                                offres(argent.offres).apparitionEnCascade(index: 2, visible: visible)
-                                CarteOffresASuivre(offres: argent.offres.offres).apparitionEnCascade(index: 2, visible: visible)
-                                if let heures = argent.heuresSecretariat {
+                            } droite: {
+                                if voit(.offres) {
+                                    if let signees = app.offresSignees {
+                                        SectionOffresSignees(modele: signees).apparitionEnCascade(index: 2, visible: visible)
+                                    }
+                                    offres(argent.offres).apparitionEnCascade(index: 2, visible: visible)
+                                    CarteOffresASuivre(offres: argent.offres.offres).apparitionEnCascade(index: 2, visible: visible)
+                                }
+                                if vue == .tout, let heures = argent.heuresSecretariat {
                                     secretariat(heures).apparitionEnCascade(index: 5, visible: visible)
                                 }
                             }

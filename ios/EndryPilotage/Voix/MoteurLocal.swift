@@ -134,7 +134,7 @@ final class MoteurLocal: MoteurVoix {
             try await ecoute.demarrerSansMicro { [weak self] definitif, provisoire in
                 Task { @MainActor in self?.entendu(definitif: definitif, provisoire: provisoire) }
             }
-            try audio.demarrer(
+            try await audio.demarrer(
                 surMorceau: { _ in },
                 surNiveau: { [weak self] niveau in
                     Task { @MainActor in
@@ -199,7 +199,8 @@ final class MoteurLocal: MoteurVoix {
         canal?.arreter()
         canal = nil
         ecouteOuverte = false
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        // Après l'arrêt des moteurs (même file) : le son revient aux autres apps sans geler l'écran.
+        FileAudio.desactiverSession()
         surEvenement = nil
     }
 

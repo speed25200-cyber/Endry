@@ -107,9 +107,11 @@ struct VueAssistantVocal: View {
         .animation(.endry(reduire: reduireAnimations), value: assistant?.cartes ?? [])
         .animation(.spring(response: 0.55, dampingFraction: 0.86), value: compact)
         .task {
-            withAnimation(reduireAnimations ? .fonduDoux : .spring(response: 0.7, dampingFraction: 0.82)) { apparu = true }
+            withAnimation(reduireAnimations ? .fonduDoux : .spring(response: 0.42, dampingFraction: 0.9)) { apparu = true }
             let nouvel = app.nouvelAssistant()
             assistant = nouvel
+            // Laisse passer la première image de l'apparition ; le son démarre ensuite, hors du fil principal.
+            await Task.yield()
             await nouvel.demarrer()
         }
         .onDisappear { assistant?.arreter() }
@@ -147,12 +149,13 @@ struct VueAssistantVocal: View {
         .onTapGesture { clavier = false }
     }
 
+    /// Le micro est rendu tout de suite (l'arrêt se fait hors du fil principal), puis un fondu court et l'écran part.
     private func fermer() {
         clavier = false
-        withAnimation(.easeIn(duration: 0.24)) { apparu = false }
+        assistant?.arreter()
+        withAnimation(.easeIn(duration: 0.16)) { apparu = false }
         Task {
-            try? await Task.sleep(for: .milliseconds(240))
-            assistant?.arreter()
+            try? await Task.sleep(for: .milliseconds(160))
             app.fermerAssistant()
         }
     }
@@ -214,8 +217,7 @@ struct VueAssistantVocal: View {
             }
         }
             .frame(maxWidth: compact ? 64 : 330, maxHeight: compact ? 64 : 330)
-            .scaleEffect(apparu ? 1 : 0.35)
-            .blur(radius: apparu ? 0 : 24)
+            .scaleEffect(apparu ? 1 : 0.6)
             .opacity(apparu ? 1 : 0)
             .contentShape(Circle().scale(0.6))
             .onTapGesture {
@@ -529,7 +531,7 @@ private struct LienConversation: View {
     }
 }
 
-/// Chaque mot reconnu apparaît en fondu, en remontant légèrement et en se précisant (flou → net) ;
+/// Chaque mot reconnu apparaît en fondu, en remontant légèrement ;
 /// les mots encore provisoires restent plus pâles jusqu'à ce que la reconnaissance les confirme.
 private struct MotsEnDirect: View {
     var definitif: String
@@ -563,15 +565,14 @@ private struct MotsEnDirect: View {
     }
 }
 
-/// Apparition d'un mot : fondu, légère montée, flou qui se dissipe.
+/// Apparition d'un mot : fondu et légère montée (sans flou : un flou par mot coûtait une passe hors écran chacun).
 private struct MotQuiApparait: ViewModifier {
     var etat: Double
 
     func body(content: Content) -> some View {
         content
             .opacity(etat)
-            .offset(y: (1 - etat) * 8)
-            .blur(radius: (1 - etat) * 6)
+            .offset(y: (1 - etat) * 6)
     }
 }
 
@@ -755,43 +756,6 @@ struct CarteContexte: View {
 }
 
 // MARK: - Claude, sur le PC
-
-/// Pastille « Claude travaille · 2 en cours » : ce que fait l'assistant du bureau, d'un coup d'œil.
-/// La toucher demande le détail à voix haute.
-private struct PastilleClaude: View {
-    var etat: EtatBureau?
-    var action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 7) {
-                Circle()
-                    .fill(couleur)
-                    .frame(width: 7, height: 7)
-                    .overlay(Circle().stroke(couleur.opacity(0.4), lineWidth: 3).scaleEffect(1.8))
-                Text(etat?.libelleCourt ?? "Claude · PC")
-                    .font(PoliceAssistant.texte(12, .medium, relativeTo: .caption))
-                    .foregroundStyle(Color.orClair.opacity(0.85))
-                    .contentTransition(.opacity)
-            }
-            .padding(.horizontal, 12)
-            .frame(height: 32)
-            .background(Color.white.opacity(0.06), in: Capsule())
-            .overlay(Capsule().stroke(Color.or.opacity(0.18), lineWidth: Espace.filet))
-        }
-        .buttonStyle(.plain)
-        .animation(.endry, value: etat?.libelleCourt)
-        .accessibilityLabel(Text(etat?.libelleCourt ?? "Claude, l’assistant du PC"))
-        .accessibilityHint(Text("Demande à Endry ce que fait Claude en ce moment"))
-        .accessibilityIdentifier("pastille-claude")
-    }
-
-    private var couleur: Color {
-        guard let etat else { return Color.orClair.opacity(0.4) }
-        if etat.enPause { return Color(hex: 0xC8764A) }
-        return etat.enCours.isEmpty && (etat.etat?.file ?? 0) == 0 ? Color(hex: 0x8FB08A) : Color.or
-    }
-}
 
 /// Question ou demande préparée par la voix : le patron la relit, la corrige s'il faut, puis confirme.
 /// Rien ne part au PC avant ce geste.
@@ -1009,83 +973,4 @@ final class LisseurOrbe {
         if flux > 1_000 { flux -= 1_000 }
         return Valeurs(horloge: horloge, flux: flux, micro: micro, voix: voix, reflexion: reflexion, lueur: lueur)
     }
-}
-
-/// Sphère de verre fumé, parfaitement ronde, où coule de l'or liquide (bruit fractal déformé, shader Metal) :
-/// l'or s'emballe quand Endry parle, le bord frémit avec la voix du patron, un anneau tourne pendant la réflexion.
-/// Rendue à la fréquence de l'écran (120 Hz sur ProMotion) ; seule cette vue se redessine.
-struct OrbeEndry: View {
-    var assistant: AssistantVocal?
-    @State private var lisseur = LisseurOrbe()
-    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
-
-    var body: some View {
-        if Configuration.testsUI {
-            // Tests d'interface (simulateur sans GPU) : sphère fixe, sans shader ni lecture des niveaux audio.
-            Circle()
-                .fill(RadialGradient(colors: [Color.orClair, Color.or, Color(hex: 0x3A2A14)], center: UnitPoint(x: 0.35, y: 0.3),
-                                     startRadius: 4, endRadius: 150))
-                .scaleEffect(0.76)
-                .aspectRatio(1, contentMode: .fit)
-                .accessibilityHidden(true)
-        } else {
-            orbe
-        }
-    }
-
-    private var orbe: some View {
-        TimelineView(.animation) { contexte in
-            let v = lisseur.avancer(contexte.date, assistant: assistant, lent: reduireAnimations)
-            Rectangle()
-                .fill(Color.white)
-                .colorEffect(ShaderLibrary.orbeEndry(
-                    .boundingRect,
-                    .float(v.horloge),
-                    .float(v.flux),
-                    .float(v.micro),
-                    .float(v.voix),
-                    .float(v.reflexion),
-                    .float(reduireAnimations ? 0.3 : 1)
-                ))
-        }
-        .aspectRatio(1, contentMode: .fit)
-        .accessibilityHidden(true)
-    }
-}
-
-/// Lueur dorée qui court sur le bord de l'écran, comme Siri : douce à l'écoute, vive quand Endry parle.
-struct LueurBord: View {
-    var assistant: AssistantVocal?
-    @State private var lisseur = LisseurOrbe()
-    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
-
-    var body: some View {
-        if Configuration.testsUI {
-            // Tests d'interface : pas de lueur (shader plein écran trop lent sur le simulateur de la CI).
-            Color.clear.allowsHitTesting(false).accessibilityHidden(true)
-        } else {
-            lueur
-        }
-    }
-
-    private var lueur: some View {
-        TimelineView(.animation) { contexte in
-            let v = lisseur.avancer(contexte.date, assistant: assistant, lent: reduireAnimations)
-            Rectangle()
-                .fill(Color.white)
-                .colorEffect(ShaderLibrary.lueurBord(
-                    .boundingRect,
-                    .float(reduireAnimations ? 0 : v.horloge),
-                    .float(v.lueur),
-                    .float(Self.rayonEcran)
-                ))
-                .blendMode(.plusLighter)
-        }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-
-    /// Rayon des coins de l'écran (iPhone à Face ID : ~47 à 62 pt).
-    static let rayonEcran: Float = 54
 }

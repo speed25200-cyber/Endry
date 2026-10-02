@@ -98,8 +98,10 @@ final class ModeleApp {
         return assistant
     }
 
+    /// Temps réel si le PC le propose dans les 4 s ; sinon le moteur de l'iPhone, sans faire attendre le patron.
     private func moteurPrefere() async -> any MoteurVoix {
-        if !session.estDemo, let api = session.api, let voix = try? await api.sessionVoix(), voix.disponible {
+        if !session.estDemo, let api = session.api,
+           let voix = await dansLeDelai(.seconds(4), { try? await api.sessionVoix() }), voix.disponible {
             return MoteurTempsReel(session: voix, executeur: ExecuteurOutils(api: api))
         }
         return moteurLocal()
@@ -123,7 +125,9 @@ final class ModeleApp {
                 RepondeurLocal.Donnees(accueil: self.decisions?.accueil, argent: self.argent?.argent, chantiers: self.chantiers?.tous ?? [])
             },
             // Apple Intelligence sur l'iPhone : comprend les questions libres et lit les données par les outils.
-            cerveau: cerveauVocal(),
+            // En relais direct (par défaut), l'iPhone ne répond pas lui-même : le modèle n'est pas chargé
+            // (des centaines de Mo et un temps de chargement épargnés à chaque ouverture).
+            cerveau: ReglageVoix.relaisBureau ? nil : cerveauVocal(),
             executeur: session.api.map { ExecuteurOutils(api: $0) }
         )
     }

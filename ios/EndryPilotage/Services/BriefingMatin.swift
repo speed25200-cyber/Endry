@@ -141,21 +141,27 @@ final class LecteurVocal {
 
     func lire(_ texte: String) {
         guard !Configuration.testsUI else { return }
-        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
-        try? AVAudioSession.sharedInstance().setActive(true)
         let phrase = AVSpeechUtterance(string: texte)
         phrase.voice = MoteurLocal.meilleureVoix()
         phrase.rate = min(AVSpeechUtteranceDefaultSpeechRate * Float(ReglageVoix.debit), AVSpeechUtteranceMaximumSpeechRate)
         phrase.prefersAssistiveTechnologySettings = false
         synthese.stopSpeaking(at: .immediate)
-        synthese.speak(phrase)
         enLecture = true
+        // Session audio réglée hors du fil principal ; la lecture commence dès qu'elle est prête.
+        Task {
+            _ = try? await FileAudio.executer {
+                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+                try AVAudioSession.sharedInstance().setActive(true)
+            }
+            guard enLecture else { return }
+            synthese.speak(phrase)
+        }
     }
 
     func arreter() {
         synthese.stopSpeaking(at: .immediate)
         enLecture = false
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        FileAudio.desactiverSession()
     }
 }
 

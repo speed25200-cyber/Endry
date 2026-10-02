@@ -52,17 +52,25 @@ final class MoteurTempsReel: MoteurVoix {
         self.socket = socket
         socket.resume()
 
-        do {
-            try await socket.send(.string(Self.texte(CommandeRealtime.configuration(session: session, vocabulaire: VocabulaireVocal.partage.termes))))
-            // Première réponse du serveur : la connexion est bien établie (sinon, repli sur le moteur local).
-            let premier = try await socket.receive()
-            traiter(Self.donnees(premier))
-        } catch {
+        // Première réponse du serveur en 6 s au plus : la connexion est bien établie (sinon, repli sur le moteur local,
+        // au lieu de rester sur « Un instant » jusqu'au délai du système).
+        let configuration = Self.texte(CommandeRealtime.configuration(session: session, vocabulaire: VocabulaireVocal.partage.termes))
+        let premier: Data? = await dansLeDelai(.seconds(6)) {
+            do {
+                try await socket.send(.string(configuration))
+                let reponse = try await socket.receive()
+                return Self.donnees(reponse)
+            } catch {
+                return nil
+            }
+        }
+        guard let premier else {
             socket.cancel(with: .goingAway, reason: nil)
             throw ErreurVoix.connexion
         }
+        traiter(premier)
 
-        if #available(iOS 26.0, *), await TranscripteurAnalyseur.disponible() {
+        if #available(iOS 26.0, *), await TranscripteurAnalyseur.pret() {
             let transcripteur = TranscripteurAnalyseur()
             do {
                 try await transcripteur.demarrerSansMicro { [weak self] definitif, provisoire in
@@ -86,7 +94,7 @@ final class MoteurTempsReel: MoteurVoix {
         canal.surVide = { [weak self] in
             Task { @MainActor in self?.lectureTerminee() }
         }
-        try canal.demarrer(
+        try await canal.demarrer(
             surMorceau: { pcm in
                 canalReseau.send(.string(Self.texte(CommandeRealtime.audio(pcm)))) { _ in }
             },
@@ -288,8 +296,16 @@ nonisolated final class CanalAudioTempsReel: @unchecked Sendable {
         return enAttente > 0
     }
 
+    /// Session audio, annulation d'écho et moteur démarrés sur la file audio : l'écran ne gèle pas pendant ce temps.
     func demarrer(surMorceau: @escaping @Sendable (Data) -> Void, surNiveau: @escaping @Sendable (Float) -> Void,
-                  surTampon: (@Sendable (AVAudioPCMBuffer) -> Void)? = nil) throws {
+                  surTampon: (@Sendable (AVAudioPCMBuffer) -> Void)? = nil) async throws {
+        try await FileAudio.executer { [self] in
+            try demarrerSurLaFile(surMorceau: surMorceau, surNiveau: surNiveau, surTampon: surTampon)
+        }
+    }
+
+    private func demarrerSurLaFile(surMorceau: @escaping @Sendable (Data) -> Void, surNiveau: @escaping @Sendable (Float) -> Void,
+                                   surTampon: (@Sendable (AVAudioPCMBuffer) -> Void)?) throws {
         guard let formatReseau, let formatLecture else { throw ErreurVoix.indisponible }
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetoothHFP, .allowBluetoothA2DP])
@@ -317,18 +333,21 @@ nonisolated final class CanalAudioTempsReel: @unchecked Sendable {
     }
 
     /// `desactiverSession` faux : un autre moteur utilise encore le son (démarrage abandonné).
+    /// Rend la main tout de suite : l'arrêt du moteur et de la session se fait sur la file audio.
     func arreter(desactiverSession: Bool = true) {
         verrou.lock()
         generation += 1
         enAttente = 0
         verrou.unlock()
-        lecteur.stop()
-        if moteur.isRunning {
-            moteur.inputNode.removeTap(onBus: 0)
-            moteur.stop()
-        }
-        if desactiverSession {
-            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        FileAudio.lancer { [self] in
+            lecteur.stop()
+            if moteur.isRunning {
+                moteur.inputNode.removeTap(onBus: 0)
+                moteur.stop()
+            }
+            if desactiverSession {
+                try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            }
         }
     }
 

@@ -41,7 +41,8 @@ final class Dictee {
             return
         }
         do {
-            try moteur.demarrer(
+            // Session audio et micro sur la file audio : le champ ne gèle pas quand la dictée démarre.
+            try await FileAudio.executer { [moteur] in try moteur.demarrer(
                 surTexte: { [weak self] texte, fini in
                     Task { @MainActor in
                         guard let self else { return }
@@ -57,7 +58,7 @@ final class Dictee {
                         self.historique.append(self.niveau)
                     }
                 }
-            )
+            ) }
             etat = .ecoute
         } catch {
             etat = .indisponible("La dictée n’est pas disponible pour le moment.")
@@ -65,7 +66,7 @@ final class Dictee {
     }
 
     func arreter() {
-        moteur.arreter()
+        FileAudio.lancer { [moteur] in moteur.arreter() }
         if ecoute { etat = .repos }
         niveau = 0
         historique = Array(repeating: 0, count: historique.count)

@@ -160,6 +160,9 @@ final class AssistantVocal {
     @ObservationIgnored private var messagesSuivis: [SuiviQuestion: String] = [:]
     @ObservationIgnored private let fabrique: @MainActor () async -> any MoteurVoix
     @ObservationIgnored private let repli: @MainActor () -> any MoteurVoix
+    /// Change à chaque démarrage et à chaque arrêt : un démarrage encore en route quand l'écran se ferme
+    /// s'arrête de lui-même au lieu d'ouvrir le micro derrière l'app.
+    @ObservationIgnored private var lancement = 0
 
     init(fabrique: @escaping @MainActor () async -> any MoteurVoix, repli: @escaping @MainActor () -> any MoteurVoix,
          bureau: BureauClaude? = nil, transmettre: (@MainActor (String) async -> ModeleSaisie.ResultatDemande)? = nil,
@@ -172,28 +175,38 @@ final class AssistantVocal {
     }
 
     func demarrer() async {
+        // Relance après une erreur : l'ancien moteur rend d'abord le micro.
+        moteur?.arreter()
+        moteur = nil
+        lancement += 1
+        let ce = lancement
         phase = .preparation
         pret = false
         surveillerBureau()
         let premier = await fabrique()
+        guard ce == lancement else { return }
         do {
-            try await lancer(premier)
+            try await lancer(premier, lancement: ce)
         } catch ErreurVoix.autorisationRefusee {
+            guard ce == lancement else { return }
             // Sans micro, on peut encore écrire à Endry.
             pret = true
             phase = .erreur("Micro non autorisé (Réglages › Endry). Vous pouvez écrire votre question.")
         } catch {
-            // Repli silencieux sur le moteur local.
             premier.arreter()
+            guard ce == lancement else { return }
+            // Repli silencieux sur le moteur local.
             do {
-                try await lancer(repli())
+                try await lancer(repli(), lancement: ce)
             } catch {
+                guard ce == lancement else { return }
                 phase = .erreur("L’assistant vocal n’est pas disponible pour le moment.")
             }
         }
     }
 
     func arreter() {
+        lancement += 1
         moteur?.arreter()
         moteur = nil
         pret = false
@@ -257,11 +270,16 @@ final class AssistantVocal {
         return fil.suffix(3).map { "Q : \($0.question)\nR : \($0.reponse)" }.joined(separator: "\n")
     }
 
-    private func lancer(_ m: any MoteurVoix) async throws {
+    private func lancer(_ m: any MoteurVoix, lancement ce: Int) async throws {
         moteur = m
         nomMoteur = m.nom
         try await m.demarrer { [weak self] evenement in
             self?.recevoir(evenement)
+        }
+        // Écran fermé pendant le démarrage : le moteur s'arrête aussitôt.
+        guard ce == lancement else {
+            m.arreter()
+            return
         }
         pret = true
     }

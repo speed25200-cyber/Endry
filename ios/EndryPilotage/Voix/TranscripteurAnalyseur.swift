@@ -26,7 +26,7 @@ nonisolated protocol Oreille: AnyObject, Sendable {
 
 enum FabriqueTranscripteur {
     static func meilleur() async -> any Transcripteur {
-        if #available(iOS 26.0, *), await TranscripteurAnalyseur.disponible() {
+        if #available(iOS 26.0, *), await TranscripteurAnalyseur.pret() {
             return TranscripteurAnalyseur()
         }
         return TranscripteurClassique()
@@ -38,11 +38,13 @@ nonisolated final class TranscripteurClassique: Transcripteur, @unchecked Sendab
     private let moteur = MoteurDictee()
 
     func demarrer(surTexte: @escaping @Sendable (String, String) -> Void, surNiveau: @escaping @Sendable (Float) -> Void) async throws {
-        try moteur.demarrer(conversation: true, surTexte: { texte, _ in surTexte("", texte) }, surNiveau: surNiveau)
+        try await FileAudio.executer { [moteur] in
+            try moteur.demarrer(conversation: true, surTexte: { texte, _ in surTexte("", texte) }, surNiveau: surNiveau)
+        }
     }
 
     func arreter() {
-        moteur.arreter(garderSession: true)
+        FileAudio.lancer { [moteur] in moteur.arreter(garderSession: true) }
     }
 }
 
@@ -62,6 +64,40 @@ nonisolated final class TranscripteurAnalyseur: Transcripteur, Oreille, @uncheck
         if await localeDictee() != nil { return true }
         guard SpeechTranscriber.isAvailable else { return false }
         return await SpeechTranscriber.supportedLocale(equivalentTo: Locale(identifier: "fr-CH")) != nil
+    }
+
+    /// Prête à écouter tout de suite : langue trouvée et modèle installé. La première fois, le modèle se télécharge
+    /// en arrière-plan pendant que la reconnaissance classique écoute ; on n'attend jamais plus de 2,5 s.
+    static func pret() async -> Bool {
+        guard await disponible() else { return false }
+        if MemoireAnalyse.partage.installe { return true }
+        return await dansLeDelai(.milliseconds(2_500)) { await installer() } ?? false
+    }
+
+    /// Installe le modèle de reconnaissance (une seule installation à la fois, même demandée deux fois).
+    private static func installer() async -> Bool {
+        await MemoireAnalyse.partage.installation {
+            let module = await moduleSeul()
+            do {
+                if let installation = try await AssetInventory.assetInstallationRequest(supporting: [module]) {
+                    try await installation.downloadAndInstall()
+                }
+                MemoireAnalyse.partage.installe = true
+                return true
+            } catch {
+                return false
+            }
+        }
+    }
+
+    /// Module de transcription seul (installation du modèle), sans lecture des résultats.
+    private static func moduleSeul() async -> any SpeechModule {
+        if let locale = await localeDictee() {
+            return DictationTranscriber(locale: locale, contentHints: [], transcriptionOptions: [.punctuation],
+                                        reportingOptions: [.volatileResults], attributeOptions: [])
+        }
+        let locale = await SpeechTranscriber.supportedLocale(equivalentTo: Locale(identifier: "fr-CH")) ?? Locale(identifier: "fr-FR")
+        return SpeechTranscriber(locale: locale, transcriptionOptions: [], reportingOptions: [.volatileResults], attributeOptions: [])
     }
 
     /// Français de Suisse, sinon de France (même reconnaissance). Cherché une fois : chaque tour de parole
@@ -118,17 +154,10 @@ nonisolated final class TranscripteurAnalyseur: Transcripteur, Oreille, @uncheck
             }
         }
         self.lecture = lecture
-        do {
-            // Modèle vérifié une fois par lancement : les tours suivants démarrent tout de suite.
-            if !MemoireAnalyse.partage.installe {
-                if let installation = try await AssetInventory.assetInstallationRequest(supporting: [module]) {
-                    try await installation.downloadAndInstall()
-                }
-                MemoireAnalyse.partage.installe = true
-            }
-        } catch {
+        // Modèle vérifié une fois par lancement (`pret()`) : les tours suivants démarrent tout de suite.
+        if !MemoireAnalyse.partage.installe, !(await Self.installer()) {
             lecture.cancel()
-            throw error
+            throw ErreurVoix.indisponible
         }
         let analyseur = SpeechAnalyzer(modules: [module])
         // Vocabulaire du moment : 100 expressions au plus (limite d'Apple). Sans effet sur SpeechTranscriber.
@@ -173,7 +202,19 @@ nonisolated final class TranscripteurAnalyseur: Transcripteur, Oreille, @uncheck
 
     func demarrer(surTexte: @escaping @Sendable (String, String) -> Void, surNiveau: @escaping @Sendable (Float) -> Void) async throws {
         let (analyseur, format, flux, continuation) = try await preparer(surTexte: surTexte)
+        verrou.withLock {
+            self.analyseur = analyseur
+            self.continuation = continuation
+            self.formatAnalyse = format
+        }
+        // Session audio et micro sur la file audio : l'écran reste fluide, et l'arrêt du tour précédent est fini.
+        try await FileAudio.executer { [self] in try ouvrirMicro(surNiveau: surNiveau) }
+        try await analyseur.start(inputSequence: flux)
+    }
 
+    private func ouvrirMicro(surNiveau: @escaping @Sendable (Float) -> Void) throws {
+        let (continuation, format) = verrou.withLock { (self.continuation, self.formatAnalyse) }
+        guard let continuation, let format else { throw ErreurVoix.indisponible }
         let session = AVAudioSession.sharedInstance()
         // Mode par défaut, pas « appel » : le traitement téléphonique (filtre, compression) dégrade la reconnaissance.
         // Endry ne parle pas pendant qu'il écoute : pas besoin d'annulation d'écho ici.
@@ -186,11 +227,7 @@ nonisolated final class TranscripteurAnalyseur: Transcripteur, Oreille, @uncheck
         let entree = moteurAudio.inputNode
         let formatMicro = entree.outputFormat(forBus: 0)
         let convertisseur = AVAudioConverter(from: formatMicro, to: format)
-        verrou.withLock {
-            self.analyseur = analyseur
-            self.continuation = continuation
-            self.convertisseur = convertisseur
-        }
+        verrou.withLock { self.convertisseur = convertisseur }
 
         entree.removeTap(onBus: 0)
         entree.installTap(onBus: 0, bufferSize: 2_048, format: formatMicro) { [weak self] tampon, _ in
@@ -202,7 +239,6 @@ nonisolated final class TranscripteurAnalyseur: Transcripteur, Oreille, @uncheck
         }
         moteurAudio.prepare()
         try moteurAudio.start()
-        try await analyseur.start(inputSequence: flux)
     }
 
     func arreter() {
@@ -212,9 +248,12 @@ nonisolated final class TranscripteurAnalyseur: Transcripteur, Oreille, @uncheck
         self.continuation = nil
         self.analyseur = nil
         verrou.unlock()
-        if moteurAudio.isRunning {
-            moteurAudio.inputNode.removeTap(onBus: 0)
-            moteurAudio.stop()
+        // Rend la main tout de suite : le micro s'éteint sur la file audio.
+        FileAudio.lancer { [self] in
+            if moteurAudio.isRunning {
+                moteurAudio.inputNode.removeTap(onBus: 0)
+                moteurAudio.stop()
+            }
         }
         continuation?.finish()
         lecture?.cancel()
@@ -254,6 +293,20 @@ nonisolated final class MemoireAnalyse: @unchecked Sendable {
     private let verrou = NSLock()
     private var localeConnue: Locale??
     private var modeleInstalle = false
+    private var tacheInstallation: Task<Bool, Never>?
+
+    /// Installation du modèle partagée : une seule à la fois ; réessayée la fois suivante si elle a échoué.
+    func installation(_ travail: @escaping @Sendable () async -> Bool) async -> Bool {
+        let tache = verrou.withLock { () -> Task<Bool, Never> in
+            if let enCours = tacheInstallation { return enCours }
+            let nouvelle = Task { await travail() }
+            tacheInstallation = nouvelle
+            return nouvelle
+        }
+        let reussi = await tache.value
+        if !reussi { verrou.withLock { if tacheInstallation == tache { tacheInstallation = nil } } }
+        return reussi
+    }
 
     /// `nil` : pas encore cherché ; `.some(nil)` : pas de dictée française sur cet iPhone.
     var locale: Locale?? {

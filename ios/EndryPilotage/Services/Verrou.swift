@@ -32,6 +32,18 @@ final class Verrou {
         }
     }
 
+    /// Symbole SF de la méthode (faceid, touchid, opticid, lock).
+    var symboleMethode: String {
+        let contexte = LAContext()
+        _ = contexte.canEvaluatePolicy(.deviceOwnerAuthentication, error: nil)
+        switch contexte.biometryType {
+        case .faceID: return "faceid"
+        case .touchID: return "touchid"
+        case .opticID: return "opticid"
+        default: return "lock"
+        }
+    }
+
     var doitAfficherEcran: Bool { actif && !deverrouille }
 
     /// Le lien d'accès vient d'être collé (ou la démo lancée) : inutile de redemander Face ID.

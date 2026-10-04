@@ -111,8 +111,8 @@ struct RacineView: View {
                     .zIndex(4)
             }
 
-            // Masquage du contenu dans le sélecteur d'apps.
-            if phase != .active, modele.session.estConnecte, !Configuration.testsUI {
+            // Masquage du contenu dans le sélecteur d'apps (inutile sous le verrou : même composition, déjà opaque).
+            if phase != .active, modele.session.estConnecte, !modele.verrou.doitAfficherEcran, !Configuration.testsUI {
                 EcranConfidentialite()
                     .transition(.opacity)
                     .zIndex(3)
@@ -153,49 +153,7 @@ struct RacineView: View {
     }
 }
 
-/// Écran affiché quand l'app passe en arrière-plan : aucun montant visible dans le sélecteur d'apps.
-struct EcranConfidentialite: View {
-    var body: some View {
-        ZStack {
-            MatiereEspresso(rayon: 0).ignoresSafeArea()
-            LogoEndry(taille: 72)
-        }
-        .accessibilityHidden(true)
-    }
-}
-
-struct EcranVerrou: View {
-    @Environment(ModeleApp.self) private var modele
-
-    var body: some View {
-        ZStack {
-            MatiereEspresso(rayon: 0).ignoresSafeArea()
-            VStack(spacing: Espace.l) {
-                Spacer()
-                LogoMarque(largeur: 240)
-                Text("Pilotage")
-                    .font(Police.etiquette(12, relativeTo: .caption))
-                    .textCase(.uppercase)
-                    .tracking(4)
-                    .foregroundStyle(Color.or)
-                if let erreur = modele.verrou.erreur {
-                    Text(erreur).styleTexte(14, relativeTo: .subheadline).foregroundStyle(Color.orClair.opacity(0.7))
-                }
-                Spacer()
-                Button {
-                    Task { await modele.verrou.deverrouiller() }
-                } label: {
-                    Label("Déverrouiller avec \(modele.verrou.nomMethode)", systemImage: "faceid")
-                }
-                .buttonStyle(BoutonPrincipal(couleur: .or))
-                .padding(.horizontal, Espace.xl)
-                .padding(.bottom, Espace.xxl)
-            }
-        }
-    }
-}
-
-/// Monogramme « E » or dans un cadre fin.
+/// Monogramme « EY » (image de 211 px de haut : au-delà de ~70 pt, il devient flou).
 struct LogoEndry: View {
     /// Hauteur du monogramme EY.
     var taille: CGFloat = 64
@@ -207,20 +165,6 @@ struct LogoEndry: View {
             .scaledToFit()
             .frame(height: taille)
             .accessibilityLabel(Text("Endry SA"))
-    }
-}
-
-/// Logo complet « EY ENDRY SA — Sanitaire Chauffage Ventilation », détouré, pour les fonds sombres.
-struct LogoMarque: View {
-    var largeur: CGFloat = 160
-
-    var body: some View {
-        Image("LogoEndry")
-            .resizable()
-            .interpolation(.high)
-            .scaledToFit()
-            .frame(width: largeur)
-            .accessibilityLabel(Text("Endry SA, sanitaire, chauffage, ventilation"))
     }
 }
 

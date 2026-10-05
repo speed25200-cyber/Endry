@@ -886,9 +886,13 @@ public struct Comptabilite: Decodable, Sendable, Hashable {
     /// Plan comptable et suivi (PDF), classeur de comptabilité (Excel).
     public var documents: [DocumentHeures]
     public var etatAu: String?
+    public var facturesOuvertes: Int?
+    public var facturesAPayer: Int?
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.champs()
+        facturesOuvertes = c.entier("factures_ouvertes")
+        facturesAPayer = c.entier("factures_a_payer")
         travaux = c.liste("a_facturer")
         comptes = c.liste("comptes")
         documents = c.liste("documents")

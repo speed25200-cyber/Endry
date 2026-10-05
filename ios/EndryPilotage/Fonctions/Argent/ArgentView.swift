@@ -12,7 +12,7 @@ struct ArgentView: View {
     @State private var heuresOuvertes: HeuresSecretariat?
 
     enum VueFinances: Hashable {
-        case encaisser, payer, offres
+        case encaisser, payer, offres, comptes
     }
 
     /// Vue choisie, gardée dans l'app : les instruments de l'accueil ouvrent directement la bonne.
@@ -34,6 +34,7 @@ struct ArgentView: View {
                         OptionSegment(valeur: VueFinances.encaisser, titre: "À encaisser"),
                         OptionSegment(valeur: .payer, titre: "À payer"),
                         OptionSegment(valeur: .offres, titre: "Offres"),
+                        OptionSegment(valeur: .comptes, titre: "Comptes"),
                     ], selection: selectionVue)
                     .padding(.top, 14)
 
@@ -56,17 +57,12 @@ struct ArgentView: View {
                                 case .encaisser: encaisser(argent)
                                 case .payer: payer(argent)
                                 case .offres: offres(argent)
+                                case .comptes: comptes(argent)
                                 }
                             }
                             .id(vue)
                             .transition(.opacity)
                             .apparitionEnCascade(index: 0, visible: visible)
-
-                            if let compta = argent.comptabilite, !devantClient {
-                                comptabilite(compta)
-                                    .padding(.top, Espace.xl)
-                                    .apparitionEnCascade(index: 1, visible: visible)
-                            }
 
                             if let heures = argent.heuresSecretariat {
                                 secretariat(heures)
@@ -325,18 +321,66 @@ struct ArgentView: View {
         "Compte \(c.numero) · \(c.factures) facture\(c.factures > 1 ? "s" : "")"
     }
 
-    /// Plan comptable tenu par le bureau : solde, comptes utilisés, documents (PDF, Excel).
-    private func comptabilite(_ c: Comptabilite) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text("Comptabilité").etiquetteMaison()
-                .accessibilityAddTraits(.isHeader)
+    /// Vue « Comptes » : la situation comptable tenue par le bureau.
+    @ViewBuilder
+    private func comptes(_ argent: Argent) -> some View {
+        if devantClient {
+            BlocMasqueClient(titre: "Comptes").padding(.top, Espace.l)
+        } else if let compta = argent.comptabilite {
+            comptabilite(compta, argent)
+        } else {
+            Text("La comptabilité n’est pas encore envoyée par le bureau.")
+                .font(Police.mono(11.5))
+                .foregroundStyle(Color.encreDouce)
+                .padding(.top, Espace.l)
+        }
+    }
+
+    /// Solde, ce qu'on nous doit (factures ouvertes, chantiers à facturer étape par étape), ce que nous devons,
+    /// charges par compte, documents (plan comptable PDF, classeur Excel).
+    private func comptabilite(_ c: Comptabilite, _ argent: Argent) -> some View {
+        let ouvertes = argent.encaisser.total
+        let nousDoit = ouvertes + c.aFacturer
+        let nousDevons = argent.payer.total
+        let nOuvertes = argent.encaisser.factures.count
+        let nAPayer = argent.payer.factures.count
+        return VStack(alignment: .leading, spacing: 0) {
+            grandMontant("Solde · ce qu’on nous doit, moins ce que nous devons", nousDoit - nousDevons)
             BandeChiffres(elements: [
-                .init(valeur: FormatSuisse.francs(c.nousDoit), libelle: "On nous doit"),
-                .init(valeur: FormatSuisse.francs(c.aPayer), libelle: "Nous devons", ton: c.aPayerEnRetard > 0 ? .alerte : nil),
-                .init(valeur: FormatSuisse.francs(c.solde), libelle: "Solde", ton: c.solde < 0 ? .alerte : nil),
+                .init(valeur: FormatSuisse.francs(nousDoit), libelle: "On nous doit"),
+                .init(valeur: FormatSuisse.francs(nousDevons), libelle: "Nous devons"),
+                .init(valeur: FormatSuisse.francs(c.aPayerEnRetard), libelle: "Dont en retard", ton: c.aPayerEnRetard > 0 ? .alerte : nil),
             ])
+            .padding(.top, Espace.m)
+
+            Text("Ce qu’on nous doit").etiquetteMaison().padding(.top, Espace.xl)
+            VStack(spacing: 10) {
+                LigneMaison(titre: "Factures clients ouvertes",
+                            detail: nOuvertes > 1 ? "\(nOuvertes) factures envoyées, pas encore payées" : "\(nOuvertes) facture envoyée, pas encore payée",
+                            montant: FormatSuisse.francs(ouvertes))
+                ForEach(c.travaux) { travail in
+                    if travail.tranches.isEmpty {
+                        LigneMaison(titre: travail.titre,
+                                    detail: Self.detailTravail(travail),
+                                    montant: FormatSuisse.francs(travail.reste),
+                                    etat: "À facturer", etatAccent: true)
+                    } else {
+                        CarteEcheancier(travail: travail)
+                    }
+                }
+            }
             .padding(.top, Espace.s)
+
+            Text("Ce que nous devons").etiquetteMaison().padding(.top, Espace.xl)
+            LigneMaison(titre: "Factures fournisseurs",
+                        detail: nAPayer > 1 ? "\(nAPayer) factures à payer" : "\(nAPayer) facture à payer",
+                        montant: FormatSuisse.francs(nousDevons),
+                        etat: c.aPayerEnRetard > 0 ? "retard \(FormatSuisse.francs(c.aPayerEnRetard))" : nil,
+                        etatAlerte: c.aPayerEnRetard > 0)
+            .padding(.top, Espace.s)
+
             if !c.comptes.isEmpty {
+                Text("Charges par compte").etiquetteMaison().padding(.top, Espace.xl)
                 VStack(spacing: 10) {
                     ForEach(c.comptes) { compte in
                         LigneMaison(titre: compte.libelle.isEmpty ? "Compte \(compte.numero)" : compte.libelle,
@@ -346,7 +390,7 @@ struct ArgentView: View {
                                     etatAlerte: compte.ouvert > 0)
                     }
                 }
-                .padding(.top, Espace.m)
+                .padding(.top, Espace.s)
             }
             if !c.documents.isEmpty {
                 HStack(spacing: Espace.xs) {
@@ -366,8 +410,13 @@ struct ArgentView: View {
                         .accessibilityHint(Text("Ouvre le document du bureau"))
                     }
                 }
-                .padding(.top, Espace.m)
+                .padding(.top, Espace.l)
             }
+            Text("Tenu par le bureau. Les acomptes et la facture finale suivent l’échéancier convenu avec le client.")
+                .font(Police.mono(11.5))
+                .foregroundStyle(Color.encreDouce)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, Espace.s)
         }
         .accessibilityIdentifier("comptabilite")
     }

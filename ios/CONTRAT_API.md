@@ -558,3 +558,15 @@ Demande du patron : « pouvoir mettre des photos dans le chat avec l’agent ».
   (`pieces-conversation/`, effacées avec la conversation et à la déconnexion). Avec une pièce jointe, le message part
   toujours comme une question : le bureau regarde, répond et prépare ce qui est demandé ; tout envoi reste une
   décision à glisser. Sans réseau, le message et ses pièces repartent seuls au retour du réseau.
+
+## v1.11 — brouillons d’offres et offre jointe à la réponse (05.10.2026, en service sur le PC)
+
+Constat du patron : une offre préparée par le bureau (brouillon Bexio) n’apparaissait ni dans les offres de l’app ni
+en pièce jointe de la réponse dans la conversation.
+
+- `GET /argent` : `offres.brouillons: [Offre]` (mêmes champs, `statut: "brouillon"`), hors de `offres.total`.
+  **App** : Finances › Offres, section « Brouillons à relire » ; toucher = PDF au modèle Endry (`/app/doc/offre/{id}`).
+- `Reponse.documents` et `documents` des saisies : toute offre créée ou modifiée pour la demande y figure
+  (`{nom: "Offre AN-00040.pdf", url: "/app/doc/offre/40"}`), même si aucun fichier n’a été généré.
+- **App** : le compte rendu d’un geste abouti (réponse à une question `Q-…`, Oui, Corriger) porte ses fichiers
+  produits en documents à ouvrir, plus seulement leurs noms.

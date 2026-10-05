@@ -292,21 +292,37 @@ struct ArgentView: View {
             }
             VStack(spacing: 10) {
                 ForEach(o.offres) { offre in
-                    Button {
-                        Task { await app.documents.ouvrir(offre.cheminPDF, nom: "\(offre.numero).pdf", api: app.session.api) }
-                    } label: {
-                        LigneMaison(titre: offre.client,
-                                    detail: offre.numero + " · " + offre.titre,
-                                    montant: FormatSuisse.francs(offre.montant),
-                                    etat: offre.valableJusquAu.map { "jusqu’au \(DateEndry.jourMois($0))" })
-                    }
-                    .buttonStyle(ActionPressee())
-                    .accessibilityHint(Text("Ouvre l’offre"))
+                    ligneOffre(offre, etat: offre.valableJusquAu.map { "jusqu’au \(DateEndry.jourMois($0))" })
                 }
             }
             .padding(.top, Espace.l)
+            if !o.brouillons.isEmpty {
+                // Préparées par le bureau, pas encore envoyées au client : à relire.
+                Text("Brouillons à relire · \(o.brouillons.count)").etiquetteMaison()
+                    .padding(.top, Espace.l)
+                    .accessibilityIdentifier("offres-brouillons")
+                VStack(spacing: 10) {
+                    ForEach(o.brouillons) { offre in
+                        ligneOffre(offre, etat: "brouillon")
+                    }
+                }
+                .padding(.top, Espace.s)
+            }
             CarteOffresASuivre(offres: o.offres).padding(.top, Espace.l)
         }
+    }
+
+    private func ligneOffre(_ offre: Offre, etat: String?) -> some View {
+        Button {
+            Task { await app.documents.ouvrir(offre.cheminPDF, nom: "\(offre.numero).pdf", api: app.session.api) }
+        } label: {
+            LigneMaison(titre: offre.client,
+                        detail: offre.numero + " · " + offre.titre,
+                        montant: FormatSuisse.francs(offre.montant),
+                        etat: etat)
+        }
+        .buttonStyle(ActionPressee())
+        .accessibilityHint(Text("Ouvre l’offre"))
     }
 
     // MARK: - Comptabilité

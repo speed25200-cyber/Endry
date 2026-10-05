@@ -520,6 +520,8 @@ public struct Offre: Decodable, Sendable, Hashable, Identifiable {
     public var valableJusquAu: String?
     /// v1.3 : dernier suivi préparé (`AAAA-MM-JJ`), pour ne pas proposer deux fois le même suivi.
     public var dernierSuivi: String?
+    /// v1.11 : « brouillon » pour une offre préparée par le bureau et pas encore émise.
+    public var statut: String?
 
     public var id: String { offreId }
 
@@ -533,6 +535,7 @@ public struct Offre: Decodable, Sendable, Hashable, Identifiable {
         emiseLe = c.texte("emise_le")
         valableJusquAu = c.texte("valable_jusqu_au")
         dernierSuivi = c.texte("dernier_suivi")
+        statut = c.texte("statut")
     }
 
     public var cheminPDF: String { "/app/doc/offre/\(offreId)" }
@@ -541,15 +544,19 @@ public struct Offre: Decodable, Sendable, Hashable, Identifiable {
 public struct Offres: Decodable, Sendable, Hashable {
     public var offres: [Offre]
     public var total: Double
+    /// v1.11 : offres en brouillon dans Bexio (préparées par le bureau, à relire) ; hors du total.
+    public var brouillons: [Offre]
 
-    public init(offres: [Offre] = [], total: Double = 0) {
+    public init(offres: [Offre] = [], total: Double = 0, brouillons: [Offre] = []) {
         self.offres = offres
         self.total = total
+        self.brouillons = brouillons
     }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.champs()
         offres = c.liste("offres")
+        brouillons = c.liste("brouillons")
         total = c.nombre("total") ?? offres.reduce(0) { $0 + $1.montant }
     }
 }

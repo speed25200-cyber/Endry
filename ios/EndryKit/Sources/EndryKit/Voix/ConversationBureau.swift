@@ -473,14 +473,16 @@ public final class ModeleConversation {
 
     /// Compte rendu d'une demande ou d'un geste, question du bureau : dans le fil, comme un message de
     /// l'assistant (une seule fois par `cle` ; mis à jour si le texte change). Comme une session ouverte avec Claude.
+    /// `documents` (v1.11) : fichiers produits (offre en PDF, planning…), à ouvrir sous le message.
     public func recevoirDuBureau(cle: String, texte: String, agent: String? = nil, decision: String? = nil,
-                                 erreur: Bool = false, le: Date = Date()) {
+                                 erreur: Bool = false, documents: [Piece] = [], le: Date = Date()) {
         let propre = texte.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !propre.isEmpty else { return }
         let id = "B:" + cle
         if var existant = messages.first(where: { $0.id == id }) {
-            guard existant.texte != propre else { return }
+            guard existant.texte != propre || (existant.documents ?? []) != documents else { return }
             existant.texte = propre
+            if !documents.isEmpty { existant.documents = documents }
             existant.etat = erreur ? .erreur : .recu
             remplacer(existant)
             return
@@ -489,13 +491,15 @@ public final class ModeleConversation {
                                     conversation: conversationCourante(maintenant: le), etat: erreur ? .erreur : .recu,
                                     agent: agent)
         m.decisionReference = decision
+        if !documents.isEmpty { m.documents = documents }
         ajouter(m)
     }
 
-    /// Compte rendu d'une action suivie qui vient d'aboutir.
+    /// Compte rendu d'une action suivie qui vient d'aboutir, avec les fichiers produits à ouvrir.
     public func recevoir(issue a: ActionSuivie) {
+        let documents = a.fichiers.compactMap { f in f.document.map { Piece(nom: f.nom, url: $0) } }
         recevoirDuBureau(cle: "S:" + a.id, texte: Self.compteRendu(a), agent: a.agent,
-                         decision: a.decisionPreparee, erreur: a.etat == .erreur)
+                         decision: a.decisionPreparee, erreur: a.etat == .erreur, documents: documents)
     }
 
     /// Question que le bureau pose au patron (carte `Q-…`) : elle entre dans le fil ; on y répond ici ou sur la carte.

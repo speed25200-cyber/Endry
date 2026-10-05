@@ -118,7 +118,8 @@ GET  /argent       → {encaisser, payer, offres,
                       heures_secretariat: {heures: string ("31 h 30"), montant: number, mois: string},
                       comptabilite (v1.10, facultatif): {a_payer_chf, a_payer_en_retard_chf, a_encaisser_chf,
                         a_facturer_chf, nous_doit_chf: number, etat_au: "AAAA-MM-JJ",
-                        a_facturer: [{dossier_id, client, chantier, devis, facture, reste: number}],
+                        a_facturer: [{dossier_id, client, chantier, devis, facture, reste: number,
+                          tranches: [{libelle, montant: number, etat: "payée"|"facturée"|"à facturer", facture: null|string}]}],
                         comptes: [{numero, libelle, factures: int, total_chf, ouvert_chf: number}],
                         documents: [{nom, url}]}}
 POST /saisie       (multipart : texte, photos[]) → {ok, message}

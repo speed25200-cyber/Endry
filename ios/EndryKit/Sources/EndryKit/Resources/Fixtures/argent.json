@@ -385,7 +385,27 @@
         "chantier": "Chemin des Cèdres 4, Payerne",
         "devis": 18400.0,
         "facture": 9200.0,
-        "reste": 9200.0
+        "reste": 9200.0,
+        "tranches": [
+          {
+            "libelle": "1er acompte, 50 % à la commande",
+            "montant": 9200.0,
+            "etat": "payée",
+            "facture": "RE-00052"
+          },
+          {
+            "libelle": "2e acompte, 30 % après la mise en service",
+            "montant": 5520.0,
+            "etat": "à facturer",
+            "facture": null
+          },
+          {
+            "libelle": "Facture finale, 20 % après la réception des travaux",
+            "montant": 3680.0,
+            "etat": "à facturer",
+            "facture": null
+          }
+        ]
       },
       {
         "dossier_id": 21,

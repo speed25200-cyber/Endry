@@ -797,6 +797,31 @@ extension EndryAPI {
     }
 }
 
+/// v1.10 : une étape de facturation d'un chantier (acompte ou facture finale) et son état.
+public struct TrancheFacturation: Decodable, Sendable, Hashable, Identifiable {
+    public enum Etat: String, Sendable {
+        case payee = "payée"
+        case facturee = "facturée"
+        case aFacturer = "à facturer"
+    }
+
+    public var libelle: String
+    public var montant: Double
+    public var etat: Etat
+    /// Numéro de la facture émise pour cette tranche (`RE-00039`), s'il y en a une.
+    public var facture: String?
+
+    public var id: String { libelle + "-" + (facture ?? "") }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.champs()
+        libelle = c.texte("libelle", defaut: "Facture")
+        montant = c.nombre("montant") ?? 0
+        etat = c.texte("etat").flatMap(Etat.init(rawValue:)) ?? .aFacturer
+        facture = c.texte("facture")
+    }
+}
+
 /// v1.10 : chantier dont le devis est accepté et pas encore entièrement facturé (un acompte ne solde pas un chantier).
 public struct TravailAFacturer: Decodable, Sendable, Hashable, Identifiable {
     public var id: String
@@ -807,9 +832,12 @@ public struct TravailAFacturer: Decodable, Sendable, Hashable, Identifiable {
     /// Déjà facturé (acomptes compris).
     public var facture: Double
     public var reste: Double
+    /// Acomptes puis facture finale, dans l'ordre ; vide si le PC ne les envoie pas.
+    public var tranches: [TrancheFacturation]
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.champs()
+        tranches = c.liste("tranches")
         client = c.texte("client", defaut: "")
         chantier = c.texte("chantier", defaut: "")
         devis = c.nombre("devis") ?? 0

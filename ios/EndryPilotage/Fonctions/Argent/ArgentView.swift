@@ -166,10 +166,14 @@ struct ArgentView: View {
                 Text("Travaux acceptés, à facturer").etiquetteMaison().padding(.top, Espace.xl)
                 VStack(spacing: 10) {
                     ForEach(compta.travaux) { travail in
-                        LigneMaison(titre: travail.titre,
-                                    detail: Self.detailTravail(travail),
-                                    montant: FormatSuisse.francs(travail.reste),
-                                    etat: "À facturer", etatAccent: true)
+                        if travail.tranches.isEmpty {
+                            LigneMaison(titre: travail.titre,
+                                        detail: Self.detailTravail(travail),
+                                        montant: FormatSuisse.francs(travail.reste),
+                                        etat: "À facturer", etatAccent: true)
+                        } else {
+                            CarteEcheancier(travail: travail)
+                        }
                     }
                 }
                 .padding(.top, Espace.s)
@@ -402,6 +406,88 @@ struct ArgentView: View {
         .accessibilityHint(Text("Détail des heures, relevés PDF et Excel du bureau"))
         .accessibilityIdentifier("heures-secretariat")
         .sheet(item: $heuresOuvertes) { HeuresSecretariatView(heures: $0).apercuDocuments() }
+    }
+}
+
+/// Un chantier accepté, étape par étape : chaque acompte et la facture finale avec son état.
+struct CarteEcheancier: View {
+    var travail: TravailAFacturer
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: Espace.s) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(travail.titre)
+                        .styleTexte(16, relativeTo: .subheadline)
+                        .foregroundStyle(Color.encre)
+                        .lineLimit(1)
+                    Text((travail.client.isEmpty ? "" : travail.chantier + " · ") + "prix convenu " + FormatSuisse.francs(travail.devis))
+                        .font(Police.mono(11.5))
+                        .foregroundStyle(Color.encreDouce)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                Spacer(minLength: Espace.xs)
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(FormatSuisse.francs(travail.reste))
+                        .font(Police.serif(23, relativeTo: .headline))
+                        .monospacedDigit()
+                        .foregroundStyle(Color.encre)
+                        .lineLimit(1)
+                    Text("reste à facturer")
+                        .font(Police.mono(11.5))
+                        .foregroundStyle(Color.signal)
+                        .lineLimit(1)
+                }
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(travail.tranches) { tranche in
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Circle()
+                            .fill(Self.couleur(tranche.etat))
+                            .frame(width: 7, height: 7)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(tranche.libelle)
+                                .styleTexte(13, relativeTo: .footnote)
+                                .foregroundStyle(Color.encre)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text(Self.etat(tranche))
+                                .font(Police.mono(11))
+                                .foregroundStyle(Self.couleur(tranche.etat))
+                        }
+                        Spacer(minLength: Espace.xs)
+                        Text(FormatSuisse.francs(tranche.montant))
+                            .font(Police.mono(12.5))
+                            .monospacedDigit()
+                            .foregroundStyle(tranche.etat == .aFacturer ? Color.encre : Color.encreDouce)
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+            }
+            .padding(.top, 2)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
+        .tuileMaison(rayon: 22)
+    }
+
+    static func couleur(_ etat: TrancheFacturation.Etat) -> Color {
+        switch etat {
+        case .payee: Color.sauge
+        case .facturee: Color.ambre
+        case .aFacturer: Color.encreDouce
+        }
+    }
+
+    /// « payée · RE-00039 », « facturée, en attente · RE-00041 », « à facturer ».
+    static func etat(_ t: TrancheFacturation) -> String {
+        let texte = switch t.etat {
+        case .payee: "payée"
+        case .facturee: "facturée, en attente"
+        case .aFacturer: "à facturer"
+        }
+        return t.facture.map { texte + " · " + $0 } ?? texte
     }
 }
 

@@ -319,6 +319,7 @@ final class ModeleApp {
         if let dossier = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
             try? FileManager.default.removeItem(at: dossier.appendingPathComponent("suivi-actions.json"))
             try? FileManager.default.removeItem(at: dossier.appendingPathComponent("conversation.json"))
+            try? FileManager.default.removeItem(at: dossier.appendingPathComponent("pieces-conversation", isDirectory: true))
         }
         reconstruire()
         DelegueApp.mettreAJourBadge(0)

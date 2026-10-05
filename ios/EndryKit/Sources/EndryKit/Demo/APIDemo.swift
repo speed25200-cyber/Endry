@@ -404,7 +404,11 @@ public actor APIDemo: EndryAPI {
     }
 
     private func deposerQuestion(agent: String, corps: Requete.Corps?) -> Data {
-        let question = Self.champ("question", dans: corps) ?? ""
+        var question = Self.champ("question", dans: corps) ?? ""
+        if case .multipart(let formulaire) = corps, !formulaire.fichiers.isEmpty {
+            let n = formulaire.fichiers.count
+            question = (question.isEmpty ? "" : question + " ") + "(\(n) pièce\(n > 1 ? "s" : "") jointe\(n > 1 ? "s" : ""))"
+        }
         let id = "Q-\(900 + questionsAgents.count)"
         questionsAgents[id] = (agent, question, .now)
         mettreAgent(agent, etat: "occupe", tache: "Cherche : « \(question) »")
@@ -443,6 +447,10 @@ public actor APIDemo: EndryAPI {
     }
 
     static func champ(_ nom: String, dans corps: Requete.Corps?) -> String? {
+        if case .multipart(let formulaire) = corps {
+            // Question avec photos (v1.10) : mêmes champs, dans un formulaire.
+            return formulaire.champs.first { $0.nom == nom }.flatMap { $0.valeur.isEmpty ? nil : $0.valeur }
+        }
         guard case .json(let data) = corps, let objet = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
         return (objet[nom] as? String).flatMap { $0.isEmpty ? nil : $0 }
     }

@@ -1,7 +1,9 @@
 import EndryKit
+import PhotosUI
 import QuickLook
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 /// « Conversation » avec le bureau, en plein écran (l'app derrière ne se dessine plus) : comme une session Claude
 /// ouverte sur le PC. L'écran ne montre que le fil en cours ; « Nouvelle conversation » repart d'une page blanche
@@ -237,9 +239,36 @@ private struct ComposeurConversation: View {
     @State private var avantDictee = ""
     /// Le message en cours vient (au moins en partie) de la dictée.
     @State private var dicte = false
+    /// Photos et PDF joints au message en cours (v1.10).
+    @State private var pieces: [PieceSaisie] = []
+    @State private var selectionPhotos: [PhotosPickerItem] = []
+    @State private var photosPresentees = false
+    @State private var cameraPresentee = false
+    @State private var fichiersPresentes = false
+    @State private var avisPieces: String?
 
     var body: some View {
         composeur
+            .photosPicker(isPresented: $photosPresentees, selection: $selectionPhotos,
+                          maxSelectionCount: ModeleConversation.maximumPieces, matching: .images, photoLibrary: .shared())
+            .onChange(of: selectionPhotos) { _, elements in
+                Task { await importer(elements) }
+            }
+            .fullScreenCover(isPresented: $cameraPresentee) {
+                CameraPhoto { image in
+                    cameraPresentee = false
+                    guard let image else { return }
+                    Task {
+                        let piece = await PiecesConversation.photo(image, rang: pieces.count + 1)
+                        ajouter(piece)
+                    }
+                }
+                .ignoresSafeArea()
+            }
+            .fileImporter(isPresented: $fichiersPresentes, allowedContentTypes: [.pdf, .image], allowsMultipleSelection: true) { resultat in
+                guard case .success(let fichiers) = resultat else { return }
+                Task { await importer(fichiers: fichiers) }
+            }
             .onDisappear { dictee.arreter() }
             .onChange(of: dictee.transcription) { _, dit in
                 guard dictee.ecoute, !dit.isEmpty else { return }
@@ -257,6 +286,81 @@ private struct ComposeurConversation: View {
 
     private var vide: Bool { texte.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
+    /// Ni texte ni pièce jointe : rien à envoyer.
+    private var rienAEnvoyer: Bool { vide && pieces.isEmpty }
+
+    private var complet: Bool { pieces.count >= ModeleConversation.maximumPieces }
+
+    // MARK: Pièces jointes
+
+    private func ajouter(_ piece: PieceSaisie?) {
+        guard let piece else { return }
+        guard !complet else {
+            avisPieces = "Six pièces au maximum par message."
+            return
+        }
+        avisPieces = nil
+        withAnimation(.endry) { pieces.append(piece) }
+    }
+
+    private func importer(_ elements: [PhotosPickerItem]) async {
+        guard !elements.isEmpty else { return }
+        selectionPhotos = []
+        for element in elements {
+            guard let donnees = try? await element.loadTransferable(type: Data.self) else { continue }
+            let piece = await PiecesConversation.photo(donnees, rang: pieces.count + 1)
+            ajouter(piece)
+        }
+    }
+
+    private func importer(fichiers: [URL]) async {
+        for fichier in fichiers {
+            do throws(PiecesConversation.Refus) {
+                let piece = try await PiecesConversation.fichier(fichier, rang: pieces.count + 1)
+                ajouter(piece)
+            } catch {
+                avisPieces = error.message
+            }
+        }
+    }
+
+    /// « + » : photo, photothèque ou fichier PDF.
+    private var boutonJoindre: some View {
+        Menu {
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Button {
+                    clavier.wrappedValue = false
+                    cameraPresentee = true
+                } label: {
+                    Label("Prendre une photo", systemImage: "camera")
+                }
+            }
+            Button {
+                clavier.wrappedValue = false
+                photosPresentees = true
+            } label: {
+                Label("Choisir dans la photothèque", systemImage: "photo.on.rectangle")
+            }
+            Button {
+                clavier.wrappedValue = false
+                fichiersPresentes = true
+            } label: {
+                Label("Choisir un fichier", systemImage: "doc")
+            }
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(Color.encreDouce)
+                .frame(width: 32, height: 32)
+                .overlay(Circle().strokeBorder(Color.filet, lineWidth: Espace.filet))
+                .contentShape(Circle())
+        }
+        .disabled(complet)
+        .opacity(complet ? 0.4 : 1)
+        .accessibilityLabel(Text("Joindre une photo ou un document"))
+        .accessibilityIdentifier("joindre-conversation")
+    }
+
     private var composeur: some View {
         VStack(alignment: .leading, spacing: Espace.xs) {
             if case .refuse(let raison) = dictee.etat {
@@ -264,7 +368,16 @@ private struct ComposeurConversation: View {
             } else if case .indisponible(let raison) = dictee.etat {
                 Text(raison).styleTexte(12, relativeTo: .caption).foregroundStyle(Color.rouille)
             }
+            if let avisPieces {
+                Text(avisPieces).styleTexte(12, relativeTo: .caption).foregroundStyle(Color.rouille)
+            }
             VStack(alignment: .leading, spacing: 10) {
+                if !pieces.isEmpty {
+                    PiecesAEnvoyer(pieces: pieces) { piece in
+                        avisPieces = nil
+                        withAnimation(.endry) { pieces.removeAll { $0.id == piece.id } }
+                    }
+                }
                 TextField("", text: $texte, prompt: Text(dictee.ecoute ? "J’écoute…" : "Écrire au bureau…").foregroundStyle(Color.encreDouce),
                           axis: .vertical)
                     .styleTexte(17)
@@ -274,7 +387,9 @@ private struct ComposeurConversation: View {
                     .focused(clavier)
                     .accessibilityIdentifier("champ-conversation")
                 HStack(spacing: Espace.xs) {
-                    choixNature
+                    boutonJoindre
+                    // Avec une pièce jointe, le message part toujours au bureau comme une question (il prépare aussi).
+                    if pieces.isEmpty { choixNature }
                     Spacer(minLength: 0)
                     boutonDictee
                     boutonEnvoyer
@@ -366,10 +481,10 @@ private struct ComposeurConversation: View {
                 .background(Color.bouton, in: Circle())
         }
         .buttonStyle(.plain)
-        .disabled(vide)
-        .opacity(vide ? 0.35 : 1)
-        .scaleEffect(vide ? 0.9 : 1)
-        .animation(.endryVif, value: vide)
+        .disabled(rienAEnvoyer)
+        .opacity(rienAEnvoyer ? 0.35 : 1)
+        .scaleEffect(rienAEnvoyer ? 0.9 : 1)
+        .animation(.endryVif, value: rienAEnvoyer)
         // Clavier de l'iPad : ⌘↩ envoie.
         .keyboardShortcut(.return, modifiers: .command)
         .accessibilityLabel(Text(nature == .question ? "Envoyer la question" : "Transmettre la demande"))
@@ -378,15 +493,18 @@ private struct ComposeurConversation: View {
 
     private func envoyer(_ contenu: String, nature: MessageConversation.Nature) async {
         let propre = contenu.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !propre.isEmpty else { return }
+        let jointes = pieces
+        guard !propre.isEmpty || !jointes.isEmpty else { return }
         dictee.arreter()
         let source: MessageConversation.Source = dicte ? .dictee : .ecrit
         texte = ""
+        pieces = []
+        avisPieces = nil
         avantDictee = ""
         dicte = false
         natureChoisie = false
         self.nature = .question
-        await modele.envoyer(propre, nature: nature, source: source)
+        await modele.envoyer(propre, pieces: jointes, nature: nature, source: source)
     }
 }
 
@@ -484,14 +602,19 @@ private struct MessageView: View {
         HStack {
             Spacer(minLength: 48)
             VStack(alignment: .trailing, spacing: 4) {
-                Text(message.texte)
-                    .styleTexte(16)
-                    .foregroundStyle(Color.encre)
-                    .textSelection(.enabled)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 11)
-                    .background(Color.tuileHaut, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                    .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Color.filet, lineWidth: Espace.filet))
+                if let pieces = message.pieces, !pieces.isEmpty, let fil = app.conversation {
+                    PiecesMessage(pieces: pieces, modele: fil)
+                }
+                if !message.texte.isEmpty {
+                    Text(message.texte)
+                        .styleTexte(16)
+                        .foregroundStyle(Color.encre)
+                        .textSelection(.enabled)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 11)
+                        .background(Color.tuileHaut, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Color.filet, lineWidth: Espace.filet))
+                }
                 HStack(spacing: 4) {
                     if message.nature == .demande { Image(systemName: "hammer") }
                     if message.source != .ecrit { Image(systemName: message.source == .voix ? "waveform" : "mic") }
@@ -501,7 +624,7 @@ private struct MessageView: View {
                 .foregroundStyle(Color.encreDouce)
             }
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: message.pieces?.isEmpty == false ? .contain : .combine)
         .accessibilityIdentifier("message-patron")
     }
 

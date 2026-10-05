@@ -116,6 +116,77 @@ final class ConversationTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: fichier.path))
     }
 
+    // MARK: Photos dans la conversation (v1.10)
+
+    private var photo: PieceSaisie {
+        PieceSaisie(nom: "photo-1.jpg", typeMIME: "image/jpeg", donnees: Data([0xFF, 0xD8, 0xFF, 0x01]), origine: .photo)
+    }
+
+    func testQuestionAvecPhotoSeuleRecoitSaReponse() async {
+        let api = APIDemo(latence: .zero, delaiClaude: .milliseconds(150))
+        let modele = ModeleConversation(bureau: BureauClaude(api: api))
+        let jointe = photo
+        await modele.envoyer("", pieces: [jointe])
+        await attendre { modele.messages.last?.etat == .recu }
+        XCTAssertEqual(modele.messages.count, 2)
+        XCTAssertEqual(modele.messages[0].nature, .question)
+        XCTAssertEqual(modele.messages[0].pieces?.map(\.nom), ["photo-1.jpg"])
+        XCTAssertEqual(modele.messages[0].pieces?.first?.taille, 4)
+        XCTAssertEqual(modele.messages[1].etat, .recu)
+        if let piece = modele.messages[0].pieces?.first {
+            let relues = await modele.donnees(de: piece)
+            XCTAssertEqual(relues, jointe.donnees)
+        }
+    }
+
+    func testDemandeAvecPhotoPartCommeQuestionEtSixPiecesAuPlus() async {
+        let api = APIDemo(latence: .zero, delaiClaude: .milliseconds(150))
+        let modele = ModeleConversation(bureau: BureauClaude(api: api), transmettre: { _ in
+            XCTFail("Avec une pièce jointe, le message part comme une question.")
+            return .transmise
+        })
+        await modele.envoyer("Prépare l’offre d’après cette photo", pieces: Array(repeating: photo, count: 8), nature: .demande)
+        XCTAssertEqual(modele.messages.first?.nature, .question)
+        XCTAssertEqual(modele.messages.first?.pieces?.count, ModeleConversation.maximumPieces)
+    }
+
+    func testPiecesGardeesSurLeDisquePuisEffacees() async {
+        let dossier = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let fichier = dossier.appendingPathComponent("conversation.json")
+        defer { try? FileManager.default.removeItem(at: dossier) }
+        let modele = ModeleConversation(bureau: nil, fichier: fichier)
+        let jointe = photo
+        await modele.envoyer("Quelle chaudière ?", pieces: [jointe])
+        guard let piece = modele.messages.first?.pieces?.first, let local = modele.fichierLocal(de: piece) else {
+            return XCTFail("Pièce jointe attendue.")
+        }
+        XCTAssertEqual(local.pathExtension, "jpg")
+        await attendre { FileManager.default.fileExists(atPath: local.path) }
+        await attendre({ (try? Data(contentsOf: fichier)).map { String(decoding: $0, as: UTF8.self).contains("photo-1.jpg") } ?? false })
+        let relu = ModeleConversation(bureau: nil, fichier: fichier)
+        XCTAssertEqual(relu.messages.first?.pieces, [piece])
+        let relues = await relu.donnees(de: piece)
+        XCTAssertEqual(relues, jointe.donnees)
+        relu.effacer()
+        await attendre { !FileManager.default.fileExists(atPath: local.path) }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: local.path))
+    }
+
+    func testRequeteQuestionEnFormulaireSeulementAvecDesPieces() {
+        let jointe = FormulaireMultipart.Fichier(nomFichier: "photo-1.jpg", typeMIME: "image/jpeg", donnees: Data([1]))
+        let avec = Requete.questionClaude("Quel modèle ?", agent: "achats", contexte: "Q : x", fichiers: [jointe])
+        guard case .multipart(let formulaire)? = avec.corps else { return XCTFail("Formulaire attendu.") }
+        XCTAssertEqual(avec.chemin, "/app/api/v1/assistant/question")
+        XCTAssertEqual(formulaire.fichiers.map(\.champ), ["photos"])
+        XCTAssertEqual(formulaire.champs.first { $0.nom == "question" }?.valeur, "Quel modèle ?")
+        XCTAssertEqual(formulaire.champs.first { $0.nom == "agent" }?.valeur, "achats")
+        XCTAssertEqual(formulaire.champs.first { $0.nom == "contexte" }?.valeur, "Q : x")
+        guard case .json? = Requete.questionClaude("Quel modèle ?").corps else { return XCTFail("JSON attendu.") }
+        guard case .multipart? = Requete.questionAgent("achats", question: "", fichiers: [jointe]).corps else {
+            return XCTFail("Formulaire attendu.")
+        }
+    }
+
     func testBlocsDuTexte() {
         let blocs = BlocTexte.decouper("""
         ## Factures ouvertes

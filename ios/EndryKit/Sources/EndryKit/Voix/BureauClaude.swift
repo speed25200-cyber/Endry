@@ -286,13 +286,17 @@ public struct BureauClaude: Sendable {
     /// Mode direct (v4) : le PC la traite tout de suite ; les envois deviennent des décisions à glisser.
     /// `conversation` : même fil pour les questions qui se suivent (« et pour la Villa Morel ? »), comme un chat ;
     /// `contexte` : derniers échanges, pour un PC qui ne garde pas le fil lui-même.
+    /// `fichiers` : photos ou PDF joints au message (v1.10) ; la question peut alors être vide.
     public func poser(_ question: String, agentId: String? = nil, nomAgent: String? = nil,
-                      conversation: String? = nil, contexte: String? = nil) async throws(ErreurAPI) -> QuestionPosee {
+                      conversation: String? = nil, contexte: String? = nil,
+                      fichiers: [FormulaireMultipart.Fichier] = []) async throws(ErreurAPI) -> QuestionPosee {
         let q = question.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { throw .refus("La question est vide.") }
+        guard !q.isEmpty || !fichiers.isEmpty else { throw .refus("La question est vide.") }
         var requetes: [Requete] = []
-        if let agentId { requetes.append(.questionAgent(agentId, question: q, conversation: conversation, contexte: contexte)) }
-        requetes.append(.questionClaude(q, agent: agentId, conversation: conversation, contexte: contexte))
+        if let agentId {
+            requetes.append(.questionAgent(agentId, question: q, conversation: conversation, contexte: contexte, fichiers: fichiers))
+        }
+        requetes.append(.questionClaude(q, agent: agentId, conversation: conversation, contexte: contexte, fichiers: fichiers))
         // Une route qui a reçu la question ne doit jamais être doublée par la suivante : on ne passe à la route
         // suivante (puis au repli /saisie) que si la précédente n'existe pas (404 / 405).
         for requete in requetes {
@@ -321,7 +325,8 @@ public struct BureauClaude: Sendable {
             }
         }
         let texte = Self.texteQuestion(q, nomAgent: nomAgent)
-        let formulaire = FormulaireMultipart(champs: [Parametre("texte", texte)] + (agentId.map { [Parametre("agent", $0)] } ?? []))
+        let formulaire = FormulaireMultipart(champs: [Parametre("texte", texte)] + (agentId.map { [Parametre("agent", $0)] } ?? []),
+                                             fichiers: fichiers)
         let reponse = try await api.charger(ReponseSimple.self, .saisie(formulaire))
         guard reponse.ok else { throw .refus(reponse.message ?? "Le PC n’a pas accepté la question.") }
         return .enAttente(.saisie(id: reponse.saisieId, texte: texte), message: nil)
@@ -391,12 +396,12 @@ extension Requete {
     /// Question à Claude, qui choisit l'agent si `agent` est absent.
     /// v1.6 : `mode: "direct"` (traiter tout de suite, comme une session ouverte), `conversation_id`, `contexte`.
     public static func questionClaude(_ question: String, agent: String? = nil, conversation: String? = nil,
-                                      contexte: String? = nil) -> Requete {
+                                      contexte: String? = nil, fichiers: [FormulaireMultipart.Fichier] = []) -> Requete {
         var corps = ["question": question, "mode": "direct"]
         if let agent { corps["agent"] = agent }
         if let conversation { corps["conversation_id"] = conversation }
         if let contexte, !contexte.isEmpty { corps["contexte"] = contexte }
-        return .init(.post, "\(prefixe)/assistant/question", corps: .json(json(corps)), delai: 90)
+        return Requete.corpsQuestion("\(prefixe)/assistant/question", corps: corps, fichiers: fichiers)
     }
 }
 

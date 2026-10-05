@@ -253,12 +253,20 @@ extension Requete {
         return .init(.get, chemin, parametres: [Parametre("limite", String(limite))])
     }
 
-    public static func questionAgent(_ agent: String, question: String, conversation: String? = nil, contexte: String? = nil) -> Requete {
+    public static func questionAgent(_ agent: String, question: String, conversation: String? = nil, contexte: String? = nil,
+                                     fichiers: [FormulaireMultipart.Fichier] = []) -> Requete {
         let id = agent.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? agent
         var corps = ["question": question, "mode": "direct"]
         if let conversation { corps["conversation_id"] = conversation }
         if let contexte, !contexte.isEmpty { corps["contexte"] = contexte }
-        return .init(.post, "\(prefixe)/agents/\(id)/question", corps: .json(json(corps)), delai: 90)
+        return corpsQuestion("\(prefixe)/agents/\(id)/question", corps: corps, fichiers: fichiers)
+    }
+
+    /// Question en JSON ; avec des photos ou des PDF (v1.10), mêmes champs en `multipart/form-data` et champ `photos`.
+    static func corpsQuestion(_ chemin: String, corps: [String: String], fichiers: [FormulaireMultipart.Fichier]) -> Requete {
+        guard !fichiers.isEmpty else { return .init(.post, chemin, corps: .json(json(corps)), delai: 90) }
+        let champs = corps.sorted { $0.key < $1.key }.map { Parametre($0.key, $0.value) }
+        return .init(.post, chemin, corps: .multipart(FormulaireMultipart(champs: champs, fichiers: fichiers)), delai: 180)
     }
 
     public static func suiviQuestion(_ id: String) -> Requete {

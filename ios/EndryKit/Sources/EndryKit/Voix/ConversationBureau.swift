@@ -1,6 +1,29 @@
 import Foundation
 import Observation
 
+/// Photo ou PDF joint à un message du patron (v1.10). Le fichier lui-même reste sur l'iPhone, à côté du fil.
+public struct PieceMessage: Codable, Identifiable, Hashable, Sendable {
+    public var id: String
+    public var nom: String
+    public var typeMIME: String
+    public var taille: Int
+
+    public init(id: String = UUID().uuidString, nom: String, typeMIME: String, taille: Int) {
+        self.id = id
+        self.nom = nom
+        self.typeMIME = typeMIME
+        self.taille = taille
+    }
+
+    public var estImage: Bool { typeMIME.hasPrefix("image/") }
+
+    /// Nom du fichier gardé sur l'iPhone (l'extension sert à l'aperçu).
+    var nomLocal: String {
+        let ext = (nom as NSString).pathExtension.lowercased()
+        return ext.isEmpty ? id : "\(id).\(ext)"
+    }
+}
+
 /// Un message du fil « Conversation » avec l'assistant du bureau (écrit ou dicté, ou venu de l'assistant vocal).
 public struct MessageConversation: Codable, Identifiable, Equatable, Sendable {
     public enum Role: String, Codable, Sendable {
@@ -55,6 +78,8 @@ public struct MessageConversation: Codable, Identifiable, Equatable, Sendable {
     public var aRenvoyer: Bool?
     /// Documents joints à la réponse (PDF, Excel…) : aperçu et enregistrement dans l'app.
     public var documents: [Piece]?
+    /// Photos et PDF joints par le patron à ce message (v1.10).
+    public var pieces: [PieceMessage]?
 
     public init(id: String = UUID().uuidString, role: Role, texte: String, le: Date = Date(), conversation: String,
                 nature: Nature = .question, source: Source = .ecrit, etat: Etat = .recu, agent: String? = nil) {
@@ -101,6 +126,11 @@ public final class ModeleConversation {
     @ObservationIgnored private var suivis: [String: Task<Void, Never>] = [:]
     @ObservationIgnored private var derniereActivite: Date
     @ObservationIgnored private var sauvegarde: Task<Void, Never>?
+    /// Pièces jointes du fil, en mémoire tant que l'app est ouverte (et sur le disque, à côté du fil).
+    @ObservationIgnored private var donneesPieces: [String: Data] = [:]
+
+    /// Pièces jointes par message, au plus.
+    public static let maximumPieces = 6
 
     /// Nouveau fil après 30 min de silence (le PC repart d'une page blanche).
     public static let silence: TimeInterval = 30 * 60
@@ -185,7 +215,8 @@ public final class ModeleConversation {
         }
         return ordre.compactMap { id -> Fil? in
             guard let fil = groupes[id], let premier = fil.first, let dernier = fil.last else { return nil }
-            let titre = fil.first { $0.role == .patron }?.texte ?? premier.texte
+            let patron = fil.first { $0.role == .patron }
+            let titre = patron.map { $0.texte.isEmpty && $0.pieces?.isEmpty == false ? "Photo jointe" : $0.texte } ?? premier.texte
             return Fil(id: id, debut: premier.le, fin: dernier.le, titre: titre, nombre: fil.count)
         }
         .sorted { $0.fin > $1.fin }
@@ -208,13 +239,17 @@ public final class ModeleConversation {
     // MARK: Envoi (écran « Conversation »)
 
     /// Question (lecture seule, mode direct) ou demande (saisie) écrite ou dictée.
-    public func envoyer(_ texte: String, nature: MessageConversation.Nature = .question,
+    /// Avec des photos ou des PDF (`pieces`, v1.10), le message part toujours au bureau comme une question :
+    /// il regarde les pièces, répond, et prépare ce qui est demandé (les envois restent des décisions à glisser).
+    public func envoyer(_ texte: String, pieces: [PieceSaisie] = [], nature: MessageConversation.Nature = .question,
                         source: MessageConversation.Source = .ecrit) async {
         let propre = texte.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !propre.isEmpty else { return }
-        switch nature {
+        let jointes = Array(pieces.prefix(Self.maximumPieces))
+        guard !propre.isEmpty || !jointes.isEmpty else { return }
+        switch jointes.isEmpty ? nature : .question {
         case .question:
             let id = consignerQuestion(propre, source: source, agent: agentNom)
+            if !jointes.isEmpty { joindre(jointes, a: id) }
             await poser(id, question: propre)
         case .demande:
             await demander(propre, source: source)
@@ -234,9 +269,10 @@ public final class ModeleConversation {
         }
         attendre(id, suivi: nil, message: nil)
         let conversation = messages.first { $0.id == id }?.conversation ?? identifiant
+        let jointes = await fichiersJoints(a: id)
         do {
             let posee = try await bureau.poser(question, agentId: agentId, nomAgent: agentNom,
-                                               conversation: conversation, contexte: contexte)
+                                               conversation: conversation, contexte: contexte, fichiers: jointes)
             switch posee {
             case .reponse(let r):
                 repondre(id, avec: r)
@@ -266,6 +302,60 @@ public final class ModeleConversation {
 
     /// Questions encore gardées faute de réseau.
     public var enAttenteReseau: Int { messages.filter { $0.aRenvoyer == true }.count }
+
+    // MARK: Pièces jointes (v1.10)
+
+    /// Dossier des pièces jointes, à côté du fichier du fil (`nil` : fil gardé en mémoire seulement).
+    private var dossierPieces: URL? {
+        fichier.map { $0.deletingLastPathComponent().appendingPathComponent("pieces-conversation", isDirectory: true) }
+    }
+
+    /// Fichier d'une pièce sur l'iPhone (aperçu plein écran), si le fil est gardé sur le disque.
+    public func fichierLocal(de piece: PieceMessage) -> URL? {
+        dossierPieces?.appendingPathComponent(piece.nomLocal)
+    }
+
+    /// Contenu d'une pièce jointe (vignette, renvoi) : en mémoire, sinon relu sur le disque hors du fil principal.
+    public func donnees(de piece: PieceMessage) async -> Data? {
+        if let deja = donneesPieces[piece.id] { return deja }
+        guard let url = fichierLocal(de: piece) else { return nil }
+        let lues = await Task.detached(priority: .userInitiated) { try? Data(contentsOf: url) }.value
+        if let lues { donneesPieces[piece.id] = lues }
+        return lues
+    }
+
+    private func joindre(_ pieces: [PieceSaisie], a id: String) {
+        guard let i = messages.firstIndex(where: { $0.id == id }) else { return }
+        var jointes: [PieceMessage] = []
+        var aEcrire: [URL: Data] = [:]
+        for piece in pieces {
+            let jointe = PieceMessage(nom: piece.nom, typeMIME: piece.typeMIME, taille: piece.donnees.count)
+            donneesPieces[jointe.id] = piece.donnees
+            if let url = fichierLocal(de: jointe) { aEcrire[url] = piece.donnees }
+            jointes.append(jointe)
+        }
+        messages[i].pieces = jointes
+        sauvegarder()
+        guard let dossier = dossierPieces, !aEcrire.isEmpty else { return }
+        let ecritures = aEcrire
+        Task.detached(priority: .utility) {
+            try? FileManager.default.createDirectory(at: dossier, withIntermediateDirectories: true)
+            for (url, contenu) in ecritures {
+                try? contenu.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+            }
+        }
+    }
+
+    /// Pièces d'un message, prêtes pour l'envoi au PC (champ `photos`).
+    private func fichiersJoints(a id: String) async -> [FormulaireMultipart.Fichier] {
+        guard let pieces = messages.first(where: { $0.id == id })?.pieces else { return [] }
+        var prets: [FormulaireMultipart.Fichier] = []
+        for piece in pieces {
+            guard let contenu = await donnees(de: piece) else { continue }
+            prets.append(FormulaireMultipart.Fichier(nomFichier: piece.nom, typeMIME: piece.typeMIME, donnees: contenu))
+        }
+        return prets
+    }
 
     private func demander(_ texte: String, source: MessageConversation.Source) async {
         let envoi = agentNom.map { "[Pour l’agent \($0)] " + texte } ?? texte
@@ -487,15 +577,18 @@ public final class ModeleConversation {
         suivis.values.forEach { $0.cancel() }
         suivis.removeAll()
         messages.removeAll()
+        donneesPieces.removeAll()
         identifiant = UUID().uuidString
         derniereActivite = .distantPast
         guard let fichier else { return }
+        let pieces = dossierPieces
         try? FileManager.default.removeItem(at: fichier)
         // Une écriture encore en route ne doit pas faire revenir le fil effacé.
         let precedente = sauvegarde
         sauvegarde = Task.detached(priority: .utility) {
             await precedente?.value
             try? FileManager.default.removeItem(at: fichier)
+            if let pieces { try? FileManager.default.removeItem(at: pieces) }
         }
     }
 

@@ -540,3 +540,21 @@ Demande du patron : « quand je demande un PDF dans le chat, pouvoir voir l’ap
   client).pdf ») doit l’être aussi, par exemple `/app/doc/fichier/{id}` (identifiant opaque, jamais un chemin du
   disque). Constat : la décision V-9DHDTK annonce ce planning, mais son adresse répond 404 — l’iPhone ne peut pas
   l’afficher. L’app affiche alors : « Le bureau n’a pas encore mis … à disposition de l’iPhone ».
+
+## v1.10 — photos et PDF dans la conversation (05.10.2026, en service sur le PC)
+
+Demande du patron : « pouvoir mettre des photos dans le chat avec l’agent ».
+
+- `POST /assistant/question` et `POST /agents/{id}/question` acceptent, en plus du JSON (inchangé), un corps
+  `multipart/form-data` avec les mêmes champs (`question`, `agent`, `contexte`, `conversation_id`, `mode`) et un champ
+  `photos` répété : JPEG, PNG, HEIC, WebP ou PDF, 15 Mo au plus par fichier. `question` peut être vide s’il y a au
+  moins une pièce. Réponse identique : `202 {statut: "en_cours", question_id}`, puis `event: reponse`.
+- Erreurs : `400 {statut: "erreur", message}` (« Question vide. », « Photo trop lourde (15 Mo au maximum). »).
+- Un même envoi répété (même texte, mêmes tailles de fichiers) rend le même `question_id` : la file hors ligne peut
+  rejouer sans doublon.
+- **App** : bouton « + » du champ d’écriture (appareil photo, photothèque, fichier PDF), six pièces au plus par
+  message, vignettes à retirer avant l’envoi ; images converties en JPEG (2560 px au plus, sans localisation). Dans
+  la bulle du patron : vignettes, toucher = aperçu plein écran. Les pièces restent sur l’iPhone à côté du fil
+  (`pieces-conversation/`, effacées avec la conversation et à la déconnexion). Avec une pièce jointe, le message part
+  toujours comme une question : le bureau regarde, répond et prépare ce qui est demandé ; tout envoi reste une
+  décision à glisser. Sans réseau, le message et ses pièces repartent seuls au retour du réseau.

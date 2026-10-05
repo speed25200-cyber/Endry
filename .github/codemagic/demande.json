@@ -1,1 +1,1 @@
-{"action": "etat", "branche": "claude/code-magic-push-eirhs1", "n": 1, "essai": 90}
+{"action": "lancer", "workflow": "ios-testflight", "branche": "claude/code-magic-push-eirhs1", "annuler": ["6ac2ed668a3d4762b47e7bf2"], "n": 2, "essai": 91}

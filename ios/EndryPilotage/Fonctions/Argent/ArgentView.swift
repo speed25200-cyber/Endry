@@ -62,6 +62,12 @@ struct ArgentView: View {
                             .transition(.opacity)
                             .apparitionEnCascade(index: 0, visible: visible)
 
+                            if let compta = argent.comptabilite, !devantClient {
+                                comptabilite(compta)
+                                    .padding(.top, Espace.xl)
+                                    .apparitionEnCascade(index: 1, visible: visible)
+                            }
+
                             if let heures = argent.heuresSecretariat {
                                 secretariat(heures)
                                     .padding(.top, Espace.xl)
@@ -155,6 +161,26 @@ struct ArgentView: View {
                 }
             }
             .padding(.top, Espace.l)
+
+            if let compta = argent.comptabilite, !compta.travaux.isEmpty {
+                Text("Travaux acceptés, à facturer").etiquetteMaison().padding(.top, Espace.xl)
+                VStack(spacing: 10) {
+                    ForEach(compta.travaux) { travail in
+                        LigneMaison(titre: travail.titre,
+                                    detail: Self.detailTravail(travail),
+                                    montant: FormatSuisse.francs(travail.reste),
+                                    etat: "À facturer", etatAccent: true)
+                    }
+                }
+                .padding(.top, Espace.s)
+                BandeChiffres(elements: [
+                    .init(valeur: FormatSuisse.francs(e.total), libelle: "Factures ouvertes"),
+                    .init(valeur: FormatSuisse.francs(compta.aFacturer), libelle: "À facturer"),
+                    .init(valeur: FormatSuisse.francs(e.total + compta.aFacturer), libelle: "On nous doit"),
+                ])
+                .padding(.top, Espace.m)
+                .accessibilityIdentifier("travaux-a-facturer")
+            }
 
             if !argent.versementsNonIdentifies.isEmpty {
                 Text("Versements non identifiés").etiquetteMaison().padding(.top, Espace.xl)
@@ -281,6 +307,65 @@ struct ArgentView: View {
             .padding(.top, Espace.l)
             CarteOffresASuivre(offres: o.offres).padding(.top, Espace.l)
         }
+    }
+
+    // MARK: - Comptabilité
+
+    /// « Devis 35’000 · facturé 17’500 », précédé du chantier quand le client est connu.
+    static func detailTravail(_ t: TravailAFacturer) -> String {
+        let montants = "devis \(FormatSuisse.francs(t.devis)) · facturé \(FormatSuisse.francs(t.facture))"
+        return t.client.isEmpty || t.chantier.isEmpty ? montants : t.chantier + " · " + montants
+    }
+
+    static func detailCompte(_ c: CompteUtilise) -> String {
+        "Compte \(c.numero) · \(c.factures) facture\(c.factures > 1 ? "s" : "")"
+    }
+
+    /// Plan comptable tenu par le bureau : solde, comptes utilisés, documents (PDF, Excel).
+    private func comptabilite(_ c: Comptabilite) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Comptabilité").etiquetteMaison()
+                .accessibilityAddTraits(.isHeader)
+            BandeChiffres(elements: [
+                .init(valeur: FormatSuisse.francs(c.nousDoit), libelle: "On nous doit"),
+                .init(valeur: FormatSuisse.francs(c.aPayer), libelle: "Nous devons", ton: c.aPayerEnRetard > 0 ? .alerte : nil),
+                .init(valeur: FormatSuisse.francs(c.solde), libelle: "Solde", ton: c.solde < 0 ? .alerte : nil),
+            ])
+            .padding(.top, Espace.s)
+            if !c.comptes.isEmpty {
+                VStack(spacing: 10) {
+                    ForEach(c.comptes) { compte in
+                        LigneMaison(titre: compte.libelle.isEmpty ? "Compte \(compte.numero)" : compte.libelle,
+                                    detail: Self.detailCompte(compte),
+                                    montant: FormatSuisse.francs(compte.total),
+                                    etat: compte.ouvert > 0 ? "reste \(FormatSuisse.francs(compte.ouvert))" : "payé",
+                                    etatAlerte: compte.ouvert > 0)
+                    }
+                }
+                .padding(.top, Espace.m)
+            }
+            if !c.documents.isEmpty {
+                HStack(spacing: Espace.xs) {
+                    ForEach(c.documents) { doc in
+                        Button {
+                            Task { await app.documents.ouvrir(doc.chemin, nom: doc.nom, api: app.session.api) }
+                        } label: {
+                            Text(doc.format == "pdf" ? "Plan comptable PDF" : "Classeur Excel")
+                                .font(Police.mono(11.5))
+                                .foregroundStyle(Color.encre)
+                                .padding(.horizontal, 12)
+                                .frame(height: 32)
+                                .overlay(Capsule().strokeBorder(Color.filetFort, lineWidth: Espace.filet))
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(ActionPressee())
+                        .accessibilityHint(Text("Ouvre le document du bureau"))
+                    }
+                }
+                .padding(.top, Espace.m)
+            }
+        }
+        .accessibilityIdentifier("comptabilite")
     }
 
     // MARK: - Secrétariat

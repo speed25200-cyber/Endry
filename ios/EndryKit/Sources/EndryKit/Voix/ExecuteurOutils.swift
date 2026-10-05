@@ -68,6 +68,8 @@ public struct ExecuteurOutils: Sendable {
                     "par_client": a.encaisser.parClient.map { ["client": $0.client, "montant": $0.montant, "retard_max_jours": $0.retardMax] },
                     "factures_fournisseurs_a_payer": a.payer.factures.count, "offres_en_attente": a.offres.total,
                     "achats_a_refacturer": a.aRefacturer.achats.count,
+                    "travaux_acceptes_a_facturer": a.comptabilite?.aFacturer ?? 0,
+                    "a_facturer_par_chantier": (a.comptabilite?.travaux ?? []).map { ["client": $0.client, "chantier": $0.chantier, "reste": $0.reste] as [String: Any] },
                     "prix_achat": "Montants d’achat fournisseurs masqués : ne jamais les dire à voix haute ; le détail est dans Finances.",
                     "suivi": "Suivi seulement : aucune relance sans demande du patron.",
                 ]), .aucun)

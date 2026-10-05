@@ -102,6 +102,16 @@ final class ContratV11Tests: XCTestCase {
         XCTAssertEqual(argent.aRefacturer.achats.first?.id, "achat:12")
         XCTAssertEqual(argent.aRefacturer.achats.first?.fournisseur, "Sanipex SA")
         XCTAssertEqual(argent.heuresSecretariat?.heures, 31.5)
+        // v1.10 : comptabilité (reste à facturer des devis acceptés, comptes utilisés, documents).
+        let compta = try XCTUnwrap(argent.comptabilite)
+        XCTAssertEqual(compta.travaux.first?.reste, 9200)
+        XCTAssertEqual(compta.travaux.first?.titre, "PPE Les Cèdres")
+        XCTAssertEqual(compta.aFacturer, 12650)
+        XCTAssertEqual(compta.nousDoit, 62323.35, accuracy: 0.001)
+        XCTAssertEqual(compta.solde, 62323.35 - 16790.75, accuracy: 0.001)
+        XCTAssertEqual(compta.comptes.first?.numero, "4000")
+        XCTAssertEqual(compta.documents.first?.format, "pdf")
+        XCTAssertNil(try Fixtures.decoder(Argent.self, .argentV10).comptabilite)
 
         let details = try Fixtures.decoder([String: Dossier].self, .chantiersDetails)
         let offre = try XCTUnwrap(details["18"]?.documents.first)

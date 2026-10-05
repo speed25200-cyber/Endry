@@ -797,6 +797,85 @@ extension EndryAPI {
     }
 }
 
+/// v1.10 : chantier dont le devis est accepté et pas encore entièrement facturé (un acompte ne solde pas un chantier).
+public struct TravailAFacturer: Decodable, Sendable, Hashable, Identifiable {
+    public var id: String
+    public var client: String
+    public var chantier: String
+    /// Total des devis acceptés.
+    public var devis: Double
+    /// Déjà facturé (acomptes compris).
+    public var facture: Double
+    public var reste: Double
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.champs()
+        client = c.texte("client", defaut: "")
+        chantier = c.texte("chantier", defaut: "")
+        devis = c.nombre("devis") ?? 0
+        facture = c.nombre("facture") ?? 0
+        reste = c.nombre("reste") ?? max(0, devis - facture)
+        id = c.texte("dossier_id") ?? "\(client)-\(chantier)-\(devis)"
+    }
+
+    /// Titre lisible : le client, sinon le chantier.
+    public var titre: String { client.isEmpty ? chantier : client }
+}
+
+/// v1.10 : compte du plan comptable qui porte des factures fournisseurs.
+public struct CompteUtilise: Decodable, Sendable, Hashable, Identifiable {
+    public var numero: String
+    public var libelle: String
+    public var factures: Int
+    public var total: Double
+    public var ouvert: Double
+
+    public var id: String { numero }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.champs()
+        guard let numero = c.texte("numero") ?? c.texte("compte") else {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "numéro de compte manquant"))
+        }
+        self.numero = numero
+        libelle = c.texte("libelle", defaut: "")
+        factures = c.entier("factures") ?? 0
+        total = c.nombre("total_chf") ?? c.nombre("total") ?? 0
+        ouvert = c.nombre("ouvert_chf") ?? c.nombre("ouvert") ?? 0
+    }
+}
+
+/// v1.10 : la comptabilité tenue par le bureau (`argent.comptabilite`) : ce qu'on nous doit en deux parts
+/// (factures ouvertes, travaux acceptés restant à facturer), ce que nous devons, les comptes utilisés, les documents.
+public struct Comptabilite: Decodable, Sendable, Hashable {
+    public var aPayer: Double
+    public var aPayerEnRetard: Double
+    public var aEncaisser: Double
+    public var aFacturer: Double
+    public var nousDoit: Double
+    public var travaux: [TravailAFacturer]
+    public var comptes: [CompteUtilise]
+    /// Plan comptable et suivi (PDF), classeur de comptabilité (Excel).
+    public var documents: [DocumentHeures]
+    public var etatAu: String?
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.champs()
+        travaux = c.liste("a_facturer")
+        comptes = c.liste("comptes")
+        documents = c.liste("documents")
+        aPayer = c.nombre("a_payer_chf") ?? 0
+        aPayerEnRetard = c.nombre("a_payer_en_retard_chf") ?? 0
+        aEncaisser = c.nombre("a_encaisser_chf") ?? 0
+        aFacturer = c.nombre("a_facturer_chf") ?? travaux.reduce(0) { $0 + $1.reste }
+        nousDoit = c.nombre("nous_doit_chf") ?? (aEncaisser + aFacturer)
+        etatAu = c.texte("etat_au")
+    }
+
+    /// Ce qu'on nous doit, moins ce que nous devons.
+    public var solde: Double { nousDoit - aPayer }
+}
+
 /// Réponse de `GET /app/api/v1/argent`.
 public struct Argent: Decodable, Sendable, Hashable {
     public var encaisser: Encaisser
@@ -805,9 +884,12 @@ public struct Argent: Decodable, Sendable, Hashable {
     public var aRefacturer: ARefacturer
     public var versementsNonIdentifies: [VersementNonIdentifie]
     public var heuresSecretariat: HeuresSecretariat?
+    /// v1.10 : absent tant que le PC ne l'envoie pas.
+    public var comptabilite: Comptabilite?
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.champs()
+        comptabilite = c.objet("comptabilite")
         encaisser = c.objet("encaisser") ?? Encaisser()
         payer = c.objet("payer") ?? Payer()
         offres = c.objet("offres") ?? Offres()

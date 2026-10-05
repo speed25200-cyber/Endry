@@ -370,5 +370,71 @@
         "categorie": "Comptabilité"
       }
     ]
+  },
+  "comptabilite": {
+    "a_payer_chf": 16790.75,
+    "a_payer_en_retard_chf": 0,
+    "a_encaisser_chf": 49673.35,
+    "a_facturer_chf": 12650.0,
+    "nous_doit_chf": 62323.35,
+    "etat_au": "2026-09-28",
+    "a_facturer": [
+      {
+        "dossier_id": 18,
+        "client": "PPE Les Cèdres",
+        "chantier": "Chemin des Cèdres 4, Payerne",
+        "devis": 18400.0,
+        "facture": 9200.0,
+        "reste": 9200.0
+      },
+      {
+        "dossier_id": 21,
+        "client": "Régie Dubois",
+        "chantier": "Rue du Lac 12, Estavayer",
+        "devis": 3450.0,
+        "facture": 0,
+        "reste": 3450.0
+      }
+    ],
+    "comptes": [
+      {
+        "numero": "4000",
+        "libelle": "Achats matériel sanitaire",
+        "factures": 6,
+        "total_chf": 9840.5,
+        "ouvert_chf": 6120.25
+      },
+      {
+        "numero": "4010",
+        "libelle": "Achats matériel chauffage et ventilation",
+        "factures": 2,
+        "total_chf": 7310.0,
+        "ouvert_chf": 7310.0
+      },
+      {
+        "numero": "6210",
+        "libelle": "Carburant",
+        "factures": 3,
+        "total_chf": 1180.4,
+        "ouvert_chf": 0
+      },
+      {
+        "numero": "6510",
+        "libelle": "Téléphone et Internet",
+        "factures": 2,
+        "total_chf": 398.0,
+        "ouvert_chf": 0
+      }
+    ],
+    "documents": [
+      {
+        "nom": "Plan comptable et suivi.pdf",
+        "url": "/app/doc/fichier/plan-comptable"
+      },
+      {
+        "nom": "Comptabilité.xlsx",
+        "url": "/app/doc/fichier/comptabilite"
+      }
+    ]
   }
 }

@@ -4,15 +4,18 @@ import XCTest
 
 final class FluiditeTests: XCTestCase {
     func testFinDePhraseNeCoupePasLaParole() {
-        XCTAssertEqual(FinDePhrase.delai(definitif: "Qui me doit de l’argent ?", provisoire: ""), .milliseconds(800))
+        XCTAssertEqual(FinDePhrase.delai(definitif: "Qui me doit de l’argent ?", provisoire: ""), .milliseconds(1_600))
         // Un point posé par la dictée à chaque pause ne veut pas dire que la phrase est finie.
-        XCTAssertEqual(FinDePhrase.delai(definitif: "Prépare l’offre de la Villa Morel.", provisoire: ""), .milliseconds(1_000))
-        XCTAssertEqual(FinDePhrase.delai(definitif: "Quels chantiers", provisoire: "cette sem"), .milliseconds(1_300))
-        XCTAssertEqual(FinDePhrase.delai(definitif: "Prépare l’offre pour", provisoire: ""), .milliseconds(2_400))
-        XCTAssertEqual(FinDePhrase.delai(definitif: "Dis-moi", provisoire: "euh"), .milliseconds(2_400))
+        XCTAssertEqual(FinDePhrase.delai(definitif: "Prépare l’offre de la Villa Morel.", provisoire: ""), .milliseconds(2_200))
+        XCTAssertEqual(FinDePhrase.delai(definitif: "Quels chantiers", provisoire: "cette sem"), .milliseconds(2_800))
+        XCTAssertEqual(FinDePhrase.delai(definitif: "Prépare l’offre pour", provisoire: ""), .milliseconds(4_500))
+        // Phrases coupées le 06.10.2026 : un sujet ou un auxiliaire en fin de phrase appelle une suite.
+        XCTAssertEqual(FinDePhrase.delai(definitif: "Pour les offres de BTK tu dois", provisoire: ""), .milliseconds(4_500))
+        XCTAssertEqual(FinDePhrase.delai(definitif: "Pour les offres utile", provisoire: ""), .milliseconds(4_500))
+        XCTAssertEqual(FinDePhrase.delai(definitif: "Dis-moi", provisoire: "euh"), .milliseconds(4_500))
         // Réglage « Long » : une fois et demie plus de patience.
-        XCTAssertEqual(FinDePhrase.delai(definitif: "Quels chantiers cette semaine", provisoire: "", patience: 1.5), .milliseconds(1_500))
-        XCTAssertEqual(FinDePhrase.delai(definitif: "Qui me doit de l’argent ?", provisoire: "", patience: 0.7), .milliseconds(560))
+        XCTAssertEqual(FinDePhrase.delai(definitif: "Quels chantiers cette semaine", provisoire: "", patience: 1.5), .milliseconds(3_300))
+        XCTAssertEqual(FinDePhrase.delai(definitif: "Qui me doit de l’argent ?", provisoire: "", patience: 0.7), .milliseconds(1_120))
     }
 
     func testReponseCourteDiteEnEntier() {

@@ -11,6 +11,11 @@ public enum FinDePhrase {
     static let motsSuspendus: Set<String> = [
         "euh", "heu", "hum", "et", "mais", "donc", "alors", "ou", "pour", "de", "du", "des", "le", "la", "les",
         "un", "une", "a", "au", "aux", "avec", "chez", "sur", "dans", "que", "qui", "si", "puis", "ensuite",
+        // sujets, auxiliaires et petits mots qui appellent une suite (« tu dois… », « il faut… », « pour les… »)
+        "je", "tu", "il", "elle", "on", "ils", "elles", "ce", "cette", "ces", "mon", "ma", "mes", "ton", "ta", "tes",
+        "son", "sa", "ses", "notre", "votre", "leur", "leurs", "dois", "doit", "devez", "faut", "peux", "peut",
+        "veux", "veut", "est", "sont", "ai", "as", "avons", "avez", "ont", "vais", "va", "par", "sans", "comme",
+        "quand", "car", "parce", "ne", "y", "en", "tout", "tous", "toutes", "aussi", "surtout", "utile",
     ]
 
     /// Réglages proposés : « Court », « Normal » (par défaut), « Long ».
@@ -25,12 +30,13 @@ public enum FinDePhrase {
         let phrase = [definitif, provisoire].map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
             .joined(separator: " ")
         let dernier = RepondeurLocal.normaliser(phrase).split(separator: " ").last.map(String.init) ?? ""
-        // Réglé pour une conversation quasi instantanée (02.10.2026) : la question part dès que le patron se tait ;
-        // une phrase manifestement inachevée garde toute sa patience.
-        if motsSuspendus.contains(dernier) { return 2_400 }
-        guard provisoire.trimmingCharacters(in: .whitespaces).isEmpty else { return 1_300 }
-        if definitif.trimmingCharacters(in: .whitespaces).last == "?" { return 800 }
-        return 1_000
+        // Réglé le 06.10.2026 : le patron réfléchit en parlant, et une seconde de silence coupait ses phrases
+        // (« Pour les offres de BTK tu dois… » partait tel quel au bureau). On laisse le temps de respirer ;
+        // pour répondre plus tôt, il reste le toucher de la sphère et le réglage « Court ».
+        if motsSuspendus.contains(dernier) { return 4_500 }
+        guard provisoire.trimmingCharacters(in: .whitespaces).isEmpty else { return 2_800 }
+        if definitif.trimmingCharacters(in: .whitespaces).last == "?" { return 1_600 }
+        return 2_200
     }
 }
 

@@ -80,7 +80,8 @@ public enum CommandeRealtime {
         var audio: [String: Any] = [
             "input": [
                 "format": ["type": "audio/pcm", "rate": 24_000],
-                "turn_detection": ["type": "semantic_vad", "create_response": true, "interrupt_response": true],
+                // « low » : le modèle attend que la phrase soit vraiment finie avant de répondre (06.10.2026)
+                "turn_detection": ["type": "semantic_vad", "eagerness": "low", "create_response": true, "interrupt_response": true],
                 "transcription": ["model": "gpt-4o-mini-transcribe", "language": "fr", "prompt": vocabulaire.joined(separator: ", ")],
             ],
             "output": ["format": ["type": "audio/pcm", "rate": 24_000]],

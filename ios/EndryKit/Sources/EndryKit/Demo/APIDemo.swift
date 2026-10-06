@@ -81,6 +81,16 @@ public actor APIDemo: EndryAPI {
         if let c = route(.get, "app/api/v1/chantiers/*") { return try detailChantier(id: c[0]) }
         if route(.get, "app/api/v1/argent") != nil { return Fixtures.donnees(.argent) }
         if route(.post, "app/api/v1/saisie") != nil { return enregistrerSaisie(requete.corps) }
+        if route(.get, "app/api/v1/mails") != nil { return json(["mails": Self.mailsDemo()]) }
+        if let c = route(.get, "app/api/v1/mails/*") {
+            guard var mail = Self.mailsDemo().first(where: { ($0["id"] as? String) == c[0] }) else {
+                throw .serveur(statut: 404, message: "E-mail inconnu.")
+            }
+            mail["de_nom"] = "Marc Rey"
+            mail["a"] = ["info@endry.ch"]
+            mail["contenu"] = "Bonjour,\n\nVoici le document demandé.\n\nMeilleures salutations"
+            return json(mail)
+        }
         if route(.get, "app/api/v1/saisies") != nil {
             avancerQuestions()
             return json(saisies)
@@ -497,6 +507,19 @@ public actor APIDemo: EndryAPI {
 
     private static func liste(_ nom: Fixtures.Nom) -> [[String: Any]] {
         (try? JSONSerialization.jsonObject(with: Fixtures.donnees(nom))) as? [[String: Any]] ?? []
+    }
+
+    /// Courrier de démonstration (contrat v1.12).
+    static func mailsDemo() -> [[String: Any]] {
+        [
+            ["id": "9001", "de": "marc.rey@exemple.ch", "objet": "Soumission chauffage – bâtiment A",
+             "recu": "2026-09-27T10:12:00", "categorie": "soumission",
+             "resume": "Soumission reçue en PDF. Accusé de réception préparé, à valider.",
+             "pieces": [["nom": "Soumission_A.pdf", "taille": 184_000, "url": "/app/doc/piece/10-9001-1"]]],
+            ["id": "9002", "de": "gerance@exemple.ch", "objet": "Rendez-vous de chantier jeudi",
+             "recu": "2026-09-26T16:40:00", "categorie": "rendez_vous",
+             "resume": "La gérance confirme jeudi 9 h. Planning mis à jour.", "pieces": [[String: Any]]()],
+        ]
     }
 
     private func json(_ objet: Any) -> Data {

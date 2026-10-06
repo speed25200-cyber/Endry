@@ -231,3 +231,47 @@ final class DecodageTests: XCTestCase {
         XCTAssertEqual(dubois?.retardMax, 24)
     }
 }
+
+final class CourrierTests: XCTestCase {
+    func testMailRecuListeEtDetail() throws {
+        let json = """
+        {"mails": [
+          {"id": "9001", "de": "m.rey@exemple.ch", "objet": "Soumission chauffage B1",
+           "recu": "2026-10-06T13:30:01", "categorie": "soumission", "resume": "Soumission chiffrée à la main.",
+           "statut": "done",
+           "pieces": [{"nom": "Soumission_B1.pdf", "taille": 5891652, "emplacement": "E-mail reçu",
+                       "url": "/app/doc/piece/82-17-14", "document": "/app/doc/piece/82-17-14"}]},
+          {"id": "2", "de": "x@y.ch", "objet": "Sans pièce connue", "recu": null, "categorie": "rendez_vous"},
+          {"objet": "sans id : ignoré"}
+        ]}
+        """
+        let liste = try JSONDecoder().decode(ListeMails.self, from: Data(json.utf8))
+        XCTAssertEqual(liste.mails.count, 2)
+        let premier = liste.mails[0]
+        XCTAssertEqual(premier.expediteur, "m.rey@exemple.ch")
+        XCTAssertEqual(premier.pieces, [Piece(nom: "Soumission_B1.pdf", url: "/app/doc/piece/82-17-14")])
+        XCTAssertEqual(premier.pieces?.first?.libelleType, "PDF")
+        XCTAssertEqual(premier.categorieLisible, "Soumission")
+        XCTAssertTrue(premier.dateLisible.hasSuffix("13 h 30"))
+        XCTAssertTrue(premier.correspond("soumission_b1"))
+        XCTAssertFalse(premier.correspond("hilti"))
+        XCTAssertNil(liste.mails[1].pieces)            // pas encore connues : elles arrivent avec le détail
+        XCTAssertNil(liste.mails[1].contenu)
+        XCTAssertEqual(liste.mails[1].categorieLisible, "Rendez-vous")
+        XCTAssertEqual(liste.mails[1].dateLisible, "")
+
+        let detail = try JSONDecoder().decode(MailRecu.self, from: Data("""
+        {"id": "2", "de": "x@y.ch", "de_nom": "Xavier Y", "objet": "Plans", "a": ["info@endry.ch"], "cc": [],
+         "contenu": "Bonjour", "pieces": []}
+        """.utf8))
+        XCTAssertEqual(detail.expediteur, "Xavier Y")
+        XCTAssertEqual(detail.a, ["info@endry.ch"])
+        XCTAssertEqual(detail.pieces, [])
+        XCTAssertEqual(detail.contenu, "Bonjour")
+    }
+
+    func testRequetesCourrier() {
+        XCTAssertEqual(Requete.mails().chemin, "/app/api/v1/mails")
+        XCTAssertEqual(Requete.mail("17").chemin, "/app/api/v1/mails/17")
+    }
+}

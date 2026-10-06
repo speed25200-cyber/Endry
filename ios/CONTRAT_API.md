@@ -570,3 +570,21 @@ en pièce jointe de la réponse dans la conversation.
   (`{nom: "Offre AN-00040.pdf", url: "/app/doc/offre/40"}`), même si aucun fichier n’a été généré.
 - **App** : le compte rendu d’un geste abouti (réponse à une question `Q-…`, Oui, Corriger) porte ses fichiers
   produits en documents à ouvrir, plus seulement leurs noms.
+
+## v1.12 — courrier reçu et pièces jointes dans la conversation (06.10.2026, en service sur le PC)
+
+### Courrier reçu
+
+- `GET /app/api/v1/mails?limite=40` → `{"mails": [{id, de, objet, recu, categorie, resume, statut, pieces?}]}`.
+  `recu` : heure suisse `AAAA-MM-JJTHH:MM:SS`. `pieces` : `[{nom, taille, emplacement, url, document}]` ; absent tant
+  que le PC ne connaît pas encore les pièces de cet e-mail (elles arrivent avec le détail), vide s'il n'y en a pas.
+- `GET /app/api/v1/mails/{id}` → le même objet avec `de_nom`, `a`, `cc`, `contenu` (texte) et `pieces`.
+  404 `introuvable` pour un e-mail que le PC n'a pas traité ; 503 `messagerie_indisponible` si Zoho ne répond pas.
+- `GET /app/doc/piece/{dossier}-{message}-{pièce}` sert la pièce jointe (jeton de l'appareil), avec son nom et son type.
+  Réservé au patron : 403 pour un accès d'équipe, 404 pour une pièce d'un e-mail inconnu du PC.
+
+### Pièce reçue par e-mail dans la conversation
+
+Quand le patron demande un document reçu (« donne-moi le PDF de… »), l'assistant appelle `mail_montrer_piece` :
+la pièce arrive dans `documents` de la réponse (`GET /questions/{id}`, `/saisies`), comme un document produit,
+avec `emplacement: "E-mail reçu"` et une `url` `/app/doc/piece/…`. Rien à changer côté app : `CartesDocuments` l'affiche.

@@ -26,9 +26,17 @@ apps = (appel("/apps") or {}).get("applications", [])
 print("== Applications Codemagic")
 for a in apps:
     print(f"- {a.get('appName')} id={a.get('_id')} dépôt={a.get('repository', {}).get('htmlUrl')} workflows={list((a.get('workflows') or {}).keys())}")
-app = next((a for a in apps if "endry" in json.dumps(a.get("repository", {})).lower()), apps[0] if apps else None)
+# « application » dans la demande : choisit l'app Codemagic par le nom de son dépôt (défaut : Endry).
+voulue = (demande.get("application") or "").lower()
+if voulue:
+    app = next((a for a in apps if voulue in json.dumps(a.get("repository", {})).lower()), None)
+    if not app:
+        sys.exit(f"Aucune application Codemagic pour le dépôt « {demande['application']} » : elle doit d'abord être ajoutée dans Codemagic.")
+else:
+    app = next((a for a in apps if "endry" in json.dumps(a.get("repository", {})).lower()), apps[0] if apps else None)
 if not app:
     sys.exit("Aucune application trouvée.")
+print("== Application retenue :", app.get("appName"))
 
 # Annule des builds en file (doublons qui bloquent la file) avant tout lancement.
 for a_annuler in demande.get("annuler", []):

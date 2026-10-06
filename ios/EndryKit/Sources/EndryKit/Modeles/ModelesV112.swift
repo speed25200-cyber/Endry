@@ -97,7 +97,7 @@ public struct ListeMails: Decodable, Sendable, Equatable {
 extension Requete {
     /// v1.12 : derniers e-mails reçus au bureau.
     public static func mails(limite: Int = 40) -> Requete {
-        .init(.get, "\(prefixe)/mails", parametres: [Parametre("limite", String(limite))], delai: 30)
+        .init(.get, "\(prefixe)/mails", parametres: [Parametre("limite", String(limite))], delai: 20)
     }
 
     /// v1.12 : un e-mail en entier (texte, destinataires, pièces jointes).

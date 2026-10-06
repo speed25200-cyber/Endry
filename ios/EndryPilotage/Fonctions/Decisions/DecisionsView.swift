@@ -130,6 +130,12 @@ struct DecisionsView: View {
             .id(Self.ancreDecisions)
             .apparitionEnCascade(index: 3, visible: visible)
 
+        // v1.12 : les derniers e-mails reçus, visibles dès l'accueil.
+        CarteCourrier()
+            .padding(.horizontal, Espace.bord)
+            .padding(.top, 26)
+            .apparitionEnCascade(index: 4, visible: visible)
+
         if let agents = app.agents {
             BureauEnDirect(modele: agents) { app.onglet = .entreprise }
                 .padding(.horizontal, Espace.bord)

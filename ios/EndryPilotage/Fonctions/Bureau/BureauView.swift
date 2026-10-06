@@ -32,7 +32,6 @@ struct SectionBureau: View {
     @Environment(ModeleApp.self) private var app
     var modele: ModeleAgents
     @State private var confirmationPause = false
-    @State private var courrierOuvert = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -44,6 +43,9 @@ struct SectionBureau: View {
                     .padding(.top, Espace.xs)
                     .accessibilityIdentifier("service-assistant")
             }
+            // v1.12 : le courrier reçu, en tête du bureau.
+            CarteCourrier()
+                .padding(.top, Espace.l)
             if modele.enDirect {
                 BandeChiffres(elements: charge)
                     .padding(.top, Espace.m)
@@ -82,30 +84,6 @@ struct SectionBureau: View {
                     .padding(.top, Espace.m)
             }
 
-            // v1.12 : les e-mails reçus au bureau et leurs pièces jointes.
-            Button { courrierOuvert = true } label: {
-                HStack(spacing: Espace.s) {
-                    Image(systemName: "envelope")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(Color.signal)
-                    Text("Courrier reçu")
-                        .styleTexte(17, relativeTo: .body)
-                        .foregroundStyle(Color.encre)
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.encrePale)
-                }
-                .padding(.horizontal, 20)
-                .frame(height: 56)
-                .tuileMaison(rayon: 20)
-                .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-            }
-            .buttonStyle(ActionPressee())
-            .padding(.top, Espace.l)
-            .accessibilityHint(Text("Ouvre les e-mails reçus et leurs pièces jointes"))
-            .accessibilityIdentifier("ouvrir-courrier")
-
             if app.conversation != nil {
                 Button { app.ouvrirConversation() } label: {
                     HStack(spacing: Espace.s) {
@@ -135,7 +113,6 @@ struct SectionBureau: View {
         .navigationDestination(for: AgentPC.self) { agent in
             FicheAgentView(modele: modele, agentId: agent.id)
         }
-        .sheet(isPresented: $courrierOuvert) { CourrierView() }
         .confirmationDialog("Mettre l’assistant en pause ?", isPresented: $confirmationPause, titleVisibility: .visible) {
             Button("Mettre en pause") { Task { _ = await app.pilotage?.basculer() } }
         } message: {

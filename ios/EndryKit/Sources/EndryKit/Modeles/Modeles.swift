@@ -709,6 +709,63 @@ public struct HeuresSecretariat: Decodable, Sendable, Hashable {
         }
     }
 
+    /// Une semaine du relevé (lundi → samedi) : ses jours et son total.
+    public struct Semaine: Sendable, Hashable, Identifiable {
+        /// Lundi de la semaine, `AAAA-MM-JJ`.
+        public var lundi: String
+        public var heures: Double
+        public var jours: [Jour]
+        public var id: String { lundi }
+
+        /// « Semaine du 05.10 au 10.10 »
+        public var libelle: String {
+            guard let samedi = HeuresSecretariat.decaler(lundi, de: 5) else { return "Semaine du \(lundi)" }
+            func court(_ d: String) -> String { "\(d.suffix(2)).\(d.dropFirst(5).prefix(2))" }
+            return "Semaine du \(court(lundi)) au \(court(samedi))"
+        }
+    }
+
+    /// Le mois semaine par semaine (la plus récente d'abord), chaque semaine jour par jour. Mêmes filtres que `parJour`.
+    public func parSemaine(categorie: String? = nil, recherche: String = "") -> [Semaine] {
+        var ordre: [String] = []
+        var groupes: [String: [Jour]] = [:]
+        for jour in parJour(categorie: categorie, recherche: recherche) {
+            let lundi = Self.lundi(de: jour.date)
+            if groupes[lundi] == nil { ordre.append(lundi) }
+            groupes[lundi, default: []].append(jour)
+        }
+        return ordre.sorted(by: >).map { l in
+            let js = groupes[l] ?? []
+            return Semaine(lundi: l, heures: js.reduce(0) { $0 + $1.heures }, jours: js)
+        }
+    }
+
+    private static let calendrierSemaine: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "UTC") ?? .current
+        return c
+    }()
+
+    /// Jour `AAAA-MM-JJ` décalé de quelques jours (calcul en UTC : pas de piège d'heure d'été).
+    static func decaler(_ date: String, de jours: Int) -> String? {
+        let morceaux = date.prefix(10).split(separator: "-").compactMap { Int($0) }
+        guard morceaux.count == 3,
+              let d = calendrierSemaine.date(from: DateComponents(year: morceaux[0], month: morceaux[1], day: morceaux[2])),
+              let cible = calendrierSemaine.date(byAdding: .day, value: jours, to: d) else { return nil }
+        let c = calendrierSemaine.dateComponents([.year, .month, .day], from: cible)
+        return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
+    }
+
+    /// Lundi de la semaine qui contient ce jour (la date elle-même si elle est illisible).
+    public static func lundi(de date: String) -> String {
+        let morceaux = date.prefix(10).split(separator: "-").compactMap { Int($0) }
+        guard morceaux.count == 3,
+              let d = calendrierSemaine.date(from: DateComponents(year: morceaux[0], month: morceaux[1], day: morceaux[2]))
+        else { return date }
+        let jourSemaine = calendrierSemaine.component(.weekday, from: d)  // 1 = dimanche … 7 = samedi
+        return decaler(date, de: -((jourSemaine + 5) % 7)) ?? date
+    }
+
     /// Demande au Secrétariat (Claude, sur le PC) le relevé soigné du mois : c'est le bureau qui le produit.
     public var demandeReleve: String {
         "[Pour l’agent Secrétariat] Prépare le relevé des heures de secrétariat de \(mois) pour Endry SA : "

@@ -2,6 +2,7 @@ import EndryKit
 import SwiftUI
 
 /// Détail des heures du secrétariat, pensé pour aller vite : en-tête compact, documents du bureau en haut,
+/// le mois d'abord puis ses semaines (total de chaque semaine, puis ses jours),
 /// bascule « Par jour / Par travail », jours à en-tête collant, lignes repliées (toucher pour déplier),
 /// filtre par travail et recherche. Les relevés PDF et Excel sont produits par le bureau (Claude), pas par l'iPhone.
 struct HeuresSecretariatView: View {
@@ -149,7 +150,7 @@ struct HeuresSecretariatView: View {
     // MARK: Par jour
 
     private var jours: some View {
-        let groupes = heures.parJour(categorie: travail, recherche: recherche)
+        let semaines = heures.parSemaine(categorie: travail, recherche: recherche)
         return Group {
             if let travail {
                 HStack {
@@ -165,11 +166,13 @@ struct HeuresSecretariatView: View {
                 .padding(.horizontal, 14).padding(.vertical, 8)
                 .background(Color.surfaceCreuse, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
-            if groupes.isEmpty {
+            if semaines.isEmpty {
                 Text("Aucune tâche ne correspond.").styleTexte(14).foregroundStyle(Color.encrePale)
                     .padding(.vertical, Espace.m)
             }
-            ForEach(groupes) { jour in
+            ForEach(semaines) { semaine in
+              enteteSemaine(semaine)
+              ForEach(semaine.jours) { jour in
                 Section {
                     VStack(spacing: 0) {
                         ForEach(jour.lignes) { l in
@@ -190,8 +193,31 @@ struct HeuresSecretariatView: View {
                     .padding(.horizontal, 4)
                     .background(.bar)
                 }
+              }
             }
         }
+    }
+
+    /// Tête d'une semaine du mois : son nom, son total d'heures et son montant.
+    private func enteteSemaine(_ semaine: HeuresSecretariat.Semaine) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(semaine.libelle).styleTexte(15, graisse: .semibold).foregroundStyle(Color.encre)
+            Spacer(minLength: Espace.s)
+            VStack(alignment: .trailing, spacing: 1) {
+                Text(FormatSuisse.heures(semaine.heures)).styleTexte(15, graisse: .semibold).monospacedDigit()
+                    .foregroundStyle(Color.bronze)
+                if let tarif = heures.tarif {
+                    Text(FormatSuisse.chf(semaine.heures * tarif)).styleTexte(11, relativeTo: .caption)
+                        .foregroundStyle(Color.encrePale)
+                }
+            }
+        }
+        .padding(.horizontal, 14).padding(.vertical, 10)
+        .background(Color.surfaceCreuse, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Color.bordureOr.opacity(0.6), lineWidth: 1))
+        .padding(.top, Espace.s)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("semaine-\(semaine.lundi)")
     }
 
     /// Une tâche : deux lignes, toucher pour lire le détail complet.

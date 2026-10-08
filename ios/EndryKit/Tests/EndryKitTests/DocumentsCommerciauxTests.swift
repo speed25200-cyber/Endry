@@ -94,6 +94,20 @@ final class HeuresSecretariatTests: XCTestCase {
         XCTAssertTrue(h.parJour(recherche: "zzz introuvable").isEmpty)
     }
 
+    /// Le mois semaine par semaine (lundi → samedi), la plus récente d'abord, sans perdre d'heures.
+    func testParSemaine() async throws {
+        XCTAssertEqual(HeuresSecretariat.lundi(de: "2026-10-07"), "2026-10-05")
+        XCTAssertEqual(HeuresSecretariat.lundi(de: "2026-10-05"), "2026-10-05")
+        XCTAssertEqual(HeuresSecretariat.lundi(de: "2026-10-04"), "2026-09-28", "le dimanche appartient à la semaine d'avant")
+        XCTAssertEqual(HeuresSecretariat.lundi(de: "2026-10-01"), "2026-09-28")
+        let h = try await APIDemo(latence: .zero).heuresSecretariat()
+        let semaines = h.parSemaine()
+        XCTAssertEqual(semaines.map(\.lundi), semaines.map(\.lundi).sorted(by: >))
+        XCTAssertEqual(semaines.reduce(0) { $0 + $1.heures }, h.heures, accuracy: 0.001)
+        XCTAssertTrue(semaines.allSatisfy { s in s.jours.allSatisfy { HeuresSecretariat.lundi(de: $0.date) == s.lundi } })
+        XCTAssertEqual(HeuresSecretariat.Semaine(lundi: "2026-10-05", heures: 1, jours: []).libelle, "Semaine du 05.10 au 10.10")
+    }
+
     /// Le relevé PDF / Excel est produit par le bureau : la demande part au Secrétariat.
     func testDemandeReleveAuSecretariat() async throws {
         let h = try await APIDemo(latence: .zero).heuresSecretariat()

@@ -52,6 +52,20 @@ if demande.get("file"):
                 print(f"- {a.get('appName')} {b.get('_id')} {b.get('status')} workflow={b.get('workflowId') or b.get('fileWorkflowId')} "
                       f"branche={b.get('branch')} créé={b.get('createdAt')} début={b.get('startedAt')}")
     print("== fin de la file")
+    # Minutes de build du mois en cours, d'après les builds que l'API liste (minimum : la liste est limitée).
+    from datetime import datetime, timezone
+    mois, total = datetime.now(timezone.utc).strftime("%Y-%m"), 0.0
+    for a in apps:
+        minutes = nombre = 0
+        for b in (appel(f"/builds?appId={a['_id']}") or {}).get("builds", []):
+            debut, fin = b.get("startedAt"), b.get("finishedAt")
+            if debut and fin and str(debut).startswith(mois):
+                minutes += (datetime.fromisoformat(str(fin).replace("Z", "+00:00"))
+                            - datetime.fromisoformat(str(debut).replace("Z", "+00:00"))).total_seconds() / 60
+                nombre += 1
+        total += minutes
+        print(f"- {a.get('appName')} : {nombre} builds, {minutes:.0f} minutes en {mois}")
+    print(f"== minutes de build en {mois} (builds listés) : {total:.0f}")
 
 build_lance = None
 if demande.get("action") in ("lancer", "lancer_et_captures"):

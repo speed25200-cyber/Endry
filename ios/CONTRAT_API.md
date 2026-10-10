@@ -600,3 +600,7 @@ avec `emplacement: "E-mail reçu"` et une `url` `/app/doc/piece/…`. Rien à ch
   du patron (`question`, `contexte`, `photos` en multipart), même réponse (`statut`, `question_id`, `reponse` ou `message`).
   Le PC ne crée ni tâche, ni document, ni envoi. Les mêmes routes existent aussi sous `/direction/question` et
   `/direction/questions/{id}`.
+- Jeton de directeur, suite : `GET /chantiers`, `GET /chantiers/{id}` (lecture) ; `POST /direction/note {texte}` →
+  `{ok, message, note_id}` (note vocale consignée, puis confiée au secrétariat comme information de terrain : les
+  conséquences deviennent des décisions à valider dans l'accès principal) ; `GET /direction/notes` → `{notes: [...]}`.
+- Les questions du directeur ne laissent aucune trace côté secrétariat ; ses fichiers joints sont rangés à part.

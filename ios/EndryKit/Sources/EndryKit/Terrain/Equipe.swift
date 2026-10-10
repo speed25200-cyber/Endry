@@ -207,3 +207,20 @@ extension EndryAPI {
         return reponse
     }
 }
+
+// MARK: - Accès directeur (v1.12) : note vocale
+
+extension Requete {
+    /// `POST /direction/note {texte}` → `{ok, message}` : la note est consignée, le secrétariat prépare les décisions.
+    public static func noteDirecteur(_ texte: String) -> Requete {
+        .init(.post, "\(prefixe)/direction/note", corps: .json(json(["texte": texte])), delai: 30)
+    }
+}
+
+extension EndryAPI {
+    public func consignerNoteDirecteur(_ texte: String) async throws(ErreurAPI) -> ReponseSimple {
+        let reponse = try await charger(ReponseSimple.self, .noteDirecteur(texte))
+        guard reponse.ok else { throw .refus(reponse.message ?? "La note n’a pas pu être consignée.") }
+        return reponse
+    }
+}

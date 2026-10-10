@@ -240,7 +240,9 @@ final class ModeleApp {
                     guard let self else { return .refusee("Connectez d’abord l’app au bureau.") }
                     return await self.transmettreDemande(demande)
                 },
-                fichier: session.estDemo ? nil : dossier?.appendingPathComponent("conversation.json"))
+                // Fil du directeur dans son propre fichier : jamais mêlé à la conversation du secrétariat.
+                fichier: session.estDemo ? nil : dossier?.appendingPathComponent(
+                    session.estDirecteur ? "conversation-directeur.json" : "conversation.json"))
         }
         if session.estOuvrier {
             let dossier = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
@@ -319,6 +321,7 @@ final class ModeleApp {
         if let dossier = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
             try? FileManager.default.removeItem(at: dossier.appendingPathComponent("suivi-actions.json"))
             try? FileManager.default.removeItem(at: dossier.appendingPathComponent("conversation.json"))
+            try? FileManager.default.removeItem(at: dossier.appendingPathComponent("conversation-directeur.json"))
             try? FileManager.default.removeItem(at: dossier.appendingPathComponent("pieces-conversation", isDirectory: true))
         }
         reconstruire()
@@ -386,6 +389,7 @@ final class ModeleApp {
         // Accès directeur : les montants et la conversation, rien d'autre (le PC répondrait 403).
         if session.estDirecteur {
             await argent?.charger()
+            await chantiers?.charger()
             await conversation?.renvoyerEnAttente()
             await conversation?.verifierEnAttente()
             return
@@ -424,6 +428,7 @@ final class ModeleApp {
         }
         if session.estDirecteur {
             if sujets.contains(.argent) { await argent?.charger() }
+            if sujets.contains(.chantiers) { await chantiers?.charger() }
             return
         }
         let d = decisions, c = chantiers, a = argent, s = saisie, g = agents

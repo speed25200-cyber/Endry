@@ -42,6 +42,17 @@ print("== Application retenue :", app.get("appName"))
 for a_annuler in demande.get("annuler", []):
     print("== Annulation du build", a_annuler, ":", appel(f"/builds/{a_annuler}/cancel", "POST", {}))
 
+if demande.get("file"):
+    # Vue de la file de l'équipe : ce qui tourne ou attend, toutes applications confondues (un build qui reste
+    # « queued » attend presque toujours qu'un autre se termine).
+    print("== File Codemagic (toutes les applications)")
+    for a in apps:
+        for b in ((appel(f"/builds?appId={a['_id']}") or {}).get("builds", []))[:10]:
+            if b.get("status") not in ("finished", "failed", "canceled", "timeout", "skipped", "warning"):
+                print(f"- {a.get('appName')} {b.get('_id')} {b.get('status')} workflow={b.get('workflowId') or b.get('fileWorkflowId')} "
+                      f"branche={b.get('branch')} créé={b.get('createdAt')} début={b.get('startedAt')}")
+    print("== fin de la file")
+
 build_lance = None
 if demande.get("action") in ("lancer", "lancer_et_captures"):
     r = appel("/builds", "POST", {"appId": app["_id"], "workflowId": demande["workflow"], "branch": demande["branche"]})

@@ -1,0 +1,50 @@
+[
+  {
+    "id": "S-0142",
+    "cree": "2026-09-27T10:05:00",
+    "texte": "Villa Morel : citerne dégazée, OK pour démontage lundi.",
+    "photos": 2,
+    "statut": "traite",
+    "resume": "Note ajoutée au dossier Villa Morel.",
+    "decision_reference": null,
+    "question": false,
+    "agent": "chantiers",
+    "tache_id": "T-0142"
+  },
+  {
+    "id": "S-0141",
+    "cree": "2026-09-26T16:40:00",
+    "texte": "Prépare une facture pour la régie Dubois, débouchage, 6 h 30 et un déplacement.",
+    "photos": 1,
+    "statut": "traite",
+    "resume": "Facture RE-00416 préparée.",
+    "decision_reference": "V-2M8R4T",
+    "question": false,
+    "agent": "comptabilite",
+    "tache_id": "T-0141"
+  },
+  {
+    "id": "S-0140",
+    "cree": "2026-09-26T09:12:00",
+    "texte": "Mme Gander veut un adoucisseur, rappeler pour la visite.",
+    "photos": 0,
+    "statut": "en_cours",
+    "resume": null,
+    "decision_reference": null,
+    "question": false,
+    "agent": null,
+    "tache_id": null
+  },
+  {
+    "id": "S-0139",
+    "cree": "2026-09-25T11:20:00",
+    "texte": "Question du patron (depuis l’assistant vocal de l’iPhone). Réponds-lui dans le résumé, en deux ou trois phrases à dire à voix haute ; ne prépare et n’envoie rien : [Pour l’agent Secrétariat] « Mme Gander a-t-elle rappelé ? »",
+    "photos": 0,
+    "statut": "traite",
+    "resume": "Oui, hier à 16 h : elle confirme la visite de jeudi pour l’adoucisseur.",
+    "decision_reference": null,
+    "question": true,
+    "agent": "secretariat",
+    "tache_id": "T-0143"
+  }
+]

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Finances — Maison Endry clair</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&amp;family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&amp;family=Geist:wght@300;400;500&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:var(--encre)}a:hover{opacity:.7}
+@keyframes entre{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes fondu{from{opacity:0}to{opacity:1}}
+@keyframes monte{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.entre{animation:entre 1.1s cubic-bezier(.16,1,.3,1) both}
+.fondu{animation:fondu 1.4s cubic-bezier(.16,1,.3,1) both}
+.barre{transform-origin:bottom;animation:monte 1.4s cubic-bezier(.16,1,.3,1) both}
+.tuile{background:var(--surface);backdrop-filter:blur(30px) saturate(150%);-webkit-backdrop-filter:blur(30px) saturate(150%);box-shadow:inset 0 0 0 .5px var(--filet),inset 0 1px 0 var(--reflet),0 20px 40px -24px rgba(var(--rgb-ombre),.55)}
+.verre{background:var(--verre);backdrop-filter:blur(26px) saturate(160%);-webkit-backdrop-filter:blur(26px) saturate(160%);box-shadow:inset 0 0 0 .5px var(--filet),inset 1px 1px 0 var(--reflet),0 18px 40px -16px rgba(var(--rgb-ombre),.5)}
+.cinzel{font-family:'Cinzel',serif;font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase}
+.mono{font-family:'Geist Mono',ui-monospace,monospace;font-size:10px;letter-spacing:.03em}
+.serif{font-family:'Cormorant Garamond',serif}
+</style>
+</helmet>
+<div style="{{theme}}; width: 390px; height: 844px; position: relative; overflow: hidden; background: var(--fond); font-family: 'Geist', -apple-system, system-ui, sans-serif; color: var(--encre)">
+
+<img src="/_blob/5190e40084eaf99f6357bc453a12ce9f" alt="" style="position: absolute; left: -90px; top: -150px; width: 570px; height: 540px; object-fit: cover; filter: blur(80px) saturate(1.3); opacity: var(--ambiance); pointer-events: none">
+
+<div class="fondu" style="position: absolute; left: 20px; right: 16px; top: 56px">
+<div class="cinzel" style="color: var(--bronze-texte)">Finances · Octobre</div>
+</div>
+
+<div class="verre fondu" role="tablist" aria-label="Vue" style="position: absolute; left: 16px; right: 16px; top: 82px; height: 44px; border-radius: 22px; animation-delay: .05s">
+<div style="position: absolute; top: 4px; height: 36px; left: {{segmentX}}px; width: {{segmentL}}px; border-radius: 18px; background: var(--lentille); box-shadow: inset 0 0 0 .5px var(--filet), inset 1px 1px 0 var(--reflet); transition: left .34s cubic-bezier(.2,.9,.25,1)"></div>
+<div style="position: absolute; left: 4px; right: 4px; top: 0; bottom: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr))">
+<sc-for list="{{vues}}" as="v" hint-placeholder-count="3">
+<button role="tab" aria-selected="{{v.actif}}" onClick="{{v.choisir}}" style="border: 0; background: transparent; color: {{v.couleur}}; font-family: inherit; font-size: 13px; cursor: pointer; transition: color .3s ease">{{v.nom}}</button>
+</sc-for>
+</div>
+</div>
+
+<div class="entre" style="position: absolute; left: 20px; right: 20px; top: 146px; animation-delay: .1s">
+<div style="font-size: 12px; color: var(--doux)">{{legende}}</div>
+<div style="display: flex; align-items: baseline; gap: 6px; margin-top: 4px"><span class="mono" style="font-size: 12px; color: var(--doux)">CHF</span><span class="serif" style="font-size: 54px; line-height: 1; letter-spacing: -1px; font-variant-numeric: lining-nums">{{grand}}</span></div>
+</div>
+
+<div class="entre" style="position: absolute; left: 20px; right: 20px; top: 236px; height: 92px; animation-delay: .2s">
+<div style="position: absolute; left: 0; right: 0; bottom: 18px; height: 70px; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 6px; align-items: end">
+<sc-for list="{{barres}}" as="b" hint-placeholder-count="12">
+<span class="barre" style="display: block; height: {{b.h}}px; border-radius: 3px; background: {{b.couleur}}; animation-delay: {{b.delai}}"></span>
+</sc-for>
+</div>
+<div class="mono" style="position: absolute; left: 0; right: 0; bottom: 0; display: flex; justify-content: space-between; font-size: 9px; color: var(--doux)"><span>Nov.</span><span>Fév.</span><span>Mai</span><span>Août</span><span>Oct.</span></div>
+</div>
+
+<div style="position: absolute; left: 16px; right: 16px; top: 346px; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{lignes}}" as="l" hint-placeholder-count="4">
+<div class="tuile entre" style="border-radius: 20px; padding: 12px 14px; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; align-items: center; animation-delay: {{l.delai}}">
+<div><div style="font-size: 13.5px">{{l.titre}}</div><div class="mono" style="color: var(--doux); margin-top: 3px">{{l.detail}}</div></div>
+<div style="text-align: right"><div class="serif" style="font-size: 20px">{{l.montant}}</div><div class="mono" style="color: {{l.etatCouleur}}; margin-top: 1px">{{l.etat}}</div></div>
+</div>
+</sc-for>
+</div>
+
+<div class="tuile entre" style="position: absolute; left: 16px; right: 16px; top: 656px; border-radius: 22px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; animation-delay: .6s">
+<div><div class="cinzel" style="color: var(--bronze-texte)">Secrétariat</div><div style="font-size: 13px; margin-top: 4px">31 h 30 · CHF 2’047.50</div></div>
+<div style="display: flex; gap: 6px">
+<a href="#" class="mono" style="height: 32px; padding: 0 10px; border-radius: 16px; display: flex; align-items: center; text-decoration: none; box-shadow: inset 0 0 0 .5px var(--filet-fort)">PDF</a>
+<a href="#" class="mono" style="height: 32px; padding: 0 10px; border-radius: 16px; display: flex; align-items: center; text-decoration: none; box-shadow: inset 0 0 0 .5px var(--filet-fort)">Excel</a>
+</div>
+</div>
+
+<div class="fondu" style="position: absolute; left: 16px; right: 16px; bottom: 24px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; animation-delay: .7s">
+<button class="verre" style="height: 54px; border: 0; border-radius: 27px; color: var(--encre); font-family: inherit; font-size: 14px; cursor: pointer">Nouvelle offre</button>
+<button style="height: 54px; border: 0; border-radius: 27px; background: var(--bouton); color: var(--bouton-texte); font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer">Nouvelle facture</button>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"sombre":{"editor":"boolean","default":false,"section":"Thème"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) { super(props); this.state = { vue: 0 }; }
+renderVals() {
+const sombre = this.props.sombre ?? false;
+const theme = sombre
+? '--fond:#17110C;--surface:rgba(249,219,163,.045);--verre:rgba(249,219,163,.06);--encre:#F6F0E6;--doux:#B2A38B;--filet:rgba(249,219,163,.12);--filet-fort:rgba(249,219,163,.3);--reflet:rgba(255,236,200,.22);--bronze-texte:#D2A764;--signal:#F9DBA3;--vert:#9CCB98;--rouge:#E59474;--lentille:rgba(249,219,163,.1);--bouton:#F9DBA3;--bouton-texte:#211A13;--rgb-ombre:0,0,0;--ambiance:.28'
+: '--fond:#F6F5F2;--surface:rgba(255,255,255,.72);--verre:rgba(255,255,255,.6);--encre:#211A13;--doux:#74695A;--filet:rgba(33,26,19,.1);--filet-fort:rgba(33,26,19,.28);--reflet:#FFFFFF;--bronze-texte:#8A6223;--signal:#9F722A;--vert:#3D7046;--rouge:#A9462B;--lentille:rgba(33,26,19,.06);--bouton:#211A13;--bouton-texte:#F9DBA3;--rgb-ombre:33,26,19;--ambiance:.16';
+const v = this.state.vue;
+const noms = ['À encaisser', 'À payer', 'Offres'];
+const largeur = (358 - 8) / 3;
+const vues = noms.map((nom, i) => ({ nom, actif: v === i ? 'true' : 'false', couleur: v === i ? 'var(--encre)' : 'var(--doux)', choisir: () => this.setState({ vue: i }) }));
+const jeux = [
+{ legende: 'À encaisser · 6 factures ouvertes', grand: '49’673', base: [22, 30, 26, 38, 34, 44, 40, 52, 46, 58, 54, 66], lignes: [
+['Gérance Morel SA', 'RE-00412 · échue depuis 12 j', '15’640', 'Suivi seulement', 'var(--doux)'],
+['Régie Dubois', 'RE-00416 · échéance 08.10', '10’028', 'Envoyée', 'var(--doux)'],
+['PPE Les Cèdres', 'RE-00418 · acompte 30 %', '22’080', 'Envoyée', 'var(--doux)'],
+['M. et Mme Lambert', 'RE-00990 · à envoyer', '1’925', 'À glisser', 'var(--signal)']] },
+{ legende: 'À payer sous 7 jours · 4 factures', grand: '2’387', base: [14, 18, 12, 22, 16, 20, 24, 18, 26, 20, 22, 28], lignes: [
+['Fournisseur sanitaire', 'Échéance 03.10', '1’214', 'Prêt', 'var(--vert)'],
+['Grossiste chauffage', 'Échéance 05.10', '642', 'Prêt', 'var(--vert)'],
+['Location nacelle', 'Échéance 06.10', '386', 'À valider', 'var(--signal)'],
+['Carburant', 'Échéance 07.10', '145', 'Prêt', 'var(--vert)']] },
+{ legende: 'Offres en attente de réponse · 5', grand: '15’641', base: [8, 12, 10, 16, 14, 20, 18, 22, 20, 26, 24, 30], lignes: [
+['Mme Gander', 'Adoucisseur · envoyée il y a 9 j', '3’480', 'À suivre', 'var(--signal)'],
+['Mme Rey', 'Variante WC · en préparation', '1’180', 'Brouillon', 'var(--doux)'],
+['M. et Mme Lambert', 'Chauffe-eau 300 L', '4’031', 'Corrigée', 'var(--vert)'],
+['Résidence Les Tilleuls', 'Salle de bains étage', '6’950', 'Envoyée', 'var(--doux)']] }
+];
+const j = jeux[v];
+const barres = j.base.map((h, i) => ({ h, couleur: i === 11 ? 'var(--signal)' : 'var(--filet-fort)', delai: (0.2 + i * 0.04) + 's' }));
+const lignes = j.lignes.map(([titre, detail, montant, etat, etatCouleur], i) => ({ titre, detail, montant, etat, etatCouleur, delai: (0.3 + i * 0.07) + 's' }));
+return { theme, vues, segmentX: 4 + v * largeur, segmentL: largeur, legende: j.legende, grand: j.grand, barres, lignes };
+}
+}
+</script>
+</body>
+</html>

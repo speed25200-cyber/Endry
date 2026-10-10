@@ -1,0 +1,264 @@
+{
+  "encaisser": {
+    "factures": [
+      {
+        "facture_id": 412,
+        "numero": "RE-00412",
+        "titre": "PAC air-eau 10 kW — acompte 40 %",
+        "contact_id": 88,
+        "montant": 15640.0,
+        "echeance": "2026-10-12",
+        "retard_jours": 0,
+        "relance": "",
+        "client": "Gérance Morel SA"
+      },
+      {
+        "facture_id": 405,
+        "numero": "RE-00405",
+        "titre": "Salle de bains étage — Résidence Les Tilleuls",
+        "contact_id": 91,
+        "montant": 9385.6,
+        "echeance": "2026-09-14",
+        "retard_jours": 13,
+        "relance": "1er rappel prévu",
+        "client": "Régie Dubois"
+      },
+      {
+        "facture_id": 398,
+        "numero": "RE-00398",
+        "titre": "Débouchage colonne et caméra",
+        "contact_id": 91,
+        "montant": 642.35,
+        "echeance": "2026-09-03",
+        "retard_jours": 24,
+        "relance": "",
+        "client": "Régie Dubois"
+      },
+      {
+        "facture_id": 381,
+        "numero": "RE-00381",
+        "titre": "Ventilation double flux — acompte 2",
+        "contact_id": 73,
+        "montant": 18400.0,
+        "echeance": "2026-08-20",
+        "retard_jours": 38,
+        "relance": "",
+        "client": "PPE Les Cèdres"
+      },
+      {
+        "facture_id": 366,
+        "numero": "RE-00366",
+        "titre": "Remplacement vase d’expansion",
+        "contact_id": 55,
+        "montant": 1390.0,
+        "echeance": "2026-07-19",
+        "retard_jours": 70,
+        "relance": "",
+        "client": "M. Chassot"
+      },
+      {
+        "facture_id": 415,
+        "numero": "RE-00415",
+        "titre": "Chauffe-eau 300 L — mise en service",
+        "contact_id": 60,
+        "montant": 4215.4,
+        "echeance": "2026-10-26",
+        "retard_jours": 0,
+        "relance": "",
+        "client": "M. et Mme Lambert"
+      }
+    ],
+    "total": 49673.35,
+    "anciennete": {
+      "a_echoir": 19855.4,
+      "0_30": 10027.95,
+      "31_60": 18400.0,
+      "plus_60": 1390.0
+    }
+  },
+  "payer": {
+    "factures": [
+      {
+        "id": 901,
+        "fournisseur": "Sanipex SA",
+        "numero": "SX-240918",
+        "montant": 4213.6,
+        "echeance": "2026-09-29",
+        "objet": "Matériel salle de bains Les Tilleuls",
+        "reference": null,
+        "dossier_id": 21,
+        "statut": "ouverte",
+        "source": "zoho",
+        "created_at": "2026-09-18T09:12:00",
+        "paid_at": null,
+        "jours_restants": 2
+      },
+      {
+        "id": 904,
+        "fournisseur": "Meier Tobler AG",
+        "numero": "MT-5512",
+        "montant": 9870.0,
+        "echeance": "2026-10-01",
+        "objet": "PAC 10 kW — Villa Morel",
+        "reference": null,
+        "dossier_id": 18,
+        "statut": "ouverte",
+        "source": "zoho",
+        "created_at": "2026-09-18T09:12:00",
+        "paid_at": null,
+        "jours_restants": 4
+      },
+      {
+        "id": 907,
+        "fournisseur": "Hoval SA",
+        "numero": "HV-7731",
+        "montant": 2388.25,
+        "echeance": "2026-10-15",
+        "objet": "Gaines et bouches — PPE Les Cèdres",
+        "reference": null,
+        "dossier_id": 12,
+        "statut": "ouverte",
+        "source": "zoho",
+        "created_at": "2026-09-18T09:12:00",
+        "paid_at": null,
+        "jours_restants": 18
+      },
+      {
+        "id": 909,
+        "fournisseur": "Debrunner Acifer SA",
+        "numero": "DA-10042",
+        "montant": 318.9,
+        "echeance": "2026-10-24",
+        "objet": "Consommables atelier",
+        "reference": null,
+        "dossier_id": null,
+        "statut": "ouverte",
+        "source": "zoho",
+        "created_at": "2026-09-18T09:12:00",
+        "paid_at": null,
+        "jours_restants": 27
+      }
+    ],
+    "total": 16790.75,
+    "cette_semaine": [
+      {
+        "id": 901,
+        "fournisseur": "Sanipex SA",
+        "numero": "SX-240918",
+        "montant": 4213.6,
+        "echeance": "2026-09-29",
+        "objet": "Matériel salle de bains Les Tilleuls",
+        "reference": null,
+        "dossier_id": 21,
+        "statut": "ouverte",
+        "source": "zoho",
+        "created_at": "2026-09-18T09:12:00",
+        "paid_at": null,
+        "jours_restants": 2
+      },
+      {
+        "id": 904,
+        "fournisseur": "Meier Tobler AG",
+        "numero": "MT-5512",
+        "montant": 9870.0,
+        "echeance": "2026-10-01",
+        "objet": "PAC 10 kW — Villa Morel",
+        "reference": null,
+        "dossier_id": 18,
+        "statut": "ouverte",
+        "source": "zoho",
+        "created_at": "2026-09-18T09:12:00",
+        "paid_at": null,
+        "jours_restants": 4
+      }
+    ],
+    "total_semaine": 14083.6
+  },
+  "offres": {
+    "offres": [
+      {
+        "offre_id": 37,
+        "numero": "OF-00037",
+        "titre": "Rénovation complète salle de bains et WC",
+        "contact_id": 97,
+        "montant": 28640.0,
+        "emise_le": "2026-09-08",
+        "valable_jusqu_au": "2026-10-08",
+        "relances": 0,
+        "client": "Famille Rey"
+      },
+      {
+        "offre_id": 39,
+        "numero": "OF-00039",
+        "titre": "Chaufferie à pellets — Collège de Moudon",
+        "contact_id": 102,
+        "montant": 46380.5,
+        "emise_le": "2026-09-15",
+        "valable_jusqu_au": "2026-10-15",
+        "relances": 0,
+        "client": "Commune de Moudon"
+      },
+      {
+        "offre_id": 41,
+        "numero": "OF-00041",
+        "titre": "Adoucisseur et nouvelle nourrice",
+        "contact_id": 108,
+        "montant": 5420.0,
+        "emise_le": "2026-09-22",
+        "valable_jusqu_au": "2026-10-22",
+        "relances": 0,
+        "client": "Mme Gander"
+      }
+    ],
+    "total": 80440.5
+  },
+  "a_refacturer": {
+    "achats": [
+      {
+        "dossier_id": 21,
+        "dossier": "Résidence Les Tilleuls",
+        "achat": "Siphon design et bonde clic-clac (hors offre)",
+        "montant": 186.4,
+        "date": "2026-09-19"
+      },
+      {
+        "dossier_id": 18,
+        "dossier": "Villa Morel",
+        "achat": "Vase d’expansion 35 L supplémentaire",
+        "montant": 264.0,
+        "date": "2026-09-21"
+      },
+      {
+        "dossier_id": 12,
+        "dossier": "PPE Les Cèdres",
+        "achat": "Location carotteuse 2 jours",
+        "montant": 390.0,
+        "date": "2026-09-09"
+      }
+    ],
+    "total": 840.4
+  },
+  "versements_non_identifies": [
+    {
+      "cle": "VN-2026-09-23-1500",
+      "date": "2026-09-23",
+      "montant": 1500.0,
+      "contrepartie": "M. Dupasquier",
+      "texte": "ACOMPTE TRAVAUX",
+      "reference": "RF18 5390 0754 7034"
+    },
+    {
+      "cle": "VN-2026-09-17-642",
+      "date": "2026-09-17",
+      "montant": 642.35,
+      "contrepartie": "Régie Dubois",
+      "texte": "PAIEMENT",
+      "reference": null
+    }
+  ],
+  "heures_secretariat": {
+    "heures": "31 h 30",
+    "montant": 2047.5,
+    "mois": "septembre 2026"
+  }
+}

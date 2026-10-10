@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Accueil — Horizon clair</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:var(--encre)}a:hover{opacity:.7}
+@keyframes entre{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes fondu{from{opacity:0}to{opacity:1}}
+@keyframes trace{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes veille{0%,100%{opacity:1}50%{opacity:.35}}
+.entre{animation:entre 1.1s cubic-bezier(.16,1,.3,1) both}
+.fondu{animation:fondu 1.4s cubic-bezier(.16,1,.3,1) both}
+.trace{transform-origin:left;animation:trace 1.6s cubic-bezier(.16,1,.3,1) both}
+.veille{animation:veille 2.8s ease-in-out infinite}
+.tuile{background:var(--surface);backdrop-filter:blur(30px) saturate(150%);-webkit-backdrop-filter:blur(30px) saturate(150%);box-shadow:inset 0 0 0 .5px var(--filet),inset 0 1px 0 var(--reflet),0 20px 40px -24px rgba(var(--rgb-ombre),.6)}
+.verre{background:var(--verre);backdrop-filter:blur(26px) saturate(160%);-webkit-backdrop-filter:blur(26px) saturate(160%);box-shadow:inset 0 0 0 .5px var(--filet),inset 1px 1px 0 var(--reflet),0 18px 40px -16px rgba(var(--rgb-ombre),.55)}
+.mono{font-family:'Geist Mono',ui-monospace,monospace;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase}
+.chiffre{font-family:'Geist',system-ui,sans-serif;font-weight:300;font-variant-numeric:tabular-nums;letter-spacing:-.04em}
+</style>
+</helmet>
+<div style="{{theme}}; width: 390px; height: 844px; position: relative; overflow: hidden; background: var(--fond); font-family: 'Geist', -apple-system, system-ui, sans-serif; color: var(--encre)">
+
+<img src="/_blob/b98c81480c1f53822336453439891e61" alt="" style="position: absolute; left: -80px; top: -140px; width: 560px; height: 560px; object-fit: cover; filter: blur(70px) saturate(1.3); opacity: var(--ambiance); pointer-events: none">
+
+<div class="fondu" style="position: absolute; left: 16px; right: 16px; top: 56px; display: flex; align-items: center; justify-content: space-between">
+<div class="verre" style="height: 40px; padding: 0 14px 0 12px; border-radius: 20px; display: flex; align-items: center; gap: 8px">
+<span class="veille" style="width: 6px; height: 6px; border-radius: 3px; background: var(--vert)"></span>
+<span class="mono" style="font-size: 10px">Bureau en ligne · 3 agents</span>
+</div>
+<button class="verre" aria-label="Réglages et profil" style="width: 40px; height: 40px; border: 0; border-radius: 20px; color: var(--encre); font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer">L</button>
+</div>
+
+<div class="entre" style="position: absolute; left: 20px; right: 20px; top: 116px; animation-delay: .1s">
+<div class="mono" style="color: var(--doux)">Mer · 01 oct · 2026</div>
+<div style="font-size: 34px; font-weight: 300; letter-spacing: -1.2px; line-height: 1.1; margin-top: 6px">Bonjour, Luc</div>
+</div>
+
+<div class="entre" style="position: absolute; left: 20px; right: 20px; top: 194px; height: 70px; animation-delay: .2s">
+<div style="position: absolute; left: 22px; top: 0; height: 26px; display: flex; align-items: center; gap: 6px">
+<span class="tuile" style="height: 24px; padding: 0 10px; border-radius: 12px; display: flex; align-items: center; gap: 6px; font-size: 11px"><span class="mono" style="font-size: 9.5px; color: var(--doux)">07:30</span>Villa Morel</span>
+</div>
+<div style="position: absolute; left: 186px; top: 0; height: 26px">
+<span class="tuile" style="height: 24px; padding: 0 10px; border-radius: 12px; display: flex; align-items: center; gap: 6px; font-size: 11px"><span class="mono" style="font-size: 9.5px; color: var(--doux)">14:00</span>Les Pâquerets</span>
+</div>
+<div class="trace" style="position: absolute; left: 0; right: 0; top: 40px; height: .5px; background: var(--filet-fort); animation-delay: .3s"></div>
+<div style="position: absolute; left: 0; right: 0; top: 36px; height: 9px; display: grid; grid-template-columns: repeat(14, minmax(0, 1fr))">
+<sc-for list="{{graduations}}" as="g" hint-placeholder-count="14">
+<span style="border-left: .5px solid var(--filet-fort); height: {{g.h}}px; margin-top: {{g.m}}px"></span>
+</sc-for>
+</div>
+<div style="position: absolute; left: {{maintenant}}px; top: 30px; width: 1px; height: 22px; background: var(--signal)"></div>
+<div style="position: absolute; left: {{maintenantPoint}}px; top: 37px; width: 7px; height: 7px; border-radius: 4px; background: var(--signal); box-shadow: 0 0 0 4px var(--signal-halo)"></div>
+<div class="mono" style="position: absolute; left: 0; right: 0; top: 54px; display: flex; justify-content: space-between; font-size: 9px; color: var(--doux)"><span>06</span><span>09</span><span>12</span><span>15</span><span>18</span><span>20</span></div>
+</div>
+
+<div style="position: absolute; left: 16px; right: 16px; top: 286px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+
+<div class="tuile entre" style="grid-column: span 2; border-radius: 26px; padding: 16px 16px 12px 16px; animation-delay: .3s">
+<div style="display: flex; justify-content: space-between; align-items: flex-start">
+<div>
+<div class="mono" style="color: var(--doux)">À décider</div>
+<div style="font-size: 17px; font-weight: 400; letter-spacing: -.3px; line-height: 1.25; margin-top: 8px; max-width: 240px; opacity: {{carteOpacite}}; transition: opacity .5s ease">{{titre}}</div>
+</div>
+<div class="chiffre" style="font-size: 44px; line-height: .9">{{restantes}}</div>
+</div>
+<div onPointerDown="{{debut}}" onPointerMove="{{bouge}}" onPointerUp="{{fin}}" onPointerCancel="{{fin}}" style="position: relative; height: 48px; margin-top: 14px; touch-action: none; cursor: grab">
+<div style="position: absolute; left: 22px; right: 22px; top: 24px; height: .5px; background: var(--filet-fort)"></div>
+<div style="position: absolute; left: 22px; top: 23.5px; height: 1.5px; width: {{trait}}px; background: var(--encre); transition: {{transition}}"></div>
+<div class="mono" style="position: absolute; right: 0; top: 0; height: 48px; display: flex; align-items: center; color: var(--doux); opacity: {{texteOpacite}}">{{geste}}</div>
+<div class="verre" style="position: absolute; left: 0; top: 2px; width: 44px; height: 44px; border-radius: 22px; display: flex; align-items: center; justify-content: center; transform: translateX({{curseurX}}px) scale({{echelle}}); transition: {{transition}}">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M14 7l5 5-5 5"></path></svg>
+</div>
+</div>
+</div>
+
+<div class="tuile entre" style="border-radius: 26px; padding: 16px; height: 128px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; animation-delay: .4s">
+<div style="display: flex; justify-content: space-between; align-items: baseline"><span class="mono" style="color: var(--doux)">Chantiers</span><span class="chiffre" style="font-size: 24px">02</span></div>
+<div style="display: flex; flex-direction: column; gap: 9px">
+<div><div style="display: flex; justify-content: space-between; font-size: 11.5px"><span>Villa Morel</span><span class="mono" style="font-size: 9.5px; color: var(--doux)">4/7</span></div><div style="height: 2px; background: var(--filet); margin-top: 5px; border-radius: 1px"><div class="trace" style="width: 57%; height: 2px; background: var(--encre); border-radius: 1px; animation-delay: .7s"></div></div></div>
+<div><div style="display: flex; justify-content: space-between; font-size: 11.5px"><span>PPE Les Cèdres</span><span class="mono" style="font-size: 9.5px; color: var(--doux)">5/7</span></div><div style="height: 2px; background: var(--filet); margin-top: 5px; border-radius: 1px"><div class="trace" style="width: 71%; height: 2px; background: var(--encre); border-radius: 1px; animation-delay: .8s"></div></div></div>
+</div>
+</div>
+
+<div class="tuile entre" style="border-radius: 26px; padding: 16px; height: 128px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; animation-delay: .5s">
+<div style="display: flex; justify-content: space-between; align-items: baseline"><span class="mono" style="color: var(--doux)">À payer</span><span class="mono" style="font-size: 9.5px; color: var(--doux)">7 j</span></div>
+<svg aria-hidden="true" width="100%" height="34" viewBox="0 0 140 34" preserveAspectRatio="none" style="overflow: visible"><polyline points="0,26 20,22 40,24 60,15 80,18 100,9 120,12 140,5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-dasharray="200" stroke-dashoffset="{{courbe}}" opacity=".85"></polyline></svg>
+<div><span class="mono" style="color: var(--doux)">CHF </span><span class="chiffre" style="font-size: 26px">{{montant}}</span></div>
+</div>
+
+<div class="tuile entre" style="grid-column: span 2; border-radius: 22px; padding: 0 16px; height: 60px; display: flex; align-items: center; justify-content: space-between; animation-delay: .6s">
+<div style="display: flex; align-items: center; gap: 10px">
+<span class="veille" style="width: 6px; height: 6px; border-radius: 3px; background: var(--signal)"></span>
+<span style="font-size: 13px">Secrétariat <span style="color: var(--doux)">rédige la réponse à Mme Rey</span></span>
+</div>
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="opacity: .6"><path d="M9 6l6 6-6 6"></path></svg>
+</div>
+</div>
+
+<nav aria-label="Navigation principale" class="verre fondu" style="position: absolute; left: 16px; right: 16px; bottom: 26px; height: 64px; border-radius: 32px; animation-delay: .7s">
+<div style="position: absolute; top: 6px; height: 52px; left: {{lentilleX}}px; width: {{lentilleL}}px; border-radius: 26px; background: var(--lentille); box-shadow: inset 0 0 0 .5px var(--filet), inset 1px 1px 0 var(--reflet); transition: left .36s cubic-bezier(.2,.9,.25,1), width .36s cubic-bezier(.2,.9,.25,1)"></div>
+<div style="position: absolute; left: 6px; right: 6px; top: 0; bottom: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); align-items: center">
+<sc-for list="{{onglets}}" as="o" hint-placeholder-count="5">
+<sc-if value="{{o.orbe}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; justify-content: center">
+<button aria-label="Parler à Endry" style="width: 50px; height: 50px; border: 0; border-radius: 25px; cursor: pointer; background: radial-gradient(circle at 34% 28%, var(--orbe-a) 0%, var(--orbe-b) 38%, var(--orbe-c) 72%); box-shadow: inset 0 0 0 .5px var(--filet), inset 0 -6px 12px rgba(var(--rgb-ombre),.25), 0 10px 22px -8px rgba(var(--rgb-ombre),.6)"></button>
+</div>
+</sc-if>
+<sc-if value="{{o.onglet}}" hint-placeholder-val="{{ true }}">
+<button onClick="{{o.choisir}}" aria-label="{{o.nom}}" style="height: 52px; border: 0; background: transparent; color: {{o.couleur}}; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transition: color .3s ease; font-family: inherit">
+<sc-if value="{{o.accueil}}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="4" width="7" height="7" rx="2"></rect><rect x="13" y="4" width="7" height="7" rx="2"></rect><rect x="4" y="13" width="7" height="7" rx="2"></rect><rect x="13" y="13" width="7" height="7" rx="2"></rect></svg></sc-if>
+<sc-if value="{{o.chantiers}}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="5" width="16" height="15" rx="2.5"></rect><path d="M4 10h16"></path></svg></sc-if>
+<sc-if value="{{o.finances}}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l5.5-6 4 3L20 7"></path></svg></sc-if>
+<sc-if value="{{o.bureau}}" hint-placeholder-val="{{ false }}"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><circle cx="12" cy="12" r="8"></circle></svg></sc-if>
+<span class="mono" style="font-size: 8.5px">{{o.nom}}</span>
+</button>
+</sc-if>
+</sc-for>
+</div>
+</nav>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"sombre":{"editor":"boolean","default":false,"section":"Thème"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+constructor(props) {
+super(props);
+this.state = { onglet: 0, lx: null, lw: null, x: 0, glisse: false, idx: 0, change: false, t: 0 };
+this.largeur = 358 - 32;
+this.course = this.largeur - 44;
+this.slot = (358 - 12) / 5;
+this.decisions = [
+['Créer l’offre adoucisseur pour Mme Gander', 'Glisser pour valider'],
+['Réponse à Mme Rey — variante WC', 'Glisser pour envoyer'],
+['Facture RE-00990 à la Régie Dubois', 'Glisser pour envoyer'],
+['Commande de robinetterie — Villa Morel', 'Glisser pour valider']
+];
+}
+componentDidMount() {
+const depart = performance.now();
+const pas = (m) => {
+const t = Math.min(1, (m - depart - 300) / 1600);
+this.setState({ t: Math.max(0, t) });
+if (t < 1) this.anim = requestAnimationFrame(pas);
+};
+this.anim = requestAnimationFrame(pas);
+}
+componentWillUnmount() { cancelAnimationFrame(this.anim); clearTimeout(this.m1); clearTimeout(this.m2); }
+lentille(i) { return { x: 6 + i * this.slot + 3, w: this.slot - 6 }; }
+position(e) {
+const r = e.currentTarget.getBoundingClientRect();
+return (e.clientX - r.left) / (r.width / this.largeur) - 22;
+}
+renderVals() {
+const sombre = this.props.sombre ?? false;
+const theme = sombre
+? '--fond:#0D0C0A;--surface:rgba(255,255,255,.045);--verre:rgba(255,255,255,.06);--encre:#ECE7DF;--doux:#958D81;--filet:rgba(236,231,223,.1);--filet-fort:rgba(236,231,223,.28);--reflet:rgba(255,255,255,.16);--signal:#E7C88F;--signal-halo:rgba(231,200,143,.16);--vert:#8FD1A0;--lentille:rgba(255,255,255,.08);--rgb-ombre:0,0,0;--ambiance:.38;--orbe-a:#FFFFFF;--orbe-b:rgba(236,231,223,.42);--orbe-c:rgba(236,231,223,.06)'
+: '--fond:#F2F0EB;--surface:rgba(255,255,255,.62);--verre:rgba(255,255,255,.55);--encre:#141210;--doux:#6B655C;--filet:rgba(20,18,16,.09);--filet-fort:rgba(20,18,16,.26);--reflet:rgba(255,255,255,1);--signal:#9A6E2C;--signal-halo:rgba(154,110,44,.14);--vert:#2F7A47;--lentille:rgba(20,18,16,.06);--rgb-ombre:20,18,16;--ambiance:.22;--orbe-a:#FFFFFF;--orbe-b:rgba(20,18,16,.18);--orbe-c:rgba(20,18,16,.5)';
+const s = this.state;
+const e = 1 - Math.pow(1 - s.t, 4);
+const n = this.decisions.length;
+const d = this.decisions[s.idx % n];
+const cible = this.lentille(s.onglet);
+const noms = [['Accueil', 'accueil'], ['Chantiers', 'chantiers'], ['', 'orbe'], ['Finances', 'finances'], ['Bureau', 'bureau']];
+const onglets = noms.map(([nom, cle], i) => ({
+nom, orbe: cle === 'orbe', onglet: cle !== 'orbe',
+accueil: cle === 'accueil', chantiers: cle === 'chantiers', finances: cle === 'finances', bureau: cle === 'bureau',
+couleur: s.onglet === i ? 'var(--encre)' : 'var(--doux)',
+choisir: () => {
+if (i === this.state.onglet) return;
+const a = this.lentille(this.state.onglet), b = this.lentille(i);
+const g = Math.min(a.x, b.x);
+this.setState({ onglet: i, lx: g, lw: Math.max(a.x, b.x) + b.w - g });
+clearTimeout(this.m2);
+this.m2 = setTimeout(() => this.setState({ lx: null, lw: null }), 170);
+}
+}));
+const graduations = Array.from({ length: 14 }, (_, i) => ({ h: i % 3 === 0 ? 9 : 5, m: i % 3 === 0 ? 0 : 2 }));
+const pos = 350 * ((9 + 41 / 60 - 6) / 14);
+const x = Math.max(0, Math.min(this.course, s.x));
+return {
+theme, onglets, graduations,
+maintenant: pos.toFixed(1),
+maintenantPoint: (pos - 3).toFixed(1),
+titre: d[0], geste: d[1],
+restantes: String(Math.round((n - s.idx % n) * e)).padStart(2, '0'),
+montant: Math.round(2387 * e).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '’'),
+courbe: (200 * (1 - e)).toFixed(1),
+lentilleX: s.lx ?? cible.x,
+lentilleL: s.lw ?? cible.w,
+curseurX: x,
+echelle: s.glisse ? 1.08 : 1,
+trait: x,
+carteOpacite: s.change ? 0 : 1,
+transition: s.glisse ? 'transform .18s ease' : 'transform .75s cubic-bezier(.34,1.45,.5,1), width .75s cubic-bezier(.34,1.45,.5,1)',
+texteOpacite: Math.max(0, 1 - x / 110),
+debut: (ev) => { ev.currentTarget.setPointerCapture && ev.currentTarget.setPointerCapture(ev.pointerId); this.setState({ glisse: true, x: this.position(ev) }); },
+bouge: (ev) => { if (this.state.glisse) this.setState({ x: this.position(ev) }); },
+fin: () => {
+if (!this.state.glisse) return;
+if (this.state.x >= this.course * 0.9) {
+this.setState({ glisse: false, x: this.course, change: true });
+clearTimeout(this.m1);
+this.m1 = setTimeout(() => this.setState({ change: false, x: 0, idx: this.state.idx + 1 }), 480);
+} else this.setState({ glisse: false, x: 0 });
+}
+};
+}
+}
+</script>
+</body>
+</html>

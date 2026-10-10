@@ -14,6 +14,10 @@ Installation : `npm ci`. Construction : `npm run build`. Vérifications backend 
 
 Voir **[DEPLOIEMENT.md](DEPLOIEMENT.md)** pour l’hébergement indépendant sur Cloudflare Workers/D1/R2 et un nom de domaine propre. Un dépôt GitHub ou un simple espace FTP ne suffit pas à exécuter ce backend.
 
+## Application iPhone « Endry Pilotage »
+
+Le dossier [`ios/`](ios/README.md) contient l’application iPhone native (SwiftUI) de la direction, qui consomme l’API v1 de l’assistant administratif du bureau. Build, tests et publication TestFlight passent par Codemagic ([`codemagic.yaml`](codemagic.yaml)). Voir **[ios/README.md](ios/README.md)**.
+
 Les informations ci-dessous documentent l’historique de la vitrine, pas l’état actuel des accès ou du backend.
 
 ## Historique de la vitrine

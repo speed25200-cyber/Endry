@@ -1,0 +1,457 @@
+import EndryKit
+import SwiftUI
+import UIKit
+
+// MARK: - Maison Endry : briques de la maquette E (voir ios/Maquettes/MaisonEndry/STYLE.md)
+
+extension Police {
+    /// Cormorant Garamond à la taille voulue (grands chiffres, titres courts), mis à l'échelle avec Dynamic Type.
+    /// Grands titres et grands chiffres : SF Pro Display, fin pour les très grandes tailles (montants, compteurs),
+    /// régulier pour les titres, chiffres alignés et tabulaires. L'italique n'est plus utilisé (gardé pour l'API).
+    static func serif(_ taille: CGFloat, relativeTo style: Font.TextStyle = .title, italique: Bool = false) -> Font {
+        let poids: Font.Weight = taille >= 34 ? .light : taille >= 22 ? .regular : .medium
+        return .system(size: UIFontMetrics(forTextStyle: style.uiKit).scaledValue(for: taille), weight: poids)
+            .monospacedDigit()
+    }
+
+    /// Cormorant avec chiffres alignés (« 01 », « 49’673 », « 0:03 ») : par défaut, la fonte dessine des chiffres
+    /// elzéviriens (« OI », chiffres qui descendent), illisibles dans les montants et les compteurs.
+    static func cormorant(_ nom: String, taille: CGFloat, relativeTo style: Font.TextStyle) -> Font {
+        guard let base = UIFont(name: nom, size: taille) else { return .custom(nom, size: taille, relativeTo: style) }
+        // kNumberCaseType (21) / kUpperCaseNumbersSelector (1) : chiffres alignés sur les capitales.
+        let reglages: [[UIFontDescriptor.FeatureKey: Int]] = [[.type: 21, .selector: 1]]
+        let descripteur = base.fontDescriptor.addingAttributes([.featureSettings: reglages])
+        let police = UIFont(descriptor: descripteur, size: taille)
+        return Font(UIFontMetrics(forTextStyle: style.uiKit).scaledFont(for: police))
+    }
+
+    /// Repères discrets (heures, « 4/7 », « Glisser pour valider ») : SF Pro, chiffres tabulaires.
+    /// (Plus de police à chasse fixe pour les libellés : elle faisait « terminal ».)
+    static func mono(_ taille: CGFloat = 11.5, relativeTo style: Font.TextStyle = .caption) -> Font {
+        .system(size: UIFontMetrics(forTextStyle: style.uiKit).scaledValue(for: taille + 1), weight: .medium)
+            .monospacedDigit()
+    }
+}
+
+extension View {
+    /// Étiquette de section : petites capitales SF Pro, nettes et espacées (« À DÉCIDER », « FINANCES »).
+    func etiquetteMaison(_ taille: CGFloat = 11.5, couleur: Color = .etiquette) -> some View {
+        font(.system(size: UIFontMetrics(forTextStyle: .caption1).scaledValue(for: taille), weight: .semibold))
+            .textCase(.uppercase)
+            .tracking(taille * 0.1)
+            .foregroundStyle(couleur)
+    }
+
+    /// Tuile Maison Endry : surface teintée en dégradé (plus claire en haut à gauche), filet fin, reflet sur le
+    /// bord haut, ombre longue et douce. Sans flou d'arrière-plan : rien ne se recalcule pendant le défilement.
+    func tuileMaison(rayon: CGFloat = 24) -> some View {
+        let forme = RoundedRectangle(cornerRadius: rayon, style: .continuous)
+        // Ombre portée par le style de remplissage : dessinée avec la forme, sans passe hors écran du contenu.
+        return background {
+            forme.fill(LinearGradient(colors: [Color.tuileHaut, Color.tuileTeinte], startPoint: .topLeading, endPoint: .bottomTrailing)
+                .shadow(.drop(color: Color.ombre.opacity(0.55), radius: 22, y: 14)))
+        }
+        .overlay { forme.strokeBorder(Color.filet, lineWidth: Espace.filet) }
+        .overlay {
+            forme.strokeBorder(LinearGradient(colors: [Color.refletBord, .clear], startPoint: .top, endPoint: .center),
+                               lineWidth: 1)
+                .opacity(0.35)
+        }
+    }
+
+    /// Verre Maison Endry pour ce qui flotte (pastilles, boutons ronds, barres) : Liquid Glass teinté crème
+    /// sur iOS 26 (réagit au toucher si `interactif`), verre teinté et filet avant.
+    @ViewBuilder
+    func verreMaison<S: InsettableShape>(_ forme: S, interactif: Bool = false) -> some View {
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            glassEffect(interactif ? Glass.regular.tint(Color.verreTeinte).interactive() : Glass.regular.tint(Color.verreTeinte), in: forme)
+                .overlay { forme.strokeBorder(Color.filet, lineWidth: Espace.filet) }
+        } else {
+            verrePlat(forme)
+        }
+        #else
+        verrePlat(forme)
+        #endif
+    }
+
+    private func verrePlat<S: InsettableShape>(_ forme: S) -> some View {
+        background {
+            forme.fill(Color.verreTeinte.shadow(.drop(color: Color.ombre.opacity(0.5), radius: 16, y: 10)))
+        }
+        .overlay { forme.strokeBorder(Color.filet, lineWidth: Espace.filet) }
+        .overlay {
+            forme.strokeBorder(LinearGradient(colors: [Color.refletBord, .clear], startPoint: .topLeading, endPoint: .center),
+                               lineWidth: 1)
+                .opacity(0.6)
+        }
+    }
+}
+
+/// Regroupe des éléments de verre voisins : sur iOS 26, un seul échantillonnage de l'arrière-plan pour tout le
+/// groupe (et les formes proches fusionnent comme du verre liquide) au lieu d'une passe par élément.
+struct ConteneurVerre<Contenu: View>: View {
+    /// Distance sous laquelle deux formes fusionnent ; 0 : chacune garde sa forme.
+    var espacement: CGFloat = 0
+    @ViewBuilder var contenu: Contenu
+
+    var body: some View {
+        #if compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            GlassEffectContainer(spacing: espacement) { contenu }
+        } else {
+            contenu
+        }
+        #else
+        contenu
+        #endif
+    }
+}
+
+/// Titre adaptatif : le Cormorant d'apparat pour les titres courts ; plus le texte est long, plus il se fait
+/// discret, jusqu'au texte courant (SF Pro) au-delà de 110 signes — jamais de mur de grandes lettres.
+/// Ce qui suit un tiret long passe en italique (« Réponse à Mme Rey — *variante WC* »).
+struct TitreAdaptatif: View {
+    var texte: String
+    /// Taille du serif pour un titre court.
+    var grand: CGFloat = 36
+    var lignes: Int? = nil
+    var couleur: Color = .encre
+
+    private var longueur: Int { texte.count }
+
+    private var taille: CGFloat {
+        switch longueur {
+        case ...32: grand * 0.86
+        case ...64: (grand * 0.7).rounded()
+        default: max((grand * 0.6).rounded(), 21)
+        }
+    }
+
+    var body: some View {
+        if longueur > 110 {
+            Text(texte)
+                .styleTexte(19, relativeTo: .title3, graisse: .medium)
+                .lineSpacing(4)
+                .foregroundStyle(couleur)
+                .lineLimit(lignes)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            let morceaux = texte.components(separatedBy: " — ")
+            let debut = morceaux.first ?? texte
+            let fin = morceaux.dropFirst().joined(separator: " — ")
+            Text("\(Text(debut))\(Text(fin.isEmpty ? "" : " — "))\(Text(fin).foregroundStyle(Color.encreDouce))")
+                .font(Police.serif(taille, relativeTo: .title))
+                .tracking(-0.02 * taille)
+                .foregroundStyle(couleur)
+                .lineLimit(lignes)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+extension EnvironmentValues {
+    /// Un écran plein (conversation, assistant vocal) recouvre l'app : les animations de fond s'arrêtent.
+    @Entry var animationsEnPause = false
+}
+
+/// Point « en veille » qui respire (statut du bureau). Horloge locale au point : aucune animation
+/// répétée ne s'échappe vers le reste de l'écran (cause du scintillement de la capsule en 1.0 (34)).
+struct PointVeille: View {
+    var couleur: Color = .sauge
+    var actif = true
+    var diametre: CGFloat = 6
+    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
+    @Environment(\.animationsEnPause) private var enPause
+
+    var body: some View {
+        if actif, !reduireAnimations, !enPause, !Configuration.testsUI {
+            TimelineView(.animation(minimumInterval: 1 / 20)) { contexte in
+                let t = contexte.date.timeIntervalSinceReferenceDate
+                Circle().fill(couleur)
+                    .opacity(0.675 + 0.325 * cos(t * 2 * .pi / 2.8))
+                    .frame(width: diametre, height: diametre)
+            }
+            .frame(width: diametre, height: diametre)
+            .accessibilityHidden(true)
+        } else {
+            Circle().fill(actif ? couleur : Color.encrePale)
+                .frame(width: diametre, height: diametre)
+                .accessibilityHidden(true)
+        }
+    }
+}
+
+/// Bouton rond de verre (40 pt) de l'en-tête.
+struct BoutonRondVerre<Contenu: View>: View {
+    var libelle: String
+    var identifiant: String
+    var action: () -> Void
+    @ViewBuilder var contenu: Contenu
+
+    var body: some View {
+        Button(action: action) {
+            contenu
+                .foregroundStyle(Color.encre)
+                .frame(width: 42, height: 42)
+                .verreMaison(Circle(), interactif: true)
+                .frame(width: 46, height: 46)
+                .contentShape(Circle())
+        }
+        .buttonStyle(ActionPressee())
+        .accessibilityLabel(Text(libelle))
+        .accessibilityIdentifier(identifiant)
+    }
+}
+
+/// Pression : l'élément se tasse puis revient avec un léger ressort.
+struct ActionPressee: ButtonStyle {
+    func makeBody(configuration: ButtonStyleConfiguration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.92 : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.55), value: configuration.isPressed)
+    }
+}
+
+/// Barre d'avancement fine (2 pt) des tuiles : filet en fond, couleur pleine jusqu'à la part.
+struct BarreFine: View {
+    var part: Double
+    var couleur: Color = .signal
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.filet)
+                Capsule().fill(couleur)
+                    .frame(width: geo.size.width * min(max(part, 0), 1))
+            }
+        }
+        .frame(height: 2)
+        .accessibilityHidden(true)
+    }
+}
+
+/// Fond du poste de pilotage : nuit brune presque noire et, en haut à droite, le bord lumineux d'une éclipse (arc d'or
+/// et halo), rendu une seule fois en haute résolution avec un grain fin, qui dérive très lentement ; par-dessus, la trame
+/// de points. Couvre toute la largeur (iPhone, iPad, paysage), sans rien couper. Seule une image figée se déplace :
+/// rien n'est recalculé pendant le défilement. Pause sous les écrans pleins et avec « Réduire les animations ».
+struct FondMaison: View {
+    /// Écrans secondaires : éclipse plus discrète.
+    var discret = false
+    @Environment(\.colorScheme) private var schema
+    @Environment(\.accessibilityReduceMotion) private var reduireAnimations
+    @Environment(\.animationsEnPause) private var enPause
+
+    var body: some View {
+        let sombre = schema == .dark
+        Color.fond
+            .overlay(alignment: .top) {
+                GeometryReader { geo in
+                    let aurore = Image(uiImage: AuroreRendue.image(sombre: sombre))
+                        .resizable()
+                        .interpolation(.high)
+                        .scaledToFill()
+                        .frame(width: geo.size.width * 1.15, height: geo.size.height * 0.95)
+                    Group {
+                        if reduireAnimations || enPause || Configuration.testsUI {
+                            aurore
+                        } else {
+                            // Dérive lente (cycles de 20 à 30 s) : une simple transformation de l'image, sur le GPU.
+                            TimelineView(.animation(minimumInterval: 1 / 30, paused: enPause)) { contexte in
+                                let t = contexte.date.timeIntervalSinceReferenceDate
+                                aurore
+                                    .scaleEffect(1.04 + 0.03 * sin(t / 9.5))
+                                    .offset(x: geo.size.width * 0.04 * sin(t / 13), y: 14 * cos(t / 11))
+                            }
+                        }
+                    }
+                    .frame(width: geo.size.width, height: geo.size.height * 0.95, alignment: .top)
+                    .opacity(discret ? 0.55 : 1)
+                }
+                .allowsHitTesting(false)
+            }
+            // Trame de points du poste de pilotage, qui s'efface vers le bas (motif de 22 pt répété, sans masque).
+            .overlay(alignment: .top) {
+                Image(uiImage: GrilleTechnique.motif(sombre: sombre))
+                    .resizable(resizingMode: .tile)
+                    .frame(height: 520)
+                    .allowsHitTesting(false)
+            }
+            // Fondu vers le fond en bas de l'aurore : les tuiles restent lisibles.
+            .overlay {
+                LinearGradient(stops: [.init(color: Color.fond.opacity(0), location: 0.25),
+                                       .init(color: Color.fond.opacity(0.85), location: 0.72),
+                                       .init(color: Color.fond, location: 1)],
+                               startPoint: .top, endPoint: .bottom)
+                    .allowsHitTesting(false)
+            }
+            .clipped()
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
+    }
+}
+
+/// Le fond, rendu une fois par apparence (éclipse, halo et grain) puis gardé en mémoire.
+@MainActor
+enum AuroreRendue {
+    private static var cache: [Bool: UIImage] = [:]
+
+    static func image(sombre: Bool) -> UIImage {
+        if let deja = cache[sombre] { return deja }
+        let taille = CGSize(width: 900, height: 1_300)
+        let rendu = ImageRenderer(content: Aurore(sombre: sombre).frame(width: taille.width, height: taille.height))
+        rendu.scale = 2
+        let image = rendu.uiImage ?? UIImage()
+        cache[sombre] = image
+        return image
+    }
+}
+
+/// Fond sombre : nuit brune presque noire et, en haut à droite, le bord d'une éclipse — un arc d'or fin et son halo,
+/// qui laisse toute la place à la salutation (coin haut gauche sombre). Clair : papier ivoire, reflet doré discret.
+/// Rendue une seule fois : le flou du halo ne coûte rien ensuite.
+private struct Aurore: View {
+    var sombre: Bool
+
+    var body: some View {
+        GeometryReader { geo in
+            let l = geo.size.width
+            let h = geo.size.height
+            // Astre hors champ, en haut à droite : seul son bord est visible.
+            let rayon = l * 0.5
+            let centre = CGPoint(x: l * 1.0, y: -h * 0.08)
+            let disque = Path(ellipseIn: CGRect(x: centre.x - rayon, y: centre.y - rayon, width: rayon * 2, height: rayon * 2))
+            let or = Color(hex: sombre ? 0xF2C98A : 0xC9A061)
+            ZStack {
+                (sombre ? Color(hex: 0x0B0907) : Color(hex: 0xF6F3EC))
+                // Lumière chaude très diffuse derrière l'astre.
+                RadialGradient(colors: [or.opacity(sombre ? 0.22 : 0.28), or.opacity(sombre ? 0.06 : 0.08), .clear],
+                               center: UnitPoint(x: centre.x / l, y: centre.y / h), startRadius: rayon * 0.9, endRadius: rayon * 1.55)
+                // Halo du bord, large puis serré.
+                disque.stroke(or.opacity(sombre ? 0.30 : 0.25), lineWidth: 90).blur(radius: 70)
+                disque.stroke(or.opacity(sombre ? 0.55 : 0.4), lineWidth: 20).blur(radius: 18)
+                // Le corps de l'astre, plus sombre que la nuit.
+                disque.fill(sombre ? Color(hex: 0x060504) : Color(hex: 0xEFE8DB))
+                // L'arc lui-même : un trait d'or net, plus vif là où la lumière l'attrape.
+                disque.stroke(
+                    AngularGradient(colors: [or.opacity(0.0), or.opacity(0.35), or, Color(hex: 0xFFF1D6), or, or.opacity(0.35), or.opacity(0.0)],
+                                    center: UnitPoint(x: centre.x / l, y: centre.y / h), startAngle: .degrees(80), endAngle: .degrees(200)),
+                    lineWidth: 3)
+                // Grain photographique fin (tirage fixe : le même à chaque lancement).
+                Canvas { ctx, taille in
+                    var graine: UInt64 = 0x9E37_79B9_7F4A_7C15
+                    func suivant() -> Double {
+                        graine = graine &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+                        return Double(graine >> 11) / Double(1 << 53)
+                    }
+                    let couleur = sombre ? Color.white : Color.black
+                    for _ in 0..<18_000 {
+                        let point = CGRect(x: suivant() * taille.width, y: suivant() * taille.height, width: 0.6, height: 0.6)
+                        ctx.fill(Path(point), with: .color(couleur.opacity(0.03 + 0.04 * suivant())))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Motif de la trame : un point fin au centre d'un carré de 22 pt (dessiné une fois par apparence).
+@MainActor
+enum GrilleTechnique {
+    private static var cache: [Bool: UIImage] = [:]
+
+    static func motif(sombre: Bool) -> UIImage {
+        if let deja = cache[sombre] { return deja }
+        let cote: CGFloat = 22
+        let couleur = sombre ? UIColor(red: 1, green: 0.93, blue: 0.8, alpha: 0.085) : UIColor(red: 0.13, green: 0.1, blue: 0.07, alpha: 0.075)
+        let image = UIGraphicsImageRenderer(size: CGSize(width: cote, height: cote)).image { contexte in
+            couleur.setFill()
+            contexte.cgContext.fillEllipse(in: CGRect(x: cote / 2 - 0.7, y: cote / 2 - 0.7, width: 1.4, height: 1.4))
+        }
+        cache[sombre] = image
+        return image
+    }
+}
+
+/// Histogramme Maison Endry : barres arrondies, la barre mise en avant en signal, libellés en mono.
+struct Histogramme: View {
+    struct Barre: Identifiable {
+        var libelle: String
+        var valeur: Double
+        var accent = false
+        var id: String { libelle }
+    }
+
+    var barres: [Barre]
+    var hauteur: CGFloat = 66
+
+    var body: some View {
+        let maximum = max(barres.map(\.valeur).max() ?? 1, 1)
+        VStack(spacing: 8) {
+            HStack(alignment: .bottom, spacing: 6) {
+                ForEach(barres) { barre in
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(barre.accent ? Color.signal : Color.signal.opacity(0.28))
+                        .frame(height: max(4, hauteur * barre.valeur / maximum))
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .frame(height: hauteur, alignment: .bottom)
+            HStack(spacing: 6) {
+                ForEach(barres) { barre in
+                    Text(barre.libelle)
+                        .font(Police.mono(11))
+                        .foregroundStyle(Color.encreDouce)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Text(barres.map { "\($0.libelle) : \(FormatSuisse.chfArrondi($0.valeur))" }.joined(separator: ", ")))
+    }
+}
+
+/// Ligne de liste Maison Endry (Finances, chantiers) : nom à gauche et repère mono, montant serif et état à droite.
+struct LigneMaison: View {
+    var titre: String
+    var detail: String
+    var montant: String
+    var etat: String?
+    var etatAccent = false
+    var etatAlerte = false
+
+    var body: some View {
+        HStack(alignment: .center, spacing: Espace.s) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(titre)
+                    .styleTexte(16, relativeTo: .subheadline)
+                    .foregroundStyle(Color.encre)
+                    .lineLimit(1)
+                Text(detail)
+                    .font(Police.mono(11.5))
+                    .foregroundStyle(Color.encreDouce)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: Espace.xs)
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(montant)
+                    .font(Police.serif(23, relativeTo: .headline))
+                    .monospacedDigit()
+                    .foregroundStyle(Color.encre)
+                    .lineLimit(1)
+                if let etat {
+                    Text(etat)
+                        .font(Police.mono(11.5))
+                        .foregroundStyle(etatAlerte ? Color.rouille : etatAccent ? Color.signal : Color.encreDouce)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
+        .tuileMaison(rayon: 22)
+        .accessibilityElement(children: .combine)
+    }
+}

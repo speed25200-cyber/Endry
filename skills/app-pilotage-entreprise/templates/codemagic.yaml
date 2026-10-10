@@ -1,0 +1,258 @@
+# Codemagic — application iPhone « {{NOM_APP}} » (dossier ios/).
+# Modèle généré par le skill app-pilotage-entreprise : remplacer les {{…}}.
+#
+# Deux workflows :
+#   ios-tests      build + tests (paquet {{PREFIXE}}Kit, tests unitaires, tests UI, captures clair/sombre)
+#                  à chaque push et pull request qui touche ios/ ou ce fichier.
+#   ios-testflight signature + IPA + envoi TestFlight, sur un tag « ios-v* » ou lancé à la main.
+#
+# Aucun secret dans ce fichier : la signature utilise l’intégration App Store Connect « Dev »
+# (déjà configurée dans l’équipe Codemagic) et le certificat de distribution enregistré
+# dans l'équipe Codemagic (Code signing identities). Voir references/ci-testflight.md.
+
+definitions:
+  outils: &outils
+    name: Outils (XcodeGen, Metal)
+    script: |
+      set -e
+      xcodebuild -version
+      brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+      # Depuis Xcode 26, le compilateur Metal (si l.app contient des shaders .metal) est un composant à part.
+      metal_ok() { xcrun -sdk iphoneos metal --version >/dev/null 2>&1; }
+      if ! metal_ok; then
+        sudo xcodebuild -runFirstLaunch || true
+        xcodebuild -downloadComponent MetalToolchain || true
+      fi
+      if ! metal_ok; then
+        DMG="$(find /System/Library/AssetsV2/com_apple_MobileAsset_MetalToolchain -name '*.dmg' 2>/dev/null | head -1)"
+        if [ -n "$DMG" ]; then sudo xcodebuild -importComponentFromPath "$DMG" || true; fi
+      fi
+      metal_ok && xcrun -sdk iphoneos metal --version | head -1 || echo "Attention : compilateur Metal introuvable."
+  projet: &projet
+    name: Générer le projet Xcode
+    working_directory: ios
+    script: |
+      set -e
+      # APP_WIDGETS=1 : avec l'extension widgets (écran d'accueil, écran verrouillé, Centre de contrôle).
+      if [ "${APP_WIDGETS:-0}" = "1" ]; then
+        xcodegen generate --spec project-widgets.yml
+      else
+        xcodegen generate
+      fi
+  tests_kit: &tests_kit
+    name: Tests du paquet {{PREFIXE}}Kit
+    working_directory: ios/{{PREFIXE}}Kit
+    script: swift test
+  tests_app: &tests_app
+    name: Build et tests de l'app (simulateur)
+    working_directory: ios
+    script: |
+      set -o pipefail
+      set +e
+      # Dernier iPhone disponible sur le runtime iOS le plus récent de l'image.
+      SIM_ID=$(xcrun simctl list devices available -j | python3 -c '
+      import json, sys
+      d = json.load(sys.stdin)["devices"]
+      def version(k):
+          v = k.rsplit(".", 1)[-1].replace("iOS-", "").split("-")
+          return tuple(int(x) for x in v if x.isdigit())
+      runtimes = sorted((k for k in d if ".iOS-" in k and d[k]), key=version)
+      for k in reversed(runtimes):
+          iphones = [x for x in d[k] if x["name"].startswith("iPhone") and "SE" not in x["name"]]
+          if iphones:
+              print(iphones[0]["udid"]); break
+      ')
+      echo "Simulateur : $SIM_ID"
+      xcrun simctl boot "$SIM_ID" || true
+      xcodebuild test \
+        -project {{PREFIXE}}Pilotage.xcodeproj \
+        -scheme {{PREFIXE}}Pilotage \
+        -destination "id=$SIM_ID" \
+        -derivedDataPath build/dd \
+        -resultBundlePath build/Tests.xcresult \
+        CODE_SIGNING_ALLOWED=NO \
+        OTHER_SWIFT_FLAGS='$(inherited) -continue-building-after-errors' \
+        | xcpretty --report junit --output build/junit.xml
+      STATUT=$?
+      # Captures exportées même si un test échoue (relecture visuelle du lot).
+      if [ "$STATUT" -ne 0 ]; then
+        mkdir -p build/captures
+        xcrun xcresulttool export attachments --path build/Tests.xcresult --output-path build/captures || true
+      fi
+      exit $STATUT
+    test_report: ios/build/junit.xml
+
+workflows:
+  ios-tests:
+    name: iOS · build et tests
+    instance_type: mac_mini_m2
+    max_build_duration: 90
+    environment:
+      xcode: latest
+      vars:
+        # Les widgets sont compilés et testés ici ; TestFlight les embarquera une fois leur profil créé.
+        APP_WIDGETS: "1"
+    triggering:
+      events:
+        - push
+        - pull_request
+      branch_patterns:
+        - pattern: "*"
+          include: true
+          source: true
+      cancel_previous_builds: true
+    when:
+      changeset:
+        includes:
+          - "ios/"
+          - "codemagic.yaml"
+    scripts:
+      - *outils
+      - *projet
+      - *tests_kit
+      - *tests_app
+      - name: Captures iPhone SE (XXL), Pro Max et iPad
+        working_directory: ios
+        script: |
+          # Relance le seul test de captures, sans recompiler, sur les formats extrêmes.
+          # Ne bloque pas la CI si l'image n'a pas l'un des simulateurs.
+          choisir() {
+            xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          motif = sys.argv[1]
+          d = json.load(sys.stdin)["devices"]
+          def version(k):
+              v = k.rsplit(".", 1)[-1].replace("iOS-", "").split("-")
+              return tuple(int(x) for x in v if x.isdigit())
+          for k in sorted((k for k in d if ".iOS-" in k), key=version, reverse=True):
+              for x in d[k]:
+                  if motif in x["name"]:
+                      print(x["udid"]); sys.exit()
+          ' "$1"
+          }
+          capturer() {
+            ID="$(choisir "$1")"
+            if [ -z "$ID" ]; then echo "Pas de simulateur « $1 » : captures $2 ignorées."; return; fi
+            echo "Captures $2 sur $1 ($ID)"
+            xcrun simctl boot "$ID" || true
+            TEST_RUNNER_CAPTURE_APPAREIL="$2" TEST_RUNNER_CAPTURE_TAILLE="$3" xcodebuild test-without-building \
+              -project {{PREFIXE}}Pilotage.xcodeproj -scheme {{PREFIXE}}Pilotage \
+              -destination "id=$ID" -derivedDataPath build/dd \
+              -only-testing:{{PREFIXE}}PilotageUITests/{{PREFIXE}}PilotageUITests/testCapturesClairEtSombre \
+              -resultBundlePath "build/Captures-$2.xcresult" \
+              CODE_SIGNING_ALLOWED=NO | xcpretty || echo "Captures $2 : échec (non bloquant)."
+          }
+          capturer "iPhone SE" se-xxl UICTContentSizeCategoryXXL
+          capturer "Pro Max" promax ""
+          capturer "iPad Pro 13" ipad ""
+      - name: Extraire les captures d'écran
+        working_directory: ios
+        script: |
+          mkdir -p build/captures
+          xcrun xcresulttool export attachments --path build/Tests.xcresult --output-path build/captures || true
+          for R in build/Captures-*.xcresult; do
+            [ -e "$R" ] || continue
+            N="$(basename "$R" .xcresult)"
+            mkdir -p "build/captures/$N"
+            xcrun xcresulttool export attachments --path "$R" --output-path "build/captures/$N" || true
+          done
+          ls -la build/captures || true
+          cd build && zip -qr Tests.xcresult.zip Tests.xcresult || true
+    artifacts:
+      - ios/build/captures/**
+      - ios/build/Tests.xcresult.zip
+      - /tmp/xcodebuild_logs/*.log
+
+  ios-testflight:
+    name: iOS · TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 90
+    # Intégration App Store Connect de l’équipe Codemagic (Teams › Integrations).
+    integrations:
+      app_store_connect: {{INTEGRATION_ASC}}
+    environment:
+      xcode: latest
+      # Signature automatique Codemagic : certificat de distribution de l'équipe
+      # (Code signing identities) + profil App Store de {{BUNDLE_ID}}.
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: {{BUNDLE_ID}}
+      vars:
+        XCODE_PROJECT: ios/{{PREFIXE}}Pilotage.xcodeproj
+        BUNDLE_ID: {{BUNDLE_ID}}
+        # Identifiant numérique public de l'app dans App Store Connect : sert à lire le dernier n° TestFlight.
+        APP_STORE_APPLE_ID: "{{APPLE_ID_APP}}"
+        # Plancher du numéro de build (si un ancien compte a déjà publié des numéros plus hauts).
+        BUILD_MINIMUM: "1"
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "ios-v*"
+          include: true
+    scripts:
+      - *outils
+      - *projet
+      # Avant toute publication : tests du paquet et tests unitaires de l'app, verts.
+      # Les tests d'interface (lents, sensibles au simulateur) tournent à chaque push dans ios-tests ;
+      # ils ne bloquent pas l'envoi à TestFlight.
+      - *tests_kit
+      - name: Build et tests unitaires de l'app (simulateur)
+        working_directory: ios
+        script: |
+          set -o pipefail
+          SIM_ID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          d = json.load(sys.stdin)["devices"]
+          def version(k):
+              v = k.rsplit(".", 1)[-1].replace("iOS-", "").split("-")
+              return tuple(int(x) for x in v if x.isdigit())
+          runtimes = sorted((k for k in d if ".iOS-" in k and d[k]), key=version)
+          for k in reversed(runtimes):
+              iphones = [x for x in d[k] if x["name"].startswith("iPhone") and "SE" not in x["name"]]
+              if iphones:
+                  print(iphones[0]["udid"]); break
+          ')
+          echo "Simulateur : $SIM_ID"
+          xcrun simctl boot "$SIM_ID" || true
+          xcodebuild test \
+            -project {{PREFIXE}}Pilotage.xcodeproj \
+            -scheme {{PREFIXE}}Pilotage \
+            -destination "id=$SIM_ID" \
+            -only-testing:{{PREFIXE}}PilotageTests \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcpretty
+      - name: Appliquer la signature
+        script: |
+          set -e
+          echo "Profils installés par Codemagic :"
+          for f in "$HOME/Library/MobileDevice/Provisioning Profiles"/*.mobileprovision; do
+            [ -e "$f" ] || continue
+            security cms -D -i "$f" 2>/dev/null | plutil -extract Entitlements.application-identifier raw -o - - 2>/dev/null || true
+          done
+          xcode-project use-profiles --project "$XCODE_PROJECT"
+      - name: Numéro de build
+        script: |
+          set -e
+          DERNIER=0
+          if [ -n "${APP_STORE_APPLE_ID:-}" ]; then
+            DERNIER=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null | tail -n 1 || true)
+          fi
+          case "$DERNIER" in ''|*[!0-9]*) DERNIER=0 ;; esac
+          SUIVANT=$(( DERNIER + 1 ))
+          if [ "$SUIVANT" -lt "${BUILD_NUMBER:-1}" ]; then SUIVANT="$BUILD_NUMBER"; fi
+          if [ "$SUIVANT" -lt "${BUILD_MINIMUM:-1}" ]; then SUIVANT="$BUILD_MINIMUM"; fi
+          echo "Build n° $SUIVANT"
+          cd ios && agvtool new-version -all "$SUIVANT"
+      - name: Construire l'IPA
+        script: |
+          set -e
+          xcode-project build-ipa --project "$XCODE_PROJECT" --scheme {{PREFIXE}}Pilotage --config Release
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

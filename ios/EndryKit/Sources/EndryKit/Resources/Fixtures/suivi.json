@@ -1,0 +1,66 @@
+{
+  "suivis": [
+    {
+      "reference": "V-8C4LQW",
+      "titre": "Préparer la commande de matériel — AN-00024 Villa Morel · 5 ligne(s) de matériel",
+      "genre": "Action",
+      "outil": "commande_preparer",
+      "chantier_id": 18,
+      "geste": "oui",
+      "geste_le": "2026-09-28T09:12:04",
+      "source": "app",
+      "etat": "fait",
+      "agent": "achats",
+      "etapes": [
+        {"id": "J-4101", "horodatage": "2026-09-28T09:12:05", "agent": "achats", "type": "info",
+         "titre": "Pris en charge par l’assistant", "decision_reference": "V-8C4LQW"},
+        {"id": "J-4102", "horodatage": "2026-09-28T09:12:41", "agent": "achats", "type": "action",
+         "titre": "Liste de commande créée (5 articles)", "decision_reference": "V-8C4LQW"}
+      ],
+      "resultat": {
+        "resume": "Liste de commande prête : à passer vous-même chez le fournisseur. Rien n’est envoyé.",
+        "fichiers": [
+          {"nom": "Commande AN-00024 Villa Morel.txt", "emplacement": "Bureau › 00 À traiter › Commandes",
+           "document": "/app/doc/fichier/cmd-an-00024"}
+        ],
+        "envois": []
+      }
+    },
+    {
+      "reference": "V-7K3F9Q",
+      "titre": "Réponse à Mme Rey — variante WC",
+      "genre": "E-mail",
+      "outil": "mail_repondre",
+      "geste": "oui",
+      "geste_le": "2026-09-28T08:55:10",
+      "source": "notification",
+      "etat": "fait",
+      "agent": "secretariat",
+      "etapes": [
+        {"id": "J-4090", "horodatage": "2026-09-28T08:55:14", "agent": "secretariat", "type": "action",
+         "titre": "E-mail envoyé à c.rey@exemple.ch", "decision_reference": "V-7K3F9Q"}
+      ],
+      "resultat": {
+        "resume": "Réponse partie à Mme Rey.",
+        "fichiers": [],
+        "envois": [
+          {"destinataire": "c.rey@exemple.ch", "objet": "Variante WC suspendu", "canal": "email",
+           "horodatage": "2026-09-28T08:55:14"}
+        ]
+      }
+    },
+    {
+      "reference": "V-2M8R4T",
+      "titre": "Envoyer la facture RE-00416 à la Régie Dubois",
+      "geste": "oui",
+      "geste_le": "2026-09-28T08:40:00",
+      "etat": "erreur",
+      "agent": "comptabilite",
+      "etapes": [
+        {"id": "J-4080", "horodatage": "2026-09-28T08:40:03", "agent": "comptabilite", "type": "erreur",
+         "titre": "Bexio ne répond pas", "detail": "Nouvel essai au prochain passage.", "decision_reference": "V-2M8R4T"}
+      ],
+      "erreur": "Bexio ne répond pas : la facture n’est pas partie."
+    }
+  ]
+}

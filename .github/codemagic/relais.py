@@ -67,6 +67,43 @@ if demande.get("file"):
         print(f"- {a.get('appName')} : {nombre} builds, {minutes:.0f} minutes en {mois}")
     print(f"== minutes de build en {mois} (builds listés) : {total:.0f}")
 
+def champs_simples(b):
+    """Champs simples d'un build, sans rien de sensible : le journal de ce relais est public."""
+    interdits = ("token", "secret", "password", "key", "url", "email")
+    return {k: (v[:140] if isinstance(v, str) else v) for k, v in b.items()
+            if (v is None or isinstance(v, (str, int, float, bool))) and not any(m in k.lower() for m in interdits)}
+
+
+def minutes_entre(debut, fin):
+    from datetime import datetime
+    if not debut or not fin:
+        return None
+    lire = lambda t: datetime.fromisoformat(str(t).replace("Z", "+00:00"))
+    return round((lire(fin) - lire(debut)).total_seconds() / 60, 1)
+
+
+if demande.get("recents"):
+    # Derniers builds de chaque application : attente en file (création → début) et durée, pour voir depuis quand
+    # la file ne part plus et sur quel type de machine.
+    print("== Derniers builds par application (attente en file, durée)")
+    for a in apps:
+        for b in ((appel(f"/builds?appId={a['_id']}") or {}).get("builds", []))[: demande["recents"]]:
+            print(f"- {a.get('appName')} {b.get('_id')} {b.get('status')} machine={b.get('instanceType')} "
+                  f"workflow={b.get('workflowId') or b.get('fileWorkflowId')} créé={b.get('createdAt')} "
+                  f"attente={minutes_entre(b.get('createdAt'), b.get('startedAt'))} min "
+                  f"durée={minutes_entre(b.get('startedAt'), b.get('finishedAt'))} min message={str(b.get('message'))[:120]}")
+    print("== fin des derniers builds")
+
+for ident in demande.get("detail", []):
+    b = (appel(f"/builds/{ident}") or {}).get("build") or {}
+    print(f"== Détail du build {ident}")
+    print("  clés :", sorted(b.keys()))
+    print("  champs :", json.dumps(champs_simples(b), ensure_ascii=False))
+    print("  étapes :", [(e.get("name"), e.get("status")) for e in b.get("buildActions") or []])
+    if isinstance(b.get("config"), dict):
+        print("  config, clés :", sorted(b["config"].keys()))
+        print("  config, champs :", json.dumps(champs_simples(b["config"]), ensure_ascii=False))
+
 build_lance = None
 if demande.get("action") in ("lancer", "lancer_et_captures"):
     r = appel("/builds", "POST", {"appId": app["_id"], "workflowId": demande["workflow"], "branch": demande["branche"]})

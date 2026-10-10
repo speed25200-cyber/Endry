@@ -93,6 +93,17 @@ if demande.get("recents"):
                   f"attente={minutes_entre(b.get('createdAt'), b.get('startedAt'))} min "
                   f"durée={minutes_entre(b.get('startedAt'), b.get('finishedAt'))} min message={str(b.get('message'))[:120]}")
     print("== fin des derniers builds")
+    # Tous les builds que voit le jeton, sans filtre d'application : un build d'une application absente de la liste
+    # ci-dessus occuperait la place sans apparaître dans la file.
+    connues = {a["_id"]: a.get("appName") for a in apps}
+    tous = (appel("/builds") or {}).get("builds", [])
+    print(f"== Tous les builds visibles ({len(tous)}), les plus récents d'abord")
+    for b in tous[: demande.get("tous", 15)]:
+        print(f"- {connues.get(b.get('appId')) or 'APPLICATION INCONNUE ' + str(b.get('appId'))} {b.get('_id')} {b.get('status')} "
+              f"machine={b.get('instanceType')} workflow={b.get('workflowId') or b.get('fileWorkflowId')} créé={b.get('createdAt')} "
+              f"attente={minutes_entre(b.get('createdAt'), b.get('startedAt'))} min "
+              f"durée={minutes_entre(b.get('startedAt'), b.get('finishedAt'))} min")
+    print("== fin de tous les builds")
 
 for ident in demande.get("detail", []):
     b = (appel(f"/builds/{ident}") or {}).get("build") or {}

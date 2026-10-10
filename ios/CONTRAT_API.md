@@ -604,3 +604,12 @@ avec `emplacement: "E-mail reçu"` et une `url` `/app/doc/piece/…`. Rien à ch
   `{ok, message, note_id}` (note vocale consignée, puis confiée au secrétariat comme information de terrain : les
   conséquences deviennent des décisions à valider dans l'accès principal) ; `GET /direction/notes` → `{notes: [...]}`.
 - Les questions du directeur ne laissent aucune trace côté secrétariat ; ses fichiers joints sont rangés à part.
+
+## v1.13 — Prospection (10.10.2026)
+
+- `GET /pistes` → `{pistes: [{id, titre, type, type_libelle, lieu, canton, maitre_ouvrage, architecte, contact, email,
+  source, source_url, resume, pourquoi, echeance, score (1–5), statut, semaine}], en_cours, derniere_recherche, rythme,
+  nouvelles}`. Statuts : `nouvelle`, `contact_en_preparation`, `contactee`, `ecartee`, `gagnee`.
+- `POST /pistes/recherche` → `{ok, message}` : lance la recherche tout de suite (sinon chaque lundi à 06:30).
+- `POST /pistes/{id}/{contacter|ecarter|garder|gagnee}` → `{ok, message}`. `contacter` : le bureau prépare UN message
+  sur mesure, qui arrive en décision ; rien n'est envoyé sans validation. Accès patron uniquement.

@@ -143,6 +143,15 @@ struct DecisionsView: View {
                 .apparitionEnCascade(index: 4, visible: visible)
         }
 
+        if !app.session.estOuvrier && !app.session.estDirecteur {
+            VStack(alignment: .leading, spacing: 10) {
+                TitreSection(titre: "Développement")
+                CarteProspection()
+            }
+            .padding(.horizontal, Espace.bord)
+            .padding(.top, 26)
+        }
+
         if let accueil = modele.accueil {
             VStack(alignment: .leading, spacing: 10) {
                 TitreSection(titre: "Cette semaine · sem. \(FriseSemaineView.numeroSemaine())", lien: "Planning", action: ouvrirPlanning)

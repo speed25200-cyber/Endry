@@ -224,3 +224,25 @@ extension EndryAPI {
         return reponse
     }
 }
+
+/// Note vocale consignée (`GET /direction/notes`).
+public struct NoteDirecteur: Decodable, Sendable, Hashable, Identifiable {
+    public var id: String
+    public var date: String?
+    public var texte: String
+    public var auteur: String?
+}
+
+struct ListeNotesDirecteur: Decodable, Sendable {
+    var notes: [NoteDirecteur]
+}
+
+extension Requete {
+    public static let notesDirecteur = Requete(.get, "\(prefixe)/direction/notes")
+}
+
+extension EndryAPI {
+    public func notesDirecteur() async throws(ErreurAPI) -> [NoteDirecteur] {
+        try await charger(ListeNotesDirecteur.self, .notesDirecteur).notes
+    }
+}

@@ -14,13 +14,18 @@ enum Adaptatif {
 }
 
 extension View {
-    /// Contenu centré et limité en largeur (iPad) ; sans effet quand l'écran est plus étroit.
-    /// Contenu d'un défilement vertical : exactement la largeur de l'écran. Un élément trop large ne peut plus
-    /// élargir la page, qui ne glisse donc jamais de côté « comme une page web ».
+    /// Contenu d'un défilement vertical : exactement la largeur proposée par l'écran. Un élément trop large ne peut
+    /// plus élargir la page, qui ne glisse donc jamais de côté « comme une page web ».
+    ///
+    /// Pas de `containerRelativeFrame` ici : un défilement vertical prend la largeur de son contenu, et ce contenu
+    /// prenait celle du défilement. Sur iPad (fenêtre agrandie, rotation), la largeur restait donc bloquée sur
+    /// l'ancienne valeur : une colonne étroite au milieu d'un écran noir (10.10.2026). Avec les deux bornes, le
+    /// cadre vaut la largeur proposée, quel que soit le contenu, et suit la fenêtre.
     func verrouillerLargeur() -> some View {
-        containerRelativeFrame(.horizontal)
+        frame(minWidth: 0, maxWidth: .infinity)
     }
 
+    /// Contenu centré et limité en largeur (iPad) ; sans effet quand l'écran est plus étroit.
     func largeurLisible(_ maximum: CGFloat = Adaptatif.lecture) -> some View {
         frame(maxWidth: maximum, alignment: .leading)
             .frame(maxWidth: .infinity)

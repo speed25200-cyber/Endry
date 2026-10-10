@@ -88,7 +88,10 @@ struct RacineView: View {
         ZStack {
             Color.fond.ignoresSafeArea()
 
-            if modele.session.estConnecte, modele.session.estOuvrier, let equipe = modele.equipe {
+            if modele.session.estConnecte, modele.session.estDirecteur {
+                EspaceDirecteur()
+                    .transition(.opacity)
+            } else if modele.session.estConnecte, modele.session.estOuvrier, let equipe = modele.equipe {
                 EspaceOuvrier(modele: equipe)
                     .transition(.opacity)
             } else if modele.session.estConnecte {
@@ -173,7 +176,8 @@ struct CommandesEndry: Commands {
     let modele: ModeleApp
 
     private var actif: Bool {
-        modele.session.estConnecte && !modele.session.estOuvrier && !modele.verrou.doitAfficherEcran
+        modele.session.estConnecte && !modele.session.estOuvrier && !modele.session.estDirecteur
+            && !modele.verrou.doitAfficherEcran
     }
 
     var body: some Commands {

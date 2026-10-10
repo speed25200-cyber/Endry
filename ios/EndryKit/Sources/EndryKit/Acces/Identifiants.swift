@@ -20,6 +20,8 @@ public struct Identifiants: Codable, Sendable, Equatable {
 
     /// L'app s'ouvre en mode équipe : chantiers du jour, heures, photos. Jamais l'argent ni les décisions.
     public var estOuvrier: Bool { role == .ouvrier }
+    /// v1.12 : accès directeur — les montants et « Poser une question », en lecture seule.
+    public var estDirecteur: Bool { role == .directeur }
 
     public init(base: URL, jeton: String, entreprise: String? = nil, expireLe: Date? = nil, appareilId: String? = nil) {
         self.base = base

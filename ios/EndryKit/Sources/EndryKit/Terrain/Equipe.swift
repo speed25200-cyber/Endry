@@ -4,6 +4,8 @@ import Foundation
 public enum RoleAcces: String, Codable, Sendable {
     case patron
     case ouvrier
+    /// v1.12 : les montants et « Poser une question » (lecture seule). Ni décisions, ni courrier, ni documents.
+    case directeur
 }
 
 /// Chantier confié à un ouvrier pour la journée : ni montants, ni décisions.
@@ -188,16 +190,19 @@ public struct InvitationEquipe: Decodable, Sendable, Equatable {
 extension Requete {
     public static let journeeEquipe = Requete(.get, "\(prefixe)/equipe/jour")
 
-    public static func invitationEquipe(nom: String) -> Requete {
-        .init(.post, "\(prefixe)/equipe/invitations", corps: .json(json(["nom": nom])))
+    /// `role` : `"directeur"` pour un accès directeur (v1.12) ; absent : ouvrier.
+    public static func invitationEquipe(nom: String, role: String? = nil) -> Requete {
+        var corps = ["nom": nom]
+        if let role { corps["role"] = role }
+        return .init(.post, "\(prefixe)/equipe/invitations", corps: .json(json(corps)))
     }
 }
 
 extension EndryAPI {
     public func journeeEquipe() async throws(ErreurAPI) -> JourneeEquipe { try await charger(JourneeEquipe.self, .journeeEquipe) }
 
-    public func inviterOuvrier(nom: String) async throws(ErreurAPI) -> InvitationEquipe {
-        let reponse = try await charger(InvitationEquipe.self, .invitationEquipe(nom: nom))
+    public func inviterOuvrier(nom: String, role: String? = nil) async throws(ErreurAPI) -> InvitationEquipe {
+        let reponse = try await charger(InvitationEquipe.self, .invitationEquipe(nom: nom, role: role))
         guard reponse.ok, reponse.lien != nil else { throw .refus(reponse.message ?? "Le bureau n’a pas pu créer le lien.") }
         return reponse
     }

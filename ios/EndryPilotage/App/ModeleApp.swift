@@ -205,8 +205,8 @@ final class ModeleApp {
             for carte in accueil.decisions where carte.estQuestion { self?.conversation?.recevoir(questionDuBureau: carte) }
         }
         decisions = d
-        offresSignees = session.estOuvrier ? nil : ModeleOffresSignees(api: api)
-        if session.estOuvrier {
+        offresSignees = (session.estOuvrier || session.estDirecteur) ? nil : ModeleOffresSignees(api: api)
+        if session.estOuvrier || session.estDirecteur {
             suiviActions = nil
         } else {
             let dossierSuivi = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
@@ -383,6 +383,13 @@ final class ModeleApp {
             await saisie?.viderFile()
             return
         }
+        // Accès directeur : les montants et la conversation, rien d'autre (le PC répondrait 403).
+        if session.estDirecteur {
+            await argent?.charger()
+            await conversation?.renvoyerEnAttente()
+            await conversation?.verifierEnAttente()
+            return
+        }
         let d = decisions, c = chantiers, a = argent, s = saisie, g = agents
         await withDiscardingTaskGroup { groupe in
             groupe.addTask { await d?.charger() }
@@ -400,7 +407,7 @@ final class ModeleApp {
 
     /// Données fraîches : briefing du prochain matin et zones de chantier à jour.
     func apresChargement() async {
-        guard !session.estDemo, !session.estOuvrier else { return }
+        guard !session.estDemo, !session.estOuvrier, !session.estDirecteur else { return }
         if let tous = chantiers?.tous, !tous.isEmpty { await RepertoireChantiers.mettreAJour(tous) }
         if BriefingMatin.actif {
             await BriefingMatin.programmer(BriefingMatin.composer(app: self, masquerMontants: true))
@@ -413,6 +420,10 @@ final class ModeleApp {
         guard session.estConnecte else { return }
         if session.estOuvrier {
             if sujets.contains(.chantiers) { await equipe?.charger() }
+            return
+        }
+        if session.estDirecteur {
+            if sujets.contains(.argent) { await argent?.charger() }
             return
         }
         let d = decisions, c = chantiers, a = argent, s = saisie, g = agents
@@ -456,7 +467,7 @@ final class ModeleApp {
 
     /// Nouvelle offre ou facture : le patron décrit, le bureau prépare dans Bexio, le Oui reste au patron.
     func nouveauDocument(_ type: TypeDemandeDocument, chantier: String? = nil, offre: OffreSignee? = nil) {
-        guard !session.estOuvrier else { return }
+        guard !session.estOuvrier, !session.estDirecteur else { return }
         reglagesPresentes = false
         creation = DemandeCreation(type: type, chantierId: chantier ?? offre?.chantierId, offre: offre)
     }
@@ -496,6 +507,7 @@ final class ModeleApp {
     /// Demande dictée ou écrite (assistant vocal, conversation, fiche d'un agent) : transmise, puis suivie tout de suite
     /// dans « Fait récemment » avec l'identifiant du PC, jusqu'à son compte rendu.
     func transmettreDemande(_ demande: String) async -> ModeleSaisie.ResultatDemande {
+        if session.estDirecteur { return .refusee("Cet accès répond aux questions : il ne prépare ni document ni envoi.") }
         guard let saisie else { return .refusee("Connectez d’abord l’app au bureau.") }
         let resultat = await saisie.transmettre(demande: demande)
         if resultat == .transmise {
@@ -525,7 +537,8 @@ final class ModeleApp {
     }
 
     private func enregistrerAppareil(_ jeton: String) {
-        guard let api = session.api, !session.estDemo, dernierJetonEnvoye != jeton else { return }
+        // Accès directeur : pas de notifications du bureau (décisions, courrier) sur cet iPhone.
+        guard let api = session.api, !session.estDemo, !session.estDirecteur, dernierJetonEnvoye != jeton else { return }
         dernierJetonEnvoye = jeton
         Task {
             do {

@@ -588,3 +588,15 @@ en pièce jointe de la réponse dans la conversation.
 Quand le patron demande un document reçu (« donne-moi le PDF de… »), l'assistant appelle `mail_montrer_piece` :
 la pièce arrive dans `documents` de la réponse (`GET /questions/{id}`, `/saisies`), comme un document produit,
 avec `emplacement: "E-mail reçu"` et une `url` `/app/doc/piece/…`. Rien à changer côté app : `CartesDocuments` l'affiche.
+
+## v1.12 — Accès directeur (10.10.2026)
+
+- `POST /equipe/invitations {nom, role: "directeur"}` : lien à usage unique ; `POST /session` répond alors `role: "directeur"`.
+- Jeton de directeur : `GET /accueil` (montants seuls, `decisions: []`), `GET /argent` (sans heures de secrétariat),
+  `GET /evenements`, `GET /agents` (`{"agents": []}`), `GET /assistant/etat`, `POST /voix/session`, et la conversation :
+  `POST /assistant/question`, `POST /agents/{id}/question`, `GET /questions/{id}` (identifiants `D-…`).
+  Toute autre route répond `403 {"erreur": "acces_directeur"}`.
+- La conversation du directeur est servie en lecture seule (« Poser une question ») : mêmes champs que la conversation
+  du patron (`question`, `contexte`, `photos` en multipart), même réponse (`statut`, `question_id`, `reponse` ou `message`).
+  Le PC ne crée ni tâche, ni document, ni envoi. Les mêmes routes existent aussi sous `/direction/question` et
+  `/direction/questions/{id}`.

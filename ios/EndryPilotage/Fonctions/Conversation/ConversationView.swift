@@ -18,6 +18,14 @@ struct ConversationView: View {
     @State private var documents = DocumentsConversation()
     @FocusState private var clavier: Bool
 
+    /// Accès directeur : mêmes outils (écrire, dicter, photo, scan), mais l'écran s'appelle « Poser une question ».
+    private static let suggestionsDirecteur = [
+        "Combien avons-nous encaissé ce mois-ci ?",
+        "Quelles factures sont encore ouvertes ?",
+        "Où en sont les chantiers en cours ?",
+        "Quelles offres attendent une réponse du client ?",
+    ]
+
     private static let suggestions = [
         "Qu’est-ce qui est arrivé par e-mail aujourd’hui ?",
         "Où en est la préparation de la commande de matériel ?",
@@ -109,7 +117,7 @@ struct ConversationView: View {
     private var barreHaute: some View {
         ZStack {
             VStack(spacing: 3) {
-                Text("Le bureau")
+                Text(app.session.estDirecteur ? "Poser une question" : "Le bureau")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(Color.encre)
                 Menu {
@@ -191,17 +199,19 @@ struct ConversationView: View {
 
     private var accueil: some View {
         VStack(alignment: .leading, spacing: Espace.m) {
-            Text("Nouvelle conversation").etiquetteMaison()
+            Text(app.session.estDirecteur ? "Endry SA" : "Nouvelle conversation").etiquetteMaison()
                 .padding(.top, Espace.xl)
-            Text("Parlez au bureau")
+            Text(app.session.estDirecteur ? "Poser une question" : "Parlez au bureau")
                 .font(Police.serif(36, relativeTo: .largeTitle))
                 .foregroundStyle(Color.encre)
-            Text("Écrivez ou dictez : l’assistant du PC répond ici, comme une session ouverte. Tout envoi reste une décision à glisser.")
+            Text(app.session.estDirecteur
+                 ? "Écrivez, dictez ou joignez une photo ou un scan : la réponse arrive ici. Entreprise, chantiers, technique, tout sujet. Rien n’est créé ni envoyé."
+                 : "Écrivez ou dictez : l’assistant du PC répond ici, comme une session ouverte. Tout envoi reste une décision à glisser.")
                 .styleTexte(15)
                 .foregroundStyle(Color.encreDouce)
                 .fixedSize(horizontal: false, vertical: true)
             VStack(alignment: .leading, spacing: 10) {
-                ForEach(Array(Self.suggestions.enumerated()), id: \.offset) { index, suggestion in
+                ForEach(Array((app.session.estDirecteur ? Self.suggestionsDirecteur : Self.suggestions).enumerated()), id: \.offset) { index, suggestion in
                     Button {
                         Task { await modele.envoyer(suggestion, nature: .question, source: .ecrit) }
                     } label: {

@@ -66,6 +66,12 @@ public final class ModeleSession {
         }
     }
 
+    /// Accès directeur (v1.12) : les montants et « Poser une question », en lecture seule.
+    public var estDirecteur: Bool {
+        if case .connecte(let i) = etat { return i.estDirecteur }
+        return false
+    }
+
     /// Nom de l'ouvrier connecté (lien d'équipe).
     public var nomOuvrier: String? {
         switch etat {

@@ -360,6 +360,8 @@ struct InvitationOuvrierView: View {
     @State private var envoi = false
     @State private var invitation: InvitationEquipe?
     @State private var erreur: String?
+    /// v1.12 : le même lien d'invitation peut ouvrir un accès directeur (montants et questions, lecture seule).
+    @State private var directeur = false
 
     var body: some View {
         NavigationStack {
@@ -375,17 +377,28 @@ struct InvitationOuvrierView: View {
                                 .frame(maxWidth: .infinity)
                                 .accessibilityLabel(Text("QR code du lien d’équipe"))
                         }
-                        Text("L’ouvrier scanne ce code avec l’appareil photo de son iPhone, ou ouvre le lien reçu.")
+                        Text(directeur
+                             ? "Le directeur scanne ce code avec l’appareil photo de son iPhone, ou ouvre le lien reçu."
+                             : "L’ouvrier scanne ce code avec l’appareil photo de son iPhone, ou ouvre le lien reçu.")
                             .styleTexte(14).foregroundStyle(Color.encreDouce)
-                        ShareLink(item: lien, message: Text("Votre accès Endry (équipe). À ouvrir sur votre iPhone.")) {
+                        ShareLink(item: lien, message: Text(directeur ? "Votre accès Endry (direction). À ouvrir sur votre iPhone."
+                                                            : "Votre accès Endry (équipe). À ouvrir sur votre iPhone.")) {
                             Label("Envoyer le lien", systemImage: "square.and.arrow.up")
                         }
                         .buttonStyle(BoutonPrincipal())
                         if let m = invitation.message { Text(m).styleTexte(12, relativeTo: .caption).foregroundStyle(Color.encrePale) }
                     } else {
-                        Text("Un lien à usage unique, propre à cet ouvrier. Il verra ses chantiers du jour et enverra ses heures, ses photos et ses relevés 3D ; jamais l’argent, les décisions ni les agents. Révocable dans Appareils.")
+                        Picker("Type d’accès", selection: $directeur) {
+                            Text("Ouvrier").tag(false)
+                            Text("Directeur").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .accessibilityIdentifier("type-acces")
+                        Text(directeur
+                             ? "Un lien à usage unique, propre à cette personne. Elle verra les montants (à encaisser, à payer, offres) et pourra poser toute question, par écrit, à la voix ou avec une photo. Elle ne voit ni les décisions ni le courrier, et ne peut rien créer ni envoyer. Révocable dans Appareils."
+                             : "Un lien à usage unique, propre à cet ouvrier. Il verra ses chantiers du jour et enverra ses heures, ses photos et ses relevés 3D ; jamais l’argent, les décisions ni les agents. Révocable dans Appareils.")
                             .styleTexte(14).foregroundStyle(Color.encreDouce)
-                        TextField("Prénom de l’ouvrier", text: $nom)
+                        TextField(directeur ? "Prénom du directeur" : "Prénom de l’ouvrier", text: $nom)
                             .textContentType(.givenName)
                             .styleTexte(17, graisse: .medium)
                             .padding(Espace.s)
@@ -418,7 +431,7 @@ struct InvitationOuvrierView: View {
         envoi = true
         erreur = nil
         do throws(ErreurAPI) {
-            invitation = try await api.inviterOuvrier(nom: nom.trimmingCharacters(in: .whitespaces))
+            invitation = try await api.inviterOuvrier(nom: nom.trimmingCharacters(in: .whitespaces), role: directeur ? "directeur" : nil)
         } catch .serveur(let statut, _) where statut == 404 || statut == 405 {
             erreur = "Le PC ne crée pas encore de liens d’équipe (contrat v1.3 à appliquer)."
         } catch {
